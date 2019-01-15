@@ -2,9 +2,11 @@
 // point.
 #![allow(dead_code)]
 
+use std::ffi::CString;
+
 extern crate libc;
 
-use libc::{c_int, c_long, c_longlong, size_t};
+use libc::{c_int, c_long, c_longlong, size_t, c_char};
 
 // Rust can't link against C macros (#define) so we just redefine them here.
 // There's a ~0 chance that any of these will ever change so it's pretty safe.
@@ -54,16 +56,22 @@ pub struct RedisModuleString;
 pub type RedisModuleCmdFunc = extern "C" fn(
     ctx: *mut RedisModuleCtx,
     argv: *mut *mut RedisModuleString,
-    argc: c_int,
+    argc: i32,
 ) -> Status;
 
 pub fn init(
     ctx: *mut RedisModuleCtx,
-    modulename: *const u8,
+    modulename: &str,
     module_version: c_int,
     api_version: c_int,
 ) -> Status {
-    unsafe { Export_RedisModule_Init(ctx, modulename, module_version, api_version) }
+    let modulename = CString::new(modulename.as_bytes()).unwrap();
+    unsafe { Export_RedisModule_Init(
+        ctx,
+        modulename.as_ptr(),
+        module_version,
+        api_version,
+    ) }
 }
 
 pub fn call_reply_type(reply: *mut RedisModuleCallReply) -> ReplyType {
@@ -93,19 +101,21 @@ pub fn close_key(kp: *mut RedisModuleKey) {
 
 pub fn create_command(
     ctx: *mut RedisModuleCtx,
-    name: *const u8,
+    name: &str,
     cmdfunc: Option<RedisModuleCmdFunc>,
-    strflags: *const u8,
-    firstkey: c_int,
-    lastkey: c_int,
-    keystep: c_int,
+    strflags: &str,
+    firstkey: i32,
+    lastkey: i32,
+    keystep: i32,
 ) -> Status {
+    let name = CString::new(name).unwrap();
+    let strflags = CString::new(strflags).unwrap();
     unsafe {
         RedisModule_CreateCommand(
             ctx,
-            name,
+            name.as_ptr(),
             cmdfunc,
-            strflags,
+            strflags.as_ptr(),
             firstkey,
             lastkey,
             keystep,
@@ -195,7 +205,7 @@ pub fn string_set(key: *mut RedisModuleKey, str: *mut RedisModuleString) -> Stat
 extern "C" {
     pub fn Export_RedisModule_Init(
         ctx: *mut RedisModuleCtx,
-        modulename: *const u8,
+        modulename: *const c_char,
         module_version: c_int,
         api_version: c_int,
     ) -> Status;
@@ -216,9 +226,9 @@ extern "C" {
     static RedisModule_CreateCommand:
         extern "C" fn(
         ctx: *mut RedisModuleCtx,
-        name: *const u8,
+        name: *const c_char,
         cmdfunc: Option<RedisModuleCmdFunc>,
-        strflags: *const u8,
+        strflags: *const c_char,
         firstkey: c_int,
         lastkey: c_int,
         keystep: c_int,

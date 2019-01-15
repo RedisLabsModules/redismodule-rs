@@ -14,7 +14,7 @@ struct HelloCommand;
 
 impl Command for HelloCommand {
     // Should return the name of the command to be registered.
-    fn name(&self) -> &'static str{
+    fn name(&self) -> &'static str {
         "hello.world"
     }
 
@@ -67,7 +67,7 @@ pub extern "C" fn RedisModule_OnLoad(
 ) -> raw::Status {
     if raw::init(
         ctx,
-        format!("{}\0", MODULE_NAME).as_ptr(),
+        MODULE_NAME,
         MODULE_VERSION,
         raw::REDISMODULE_APIVER_1,
     ) == raw::Status::Err
@@ -76,11 +76,12 @@ pub extern "C" fn RedisModule_OnLoad(
     }
 
     let command = HelloCommand;
+    // TODO: Add this as a method on the Command trait
     if raw::create_command(
         ctx,
-        format!("{}\0", command.name()).as_ptr(),
+        command.name(),
         Some(Hello_RedisCommand),
-        format!("{}\0", command.str_flags()).as_ptr(),
+        command.str_flags(),
         0,
         0,
         0,
