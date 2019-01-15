@@ -1,9 +1,9 @@
 macro_rules! error {
     ($message:expr) => {
-        CellError::generic($message)
+        Error::generic($message)
     };
     ($message:expr, $($arg:tt)*) => {
-        CellError::generic(format!($message, $($arg)+).as_str())
+        Error::generic(format!($message, $($arg)+).as_str())
     }
 }
 

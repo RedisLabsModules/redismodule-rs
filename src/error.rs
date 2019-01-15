@@ -1,52 +1,53 @@
 use std;
 use std::error;
 use std::fmt;
+use std::fmt::{Display};
 
 #[derive(Debug)]
-pub enum CellError {
+pub enum Error {
     Generic(GenericError),
     FromUtf8(std::string::FromUtf8Error),
     ParseInt(std::num::ParseIntError),
 }
 
-impl CellError {
-    pub fn generic(message: &str) -> CellError {
-        CellError::Generic(GenericError::new(message))
+impl Error {
+    pub fn generic(message: &str) -> Error {
+        Error::Generic(GenericError::new(message))
     }
 }
 
-impl From<std::string::FromUtf8Error> for CellError {
-    fn from(err: std::string::FromUtf8Error) -> CellError {
-        CellError::FromUtf8(err)
+impl From<std::string::FromUtf8Error> for Error {
+    fn from(err: std::string::FromUtf8Error) -> Error {
+        Error::FromUtf8(err)
     }
 }
 
-impl From<std::num::ParseIntError> for CellError {
-    fn from(err: std::num::ParseIntError) -> CellError {
-        CellError::ParseInt(err)
+impl From<std::num::ParseIntError> for Error {
+    fn from(err: std::num::ParseIntError) -> Error {
+        Error::ParseInt(err)
     }
 }
 
-impl fmt::Display for CellError {
+impl Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             // Both underlying errors already impl `Display`, so we defer to
             // their implementations.
-            CellError::Generic(ref err) => write!(f, "{}", err),
-            CellError::FromUtf8(ref err) => write!(f, "{}", err),
-            CellError::ParseInt(ref err) => write!(f, "{}", err),
+            Error::Generic(ref err) => write!(f, "{}", err),
+            Error::FromUtf8(ref err) => write!(f, "{}", err),
+            Error::ParseInt(ref err) => write!(f, "{}", err),
         }
     }
 }
 
-impl error::Error for CellError {
+impl error::Error for Error {
     fn description(&self) -> &str {
         // Both underlying errors already impl `Error`, so we defer to their
         // implementations.
         match *self {
-            CellError::Generic(ref err) => err.description(),
-            CellError::FromUtf8(ref err) => err.description(),
-            CellError::ParseInt(ref err) => err.description(),
+            Error::Generic(ref err) => err.description(),
+            Error::FromUtf8(ref err) => err.description(),
+            Error::ParseInt(ref err) => err.description(),
         }
     }
 
@@ -56,9 +57,9 @@ impl error::Error for CellError {
             // types (either `&io::Error` or `&num::ParseIntError`)
             // to a trait object `&Error`. This works because both error types
             // implement `Error`.
-            CellError::Generic(ref err) => Some(err),
-            CellError::FromUtf8(ref err) => Some(err),
-            CellError::ParseInt(ref err) => Some(err),
+            Error::Generic(ref err) => Some(err),
+            Error::FromUtf8(ref err) => Some(err),
+            Error::ParseInt(ref err) => Some(err),
         }
     }
 }
@@ -76,7 +77,7 @@ impl GenericError {
     }
 }
 
-impl<'a> fmt::Display for GenericError {
+impl<'a> Display for GenericError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Store error: {}", self.message)
     }

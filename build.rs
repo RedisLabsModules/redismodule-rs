@@ -9,7 +9,7 @@ fn main() {
     // tricks that we need to complete the build.
     cc::Build::new()
         .file("src/redismodule.c")
-        .include("include/")
+        .include("src/include/")
         .compile("libredismodule.a");
     // The GCC module emits `rustc-link-lib=static=redismodule` for us.
 }

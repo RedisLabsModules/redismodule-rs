@@ -276,80 +276,70 @@ extern "C" {
     ) -> *mut RedisModuleCallReply;
 }
 
-pub mod call1 {
-    use redis::raw;
+// Rewrite the stuff below to use varargs correctly
 
-    pub fn call(
-        ctx: *mut raw::RedisModuleCtx,
-        cmdname: *const u8,
-        fmt: *const u8,
-        arg0: *mut raw::RedisModuleString,
-    ) -> *mut raw::RedisModuleCallReply {
-        unsafe { RedisModule_Call(ctx, cmdname, fmt, arg0) }
-    }
-
-    #[allow(improper_ctypes)]
-    extern "C" {
-        pub static RedisModule_Call:
-            extern "C" fn(
-            ctx: *mut raw::RedisModuleCtx,
-            cmdname: *const u8,
-            fmt: *const u8,
-            arg0: *mut raw::RedisModuleString,
-        ) -> *mut raw::RedisModuleCallReply;
-    }
+pub fn call1(
+    ctx: *mut RedisModuleCtx,
+    cmdname: *const u8,
+    fmt: *const u8,
+    arg0: *mut RedisModuleString,
+) -> *mut RedisModuleCallReply {
+    unsafe { RedisModule_Call1(ctx, cmdname, fmt, arg0) }
 }
 
-pub mod call2 {
-    use redis::raw;
-
-    pub fn call(
-        ctx: *mut raw::RedisModuleCtx,
+#[allow(improper_ctypes)]
+extern "C" {
+    static RedisModule_Call1:
+    extern "C" fn(
+        ctx: *mut RedisModuleCtx,
         cmdname: *const u8,
         fmt: *const u8,
-        arg0: *mut raw::RedisModuleString,
-        arg1: *mut raw::RedisModuleString,
-    ) -> *mut raw::RedisModuleCallReply {
-        unsafe { RedisModule_Call(ctx, cmdname, fmt, arg0, arg1) }
-    }
-
-    #[allow(improper_ctypes)]
-    extern "C" {
-        pub static RedisModule_Call:
-            extern "C" fn(
-            ctx: *mut raw::RedisModuleCtx,
-            cmdname: *const u8,
-            fmt: *const u8,
-            arg0: *mut raw::RedisModuleString,
-            arg1: *mut raw::RedisModuleString,
-        ) -> *mut raw::RedisModuleCallReply;
-    }
+        arg0: *mut RedisModuleString,
+    ) -> *mut RedisModuleCallReply;
 }
 
-pub mod call3 {
-    use redis::raw;
+pub fn call2(
+    ctx: *mut RedisModuleCtx,
+    cmdname: *const u8,
+    fmt: *const u8,
+    arg0: *mut RedisModuleString,
+    arg1: *mut RedisModuleString,
+) -> *mut RedisModuleCallReply {
+    unsafe { RedisModule_Call2(ctx, cmdname, fmt, arg0, arg1) }
+}
 
-    pub fn call(
-        ctx: *mut raw::RedisModuleCtx,
+#[allow(improper_ctypes)]
+extern "C" {
+    pub static RedisModule_Call2:
+    extern "C" fn(
+        ctx: *mut RedisModuleCtx,
         cmdname: *const u8,
         fmt: *const u8,
-        arg0: *mut raw::RedisModuleString,
-        arg1: *mut raw::RedisModuleString,
-        arg2: *mut raw::RedisModuleString,
-    ) -> *mut raw::RedisModuleCallReply {
-        unsafe { RedisModule_Call(ctx, cmdname, fmt, arg0, arg1, arg2) }
-    }
+        arg0: *mut RedisModuleString,
+        arg1: *mut RedisModuleString,
+    ) -> *mut RedisModuleCallReply;
+}
 
-    #[allow(improper_ctypes)]
-    extern "C" {
-        pub static RedisModule_Call:
-            extern "C" fn(
-            ctx: *mut raw::RedisModuleCtx,
-            cmdname: *const u8,
-            fmt: *const u8,
-            arg0: *mut raw::RedisModuleString,
-            arg1: *mut raw::RedisModuleString,
-            arg2: *mut raw::RedisModuleString,
-        ) -> *mut raw::RedisModuleCallReply;
-    }
+pub fn call3(
+    ctx: *mut RedisModuleCtx,
+    cmdname: *const u8,
+    fmt: *const u8,
+    arg0: *mut RedisModuleString,
+    arg1: *mut RedisModuleString,
+    arg2: *mut RedisModuleString,
+) -> *mut RedisModuleCallReply {
+    unsafe { RedisModule_Call3(ctx, cmdname, fmt, arg0, arg1, arg2) }
+}
+
+#[allow(improper_ctypes)]
+extern "C" {
+    pub static RedisModule_Call3:
+    extern "C" fn(
+        ctx: *mut RedisModuleCtx,
+        cmdname: *const u8,
+        fmt: *const u8,
+        arg0: *mut RedisModuleString,
+        arg1: *mut RedisModuleString,
+        arg2: *mut RedisModuleString,
+    ) -> *mut RedisModuleCallReply;
 }

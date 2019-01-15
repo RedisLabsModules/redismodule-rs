@@ -1,14 +1,16 @@
 [package]
-name = "redis-cell"
-version = "0.2.2"
-authors = ["Brandur <brandur@mutelight.org>"]
+name = "redismod"
+version = "0.1.0"
+authors = ["Brandur <brandur@mutelight.org>", "Gavrie Philipson <gavrie@redislabs.com>"]
+edition = "2018"
 build = "build.rs"
-description = "A Redis module that provides rate limiting in Redis as a single command."
+description = "A toolkit for building Redis modules in Rust"
 license = "MIT"
-repository = "https://github.com/brandur/redis-cell"
+repository = ""
 
-[lib]
-crate-type = ["dylib"]
+[[example]]
+name = "hello"
+crate-type = ["cdylib"]
 
 [dependencies]
 bitflags = "1.0"
