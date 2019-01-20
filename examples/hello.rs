@@ -1,11 +1,11 @@
 extern crate libc;
 use libc::c_int;
 
-extern crate redismod;
-use redismod::error::Error;
-use redismod::Command;
-use redismod::raw;
-use redismod::Redis;
+extern crate redismodule;
+use redismodule::error::Error;
+use redismodule::Command;
+use redismodule::raw;
+use redismodule::Redis;
 
 const MODULE_NAME: &str = "hello";
 const MODULE_VERSION: c_int = 1;
@@ -76,7 +76,7 @@ pub extern "C" fn RedisModule_OnLoad(
     }
 
     let command = HelloCommand;
-    // TODO: Add this as a method on the Command trait
+    // TODO: Add this as a method on the Command trait?
     if raw::create_command(
         ctx,
         command.name(),
