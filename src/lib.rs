@@ -1,8 +1,8 @@
-pub mod redisraw;
-pub mod raw;
-
 #[macro_use]
 extern crate bitflags;
+
+pub mod redisraw;
+pub mod raw;
 
 // `raw` should not be public in the long run. Build an abstraction interface
 // instead.
@@ -12,20 +12,24 @@ extern crate bitflags;
 //#[cfg_attr(feature = "cargo-clippy",
 //           allow(redundant_field_names, suspicious_arithmetic_impl))]
 
-/*
 use std::iter;
 use std::ptr;
 use std::string;
 use std::error::Error as StdError; // We need this trait to call description() on it
 
+use std::ffi::CString;
+use std::os::raw::{c_char, c_int, c_long, c_longlong};
+
 extern crate libc;
 extern crate time;
-use libc::{c_int, c_long, c_longlong, size_t};
+
+use libc::size_t;
 
 #[macro_use]
 mod macros;
 
 pub mod error;
+
 use crate::error::Error;
 
 /// `LogLevel` is a level of logging to be specified with a Redis log directive.
@@ -80,9 +84,11 @@ impl Command {
         match command.run(r, str_args.as_slice()) {
             Ok(_) => raw::Status::Ok,
             Err(e) => {
+                let message = format!("Redis error: {}", e.description());
+                let message = CString::new(message).unwrap();
                 raw::reply_with_error(
                     ctx,
-                    format!("Redis error: {}\0", e.description()).as_ptr(),
+                    message.as_ptr(),
                 );
                 raw::Status::Err
             }
@@ -97,69 +103,6 @@ pub struct Redis {
 }
 
 impl Redis {
-    pub fn call(&self, command: &str, args: &[&str]) -> Result<Reply, Error> {
-        log_debug!(self, "{} [began] args = {:?}", command, args);
-
-        // We use a "format" string to tell redis what types we're passing in.
-        // Currently we just pass everything as a string so this is just the
-        // character "s" repeated as many times as we have arguments.
-        //
-        // It would be nice to start passing some parameters as their actual
-        // type (for example, i64s as long longs), but Redis stringifies these
-        // on the other end anyway so the practical benefit will be minimal.
-        let format: String = iter::repeat("s").take(args.len()).collect();
-
-        let terminated_args: Vec<RedisString> =
-            args.iter().map(|s| self.create_string(s)).collect();
-
-        // One would hope that there's a better way to handle a va_list than
-        // this, but I can't find it for the life of me.
-        let raw_reply = match args.len() {
-            1 => {
-                // WARNING: This is downright hazardous, but I've noticed that
-                // if I remove this format! from the line of invocation, the
-                // right memory layout doesn't make it into Redis (and it will
-                // reply with a -1 "unknown" to all calls). This is still
-                // unexplained and I need to do more legwork in understanding
-                // this.
-                //
-                // Still, this works fine and will continue to work as long as
-                // it's left unchanged.
-                raw::call1(
-                    self.ctx,
-                    format!("{}\0", command).as_ptr(),
-                    format!("{}\0", format).as_ptr(),
-                    terminated_args[0].str_inner,
-                )
-            }
-            2 => raw::call2(
-                self.ctx,
-                format!("{}\0", command).as_ptr(),
-                format!("{}\0", format).as_ptr(),
-                terminated_args[0].str_inner,
-                terminated_args[1].str_inner,
-            ),
-            3 => raw::call3(
-                self.ctx,
-                format!("{}\0", command).as_ptr(),
-                format!("{}\0", format).as_ptr(),
-                terminated_args[0].str_inner,
-                terminated_args[1].str_inner,
-                terminated_args[2].str_inner,
-            ),
-            _ => return Err(error!("Can't support that many CALL arguments")),
-        };
-
-        let reply_res = manifest_redis_reply(raw_reply);
-        raw::free_call_reply(raw_reply);
-
-        if let Ok(ref reply) = reply_res {
-            log_debug!(self, "{} [ended] result = {:?}", command, reply);
-        }
-
-        reply_res
-    }
-
     /// Coerces a Redis string as an integer.
     ///
     /// Redis is pretty dumb about data types. It nominally supports strings
@@ -188,10 +131,12 @@ impl Redis {
     }
 
     pub fn log(&self, level: LogLevel, message: &str) {
+        let level = CString::new(format!("{:?}", level).to_lowercase()).unwrap();
+        let fmt = CString::new(message).unwrap();
         raw::log(
             self.ctx,
-            format!("{:?}\0", level).to_lowercase().as_ptr(),
-            format!("{}\0", message).as_ptr(),
+            level.as_ptr(),
+            fmt.as_ptr(),
         );
     }
 
@@ -256,9 +201,9 @@ pub enum KeyMode {
 /// operation through the use of the Drop trait.
 #[derive(Debug)]
 pub struct RedisKey {
-    ctx:       *mut raw::RedisModuleCtx,
+    ctx: *mut raw::RedisModuleCtx,
     key_inner: *mut raw::RedisModuleKey,
-    key_str:   RedisString,
+    key_str: RedisString,
 }
 
 impl RedisKey {
@@ -298,7 +243,7 @@ impl Drop for RedisKey {
 /// `RedisKeyWritable` is an abstraction over a Redis key that allows read and
 /// write operations.
 pub struct RedisKeyWritable {
-    ctx:       *mut raw::RedisModuleCtx,
+    ctx: *mut raw::RedisModuleCtx,
     key_inner: *mut raw::RedisModuleKey,
 
     // The Redis string
@@ -376,13 +321,14 @@ impl Drop for RedisKeyWritable {
 /// fault-free operation through the use of the Drop trait.
 #[derive(Debug)]
 pub struct RedisString {
-    ctx:       *mut raw::RedisModuleCtx,
+    ctx: *mut raw::RedisModuleCtx,
     str_inner: *mut raw::RedisModuleString,
 }
 
 impl RedisString {
     fn create(ctx: *mut raw::RedisModuleCtx, s: &str) -> RedisString {
-        let str_inner = raw::create_string(ctx, format!("{}\0", s).as_ptr(), s.len());
+        let str = CString::new(s).unwrap();
+        let str_inner = raw::create_string(ctx, str.as_ptr(), s.len());
         RedisString { ctx, str_inner }
     }
 }
@@ -445,12 +391,12 @@ fn parse_args(
 }
 
 fn from_byte_string(
-    byte_str: *const u8,
+    byte_str: *const c_char,
     length: size_t,
 ) -> Result<String, string::FromUtf8Error> {
     let mut vec_str: Vec<u8> = Vec::with_capacity(length as usize);
     for j in 0..length {
-        let byte: u8 = unsafe { *byte_str.offset(j as isize) };
+        let byte = unsafe { *byte_str.offset(j as isize) } as u8;
         vec_str.insert(j, byte);
     }
 
@@ -471,4 +417,3 @@ fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
         KeyMode::ReadWrite => raw::KeyMode::READ | raw::KeyMode::WRITE,
     }
 }
-*/

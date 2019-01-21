@@ -3,9 +3,11 @@
 #![allow(dead_code)]
 
 use std::ffi::CString;
-use std::os::raw::{c_int, c_char};
+use std::os::raw::{c_char, c_int, c_long, c_longlong};
 
 extern crate libc;
+
+use libc::size_t;
 
 pub use crate::redisraw::bindings::*;
 
@@ -27,6 +29,34 @@ pub enum ReplyType {
     Nil = REDISMODULE_REPLY_NULL as i32,
 }
 
+// Tools that can automate this:
+// https://crates.io/crates/enum_primitive
+// https://crates.io/crates/num_enum
+// https://crates.io/crates/enum-primitive-derive
+
+impl From<i32> for ReplyType {
+    fn from(v: i32) -> Self {
+        use crate::raw::ReplyType::*;
+
+        // TODO: Is there a way to do this with a `match`? We have different types of constants here.
+        if v == Unknown as i32 {
+            Unknown
+        } else if v == String as i32 {
+            String
+        } else if v == Error as i32 {
+            Error
+        } else if v == Integer as i32 {
+            Integer
+        } else if v == Array as i32 {
+            Array
+        } else if v == Nil as i32 {
+            Nil
+        } else {
+            panic!("Received unexpected reply type from Redis: {}", v)
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(i32)]
 pub enum Status {
@@ -36,10 +66,13 @@ pub enum Status {
 
 impl From<c_int> for Status {
     fn from(v: c_int) -> Self {
-        match v {
-            0 => Status::Ok,
-            1 => Status::Err,
-            _ => panic!("Received unexpected status from Redis: {}", v),
+        // TODO: Is there a way to do this with a `match`? We have different types of constants here.
+        if v == REDISMODULE_OK as c_int {
+            Status::Ok
+        } else if v == REDISMODULE_ERR as c_int {
+            Status::Err
+        } else {
+            panic!("Received unexpected status from Redis: {}", v)
         }
     }
 }
@@ -50,16 +83,21 @@ impl From<Status> for c_int {
     }
 }
 
+pub type CommandFunc = extern "C" fn(
+    ctx: *mut RedisModuleCtx,
+    argv: *mut *mut RedisModuleString,
+    argc: c_int,
+) -> c_int;
+
 pub fn create_command(
     ctx: *mut RedisModuleCtx,
     name: &str,
-    cmdfunc: RedisModuleCmdFunc,
+    cmdfunc: CommandFunc,
     strflags: &str,
     firstkey: i32,
     lastkey: i32,
     keystep: i32,
 ) -> Status {
-
     let name = CString::new(name).unwrap();
     let strflags = CString::new(strflags).unwrap();
 
@@ -67,7 +105,7 @@ pub fn create_command(
         RedisModule_CreateCommand.unwrap()(
             ctx,
             name.as_ptr(),
-            cmdfunc,
+            Some(cmdfunc),
             strflags.as_ptr(),
             firstkey,
             lastkey,
@@ -103,4 +141,114 @@ extern "C" {
         module_version: c_int,
         api_version: c_int,
     ) -> c_int;
+}
+
+// Helper functions for the raw bindings.
+// Taken from redis-cell.
+
+pub fn call_reply_type(reply: *mut RedisModuleCallReply) -> ReplyType {
+    unsafe {
+        // TODO: Cache the unwrapped functions and use them instead of unwrapping every time?
+        RedisModule_CallReplyType.unwrap()(reply).into()
+    }
+}
+
+pub fn free_call_reply(reply: *mut RedisModuleCallReply) {
+    unsafe {
+        RedisModule_FreeCallReply.unwrap()(reply)
+    }
+}
+
+pub fn call_reply_integer(reply: *mut RedisModuleCallReply) -> c_longlong {
+    unsafe {
+        RedisModule_CallReplyInteger.unwrap()(reply)
+    }
+}
+
+pub fn call_reply_string_ptr(
+    str: *mut RedisModuleCallReply,
+    len: *mut size_t,
+) -> *const c_char {
+    unsafe {
+        RedisModule_CallReplyStringPtr.unwrap()(str, len)
+    }
+}
+
+pub fn close_key(kp: *mut RedisModuleKey) {
+    unsafe {
+        RedisModule_CloseKey.unwrap()(kp)
+    }
+}
+
+pub fn create_string(
+    ctx: *mut RedisModuleCtx,
+    ptr: *const c_char,
+    len: size_t,
+) -> *mut RedisModuleString {
+    unsafe { RedisModule_CreateString.unwrap()(ctx, ptr, len) }
+}
+
+pub fn free_string(ctx: *mut RedisModuleCtx, str: *mut RedisModuleString) {
+    unsafe { RedisModule_FreeString.unwrap()(ctx, str) }
+}
+
+pub fn get_selected_db(ctx: *mut RedisModuleCtx) -> c_int {
+    unsafe { RedisModule_GetSelectedDb.unwrap()(ctx) }
+}
+
+pub fn log(ctx: *mut RedisModuleCtx, level: *const c_char, fmt: *const c_char) {
+    unsafe { RedisModule_Log.unwrap()(ctx, level, fmt) }
+}
+
+pub fn open_key(
+    ctx: *mut RedisModuleCtx,
+    keyname: *mut RedisModuleString,
+    mode: KeyMode,
+) -> *mut RedisModuleKey {
+    unsafe {
+        RedisModule_OpenKey.unwrap()(ctx, keyname, mode.bits) as *mut RedisModuleKey
+    }
+}
+
+pub fn reply_with_array(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
+    unsafe { RedisModule_ReplyWithArray.unwrap()(ctx, len).into() }
+}
+
+pub fn reply_with_error(ctx: *mut RedisModuleCtx, err: *const c_char) {
+    unsafe { RedisModule_ReplyWithError.unwrap()(ctx, err); }
+}
+
+pub fn reply_with_long_long(ctx: *mut RedisModuleCtx, ll: c_longlong) -> Status {
+    unsafe { RedisModule_ReplyWithLongLong.unwrap()(ctx, ll).into() }
+}
+
+pub fn reply_with_string(
+    ctx: *mut RedisModuleCtx,
+    str: *mut RedisModuleString,
+) -> Status {
+    unsafe { RedisModule_ReplyWithString.unwrap()(ctx, str).into() }
+}
+
+// Sets the expiry on a key.
+//
+// Expire is in milliseconds.
+pub fn set_expire(key: *mut RedisModuleKey, expire: c_longlong) -> Status {
+    unsafe { RedisModule_SetExpire.unwrap()(key, expire).into() }
+}
+
+pub fn string_dma(
+    key: *mut RedisModuleKey,
+    len: *mut size_t,
+    mode: KeyMode,
+) -> *const c_char {
+    unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits) }
+}
+
+// Returns pointer to the C string, and sets len to its length
+pub fn string_ptr_len(str: *mut RedisModuleString, len: *mut size_t) -> *const c_char {
+    unsafe { RedisModule_StringPtrLen.unwrap()(str, len) }
+}
+
+pub fn string_set(key: *mut RedisModuleKey, str: *mut RedisModuleString) -> Status {
+    unsafe { RedisModule_StringSet.unwrap()(key, str).into() }
 }

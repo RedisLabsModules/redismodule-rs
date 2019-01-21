@@ -1,8 +1,9 @@
-/*
 extern crate libc;
+
 use libc::c_int;
 
 extern crate redismodule;
+
 use redismodule::error::Error;
 use redismodule::Command;
 use redismodule::raw;
@@ -54,7 +55,7 @@ pub extern "C" fn Hello_RedisCommand(
     ctx: *mut raw::RedisModuleCtx,
     argv: *mut *mut raw::RedisModuleString,
     argc: c_int,
-) -> raw::Status {
+) -> c_int {
     Command::harness(&HelloCommand, ctx, argv, argc)
 }
 
@@ -66,12 +67,7 @@ pub extern "C" fn RedisModule_OnLoad(
     argv: *mut *mut raw::RedisModuleString,
     argc: c_int,
 ) -> raw::Status {
-    if raw::init(
-        ctx,
-        MODULE_NAME,
-        MODULE_VERSION,
-        raw::REDISMODULE_APIVER_1,
-    ) == raw::Status::Err
+    if raw::init(ctx, MODULE_NAME, MODULE_VERSION) == raw::Status::Err
     {
         return raw::Status::Err;
     }
@@ -81,7 +77,7 @@ pub extern "C" fn RedisModule_OnLoad(
     if raw::create_command(
         ctx,
         command.name(),
-        Some(Hello_RedisCommand),
+        Hello_RedisCommand,
         command.str_flags(),
         0,
         0,
@@ -98,4 +94,3 @@ fn parse_i64(arg: &str) -> Result<i64, Error> {
     arg.parse::<i64>()
         .map_err(|_| Error::generic(format!("Couldn't parse as integer: {}", arg).as_str()))
 }
-*/

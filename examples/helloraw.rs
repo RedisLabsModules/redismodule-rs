@@ -60,7 +60,7 @@ pub extern "C" fn RedisModule_OnLoad(
 
     // Create command
     let name = "helloraw";
-    let cmdfunc = Some(Hello_RedisCommand);
+    let cmdfunc = Hello_RedisCommand;
     let strflags = "write";
     let firstkey = 1;
     let lastkey = 1;
