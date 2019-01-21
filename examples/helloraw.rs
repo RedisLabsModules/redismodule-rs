@@ -1,16 +1,13 @@
 extern crate libc;
 
-use std::os::raw::{c_int, c_char};
+use std::os::raw::c_int;
 
 extern crate redismodule;
 
 //use redismodule::raw;
 use redismodule::raw::RedisModuleCtx;
 use redismodule::raw::RedisModuleString;
-use redismodule::raw::REDISMODULE_APIVER_1;
-use redismodule::raw::RedisModule_CreateCommand;
 use redismodule::raw::RedisModule_ReplyWithLongLong;
-use redismodule::raw::Export_RedisModule_Init;
 use redismodule::raw::Status;
 use redismodule::raw::init;
 use redismodule::raw::create_command;
@@ -25,8 +22,8 @@ const MODULE_VERSION: c_int = 1;
 // TODO: This symbol doesn't need to be external (only RedisModule_OnLoad does)
 pub extern "C" fn Hello_RedisCommand(
     ctx: *mut RedisModuleCtx,
-    argv: *mut *mut RedisModuleString,
-    argc: c_int,
+    _argv: *mut *mut RedisModuleString,
+    _argc: c_int,
 ) -> c_int {
 
     // TODO: Handle return value
@@ -44,8 +41,8 @@ pub extern "C" fn Hello_RedisCommand(
 #[no_mangle]
 pub extern "C" fn RedisModule_OnLoad(
     ctx: *mut RedisModuleCtx,
-    argv: *mut *mut RedisModuleString,
-    argc: c_int,
+    _argv: *mut *mut RedisModuleString,
+    _argc: c_int,
 ) -> c_int {
 
     // Init

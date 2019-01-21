@@ -50,22 +50,22 @@ impl Command for HelloCommand {
 }
 
 #[allow(non_snake_case)]
-#[allow(unused_variables)]
 #[no_mangle]
 pub extern "C" fn Hello_RedisCommand(
     ctx: *mut raw::RedisModuleCtx,
     argv: *mut *mut raw::RedisModuleString,
     argc: c_int,
 ) -> c_int {
-    Command::harness(&HelloCommand, ctx, argv, argc).into()
+    let cmd = HelloCommand;
+    cmd.execute(ctx, argv, argc).into()
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn RedisModule_OnLoad(
     ctx: *mut raw::RedisModuleCtx,
-    argv: *mut *mut raw::RedisModuleString,
-    argc: c_int,
+    _argv: *mut *mut raw::RedisModuleString,
+    _argc: c_int,
 ) -> c_int {
 
     if raw::init(ctx, MODULE_NAME, MODULE_VERSION) == raw::Status::Err {

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 #[macro_use]
 extern crate bitflags;
 
@@ -12,7 +14,6 @@ pub mod raw;
 //#[cfg_attr(feature = "cargo-clippy",
 //           allow(redundant_field_names, suspicious_arithmetic_impl))]
 
-use std::iter;
 use std::ptr;
 use std::string;
 use std::error::Error as StdError; // We need this trait to call description() on it
@@ -67,29 +68,31 @@ pub trait Command {
     // separated list. See the Redis module API documentation for a complete
     // list of the ones that are available.
     fn str_flags(&self) -> &'static str;
-}
 
-impl Command {
     /// Provides a basic wrapper for a command's implementation that parses
     /// arguments to Rust data types and handles the OK/ERR reply back to Redis.
-    pub fn harness(
-        command: &Command,
+    fn execute(
+        &self,
         ctx: *mut raw::RedisModuleCtx,
         argv: *mut *mut raw::RedisModuleString,
         argc: c_int,
     ) -> raw::Status {
-        let r = Redis { ctx };
         let args = parse_args(argv, argc).unwrap();
         let str_args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
-        match command.run(r, str_args.as_slice()) {
+
+        let r = Redis { ctx };
+
+        match self.run(r, str_args.as_slice()) {
             Ok(_) => raw::Status::Ok,
             Err(e) => {
                 let message = format!("Redis error: {}", e.description());
                 let message = CString::new(message).unwrap();
+
                 raw::reply_with_error(
                     ctx,
                     message.as_ptr(),
                 );
+
                 raw::Status::Err
             }
         }

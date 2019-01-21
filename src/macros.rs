@@ -7,6 +7,7 @@ macro_rules! error {
     }
 }
 
+#[allow(unused_macros)]
 macro_rules! log_debug {
     ($logger:expr, $target:expr) => {
         if cfg!(debug_assertions) {
