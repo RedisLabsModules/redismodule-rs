@@ -11,3 +11,4 @@ Cargo.lock
 
 # IntelliJ
 .idea
+src/redisraw/bindings.rs
