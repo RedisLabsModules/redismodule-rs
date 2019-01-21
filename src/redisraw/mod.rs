@@ -4,3 +4,5 @@
 #![allow(dead_code)]
 
 pub mod bindings;
+
+// See: https://users.rust-lang.org/t/bindgen-generate-options-and-some-are-none/14027

@@ -7,12 +7,15 @@ use std::os::raw::{c_int, c_char};
 extern crate redismodule;
 
 //use redismodule::raw;
-use redismodule::redisraw::bindings::RedisModuleCtx;
-use redismodule::redisraw::bindings::RedisModuleString;
-use redismodule::redisraw::bindings::{REDISMODULE_OK, REDISMODULE_ERR, REDISMODULE_APIVER_1};
-use redismodule::redisraw::bindings::RedisModule_CreateCommand;
-use redismodule::redisraw::bindings::RedisModule_ReplyWithLongLong;
+use redismodule::raw::RedisModuleCtx;
+use redismodule::raw::RedisModuleString;
+use redismodule::raw::REDISMODULE_APIVER_1;
+use redismodule::raw::RedisModule_CreateCommand;
+use redismodule::raw::RedisModule_ReplyWithLongLong;
 use redismodule::raw::Export_RedisModule_Init;
+use redismodule::raw::Status;
+use redismodule::raw::init;
+use redismodule::raw::create_command;
 //use redismodule::raw::Status;
 
 const MODULE_NAME: &str = "helloraw";
@@ -20,8 +23,8 @@ const MODULE_VERSION: c_int = 1;
 
 
 #[allow(non_snake_case)]
-#[allow(unused_variables)]
 #[no_mangle]
+// TODO: This symbol doesn't need to be external (only RedisModule_OnLoad does)
 pub extern "C" fn Hello_RedisCommand(
     ctx: *mut RedisModuleCtx,
     argv: *mut *mut RedisModuleString,
@@ -36,11 +39,10 @@ pub extern "C" fn Hello_RedisCommand(
         );
     }
 
-    REDISMODULE_OK as c_int
+    Status::Ok.into()
 }
 
 #[allow(non_snake_case)]
-#[allow(unused_variables)]
 #[no_mangle]
 pub extern "C" fn RedisModule_OnLoad(
     ctx: *mut RedisModuleCtx,
@@ -52,43 +54,22 @@ pub extern "C" fn RedisModule_OnLoad(
     let modulename = MODULE_NAME;
     let module_version = MODULE_VERSION;
 
-    let modulename = CString::new(modulename.as_bytes()).unwrap();
-    if unsafe {
-        Export_RedisModule_Init(
-            ctx,
-            modulename.as_ptr(),
-            module_version,
-            REDISMODULE_APIVER_1 as c_int,
-        )
-    } == REDISMODULE_ERR as c_int {
-        return REDISMODULE_ERR as c_int
+    if init(ctx, modulename, module_version) == Status::Err {
+        return Status::Err.into();
     }
 
     // Create command
     let name = "helloraw";
+    let cmdfunc = Some(Hello_RedisCommand);
     let strflags = "write";
     let firstkey = 1;
     let lastkey = 1;
     let keystep = 1;
 
-    let name = CString::new(name).unwrap();
-    let strflags = CString::new(strflags).unwrap();
-    let cmdfunc = Hello_RedisCommand;
-    if unsafe {
-        RedisModule_CreateCommand.unwrap()(
-            ctx,
-            name.as_ptr(),
-            Some(cmdfunc),
-            strflags.as_ptr(),
-            firstkey,
-            lastkey,
-            keystep,
-        )
-    } == REDISMODULE_ERR as c_int {
-        return REDISMODULE_ERR as c_int
+    if create_command(ctx, name, cmdfunc, strflags, firstkey, lastkey, keystep) == Status::Err {
+        return Status::Err.into();
     }
 
-    REDISMODULE_OK as c_int
+    Status::Ok.into()
 }
-
 

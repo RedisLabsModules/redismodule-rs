@@ -6,34 +6,32 @@ use std::ffi::CString;
 use std::os::raw::{c_int, c_char};
 
 extern crate libc;
-use crate::redisraw::bindings::RedisModuleCtx;
-use crate::redisraw::bindings::RedisModuleCmdFunc;
-use crate::redisraw::bindings::RedisModule_CreateCommand;
-use crate::redisraw::bindings::{REDISMODULE_OK, REDISMODULE_ERR};
 
-/*
+pub use crate::redisraw::bindings::*;
+
 bitflags! {
     pub struct KeyMode: c_int {
-        const READ = 1;
-        const WRITE = (1 << 1);
+        const READ = REDISMODULE_READ as c_int;
+        const WRITE = REDISMODULE_WRITE as c_int;
     }
 }
-*/
 
 #[derive(Debug, PartialEq)]
+#[repr(i32)]
 pub enum ReplyType {
-    Unknown = -1,
-    String = 0,
-    Error = 1,
-    Integer = 2,
-    Array = 3,
-    Nil = 4,
+    Unknown = REDISMODULE_REPLY_UNKNOWN as i32,
+    String = REDISMODULE_REPLY_STRING as i32,
+    Error = REDISMODULE_REPLY_ERROR as i32,
+    Integer = REDISMODULE_REPLY_INTEGER as i32,
+    Array = REDISMODULE_REPLY_ARRAY as i32,
+    Nil = REDISMODULE_REPLY_NULL as i32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[repr(i32)]
 pub enum Status {
-    Ok = REDISMODULE_OK as isize,
-    Err = REDISMODULE_ERR as isize,
+    Ok = REDISMODULE_OK as i32,
+    Err = REDISMODULE_ERR as i32,
 }
 
 impl From<c_int> for Status {
@@ -48,10 +46,7 @@ impl From<c_int> for Status {
 
 impl From<Status> for c_int {
     fn from(s: Status) -> Self {
-        match s {
-            Status::Ok => 0,
-            Status::Err => 1,
-        }
+        s as c_int
     }
 }
 
@@ -64,8 +59,10 @@ pub fn create_command(
     lastkey: i32,
     keystep: i32,
 ) -> Status {
+
     let name = CString::new(name).unwrap();
     let strflags = CString::new(strflags).unwrap();
+
     unsafe {
         RedisModule_CreateCommand.unwrap()(
             ctx,
@@ -79,12 +76,10 @@ pub fn create_command(
     }
 }
 
-/*
 pub fn init(
     ctx: *mut RedisModuleCtx,
     modulename: &str,
     module_version: c_int,
-    api_version: c_int,
 ) -> Status {
     let modulename = CString::new(modulename.as_bytes()).unwrap();
     unsafe {
@@ -92,11 +87,10 @@ pub fn init(
             ctx,
             modulename.as_ptr(),
             module_version,
-            api_version,
+            REDISMODULE_APIVER_1 as c_int,
         ).into()
     }
 }
-*/
 
 // This is the one static function we need to initialize a module.
 // bindgen does not generate it for us (probably since it's defined as static in redismodule.h).
