@@ -17,25 +17,26 @@ struct HelloCommand;
 impl Command for HelloCommand {
     // Should return the name of the command to be registered.
     fn name(&self) -> &'static str {
-        "hello.world"
+        "hello.mul"
     }
 
     // Run the command.
     fn run(&self, r: Redis, args: &[&str]) -> Result<(), Error> {
         if args.len() != 3 {
             return Err(Error::generic(format!(
-                "Usage: {} <message> <times>",
+                "Usage: {} <m1> <m2>",
                 self.name()
             ).as_str()));
         }
 
         // the first argument is command name (ignore it)
-        let message = args[1];
-        let times = parse_i64(args[2])?;
+        let m1 = parse_i64(args[1])?;
+        let m2 = parse_i64(args[2])?;
 
-        r.reply_array(2)?;
-        r.reply_integer(42)?;
-        r.reply_integer(43)?;
+        r.reply_array(3)?;
+        r.reply_integer(m1)?;
+        r.reply_integer(m2)?;
+        r.reply_integer(m1 * m2)?;
 
         Ok(())
     }
@@ -56,20 +57,19 @@ pub extern "C" fn Hello_RedisCommand(
     argv: *mut *mut raw::RedisModuleString,
     argc: c_int,
 ) -> c_int {
-    Command::harness(&HelloCommand, ctx, argv, argc)
+    Command::harness(&HelloCommand, ctx, argv, argc).into()
 }
 
 #[allow(non_snake_case)]
-#[allow(unused_variables)]
 #[no_mangle]
 pub extern "C" fn RedisModule_OnLoad(
     ctx: *mut raw::RedisModuleCtx,
     argv: *mut *mut raw::RedisModuleString,
     argc: c_int,
-) -> raw::Status {
-    if raw::init(ctx, MODULE_NAME, MODULE_VERSION) == raw::Status::Err
-    {
-        return raw::Status::Err;
+) -> c_int {
+
+    if raw::init(ctx, MODULE_NAME, MODULE_VERSION) == raw::Status::Err {
+        return raw::Status::Err.into();
     }
 
     let command = HelloCommand;
@@ -82,12 +82,11 @@ pub extern "C" fn RedisModule_OnLoad(
         0,
         0,
         0,
-    ) == raw::Status::Err
-    {
-        return raw::Status::Err;
+    ) == raw::Status::Err {
+        return raw::Status::Err.into();
     }
 
-    raw::Status::Ok
+    raw::Status::Ok.into()
 }
 
 fn parse_i64(arg: &str) -> Result<i64, Error> {

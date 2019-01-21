@@ -1,5 +1,3 @@
-use std::ffi::CString;
-
 extern crate libc;
 
 use std::os::raw::{c_int, c_char};
