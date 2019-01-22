@@ -15,17 +15,15 @@ const MODULE_VERSION: c_int = 1;
 struct HelloCommand;
 
 impl Command for HelloCommand {
-    // Should return the name of the command to be registered.
-    fn name(&self) -> &'static str {
-        "hello.mul"
-    }
+    fn name() -> &'static str { "hello.mul" }
+
+    fn str_flags() -> &'static str { "write" }
 
     // Run the command.
-    fn run(&self, r: Redis, args: &[&str]) -> Result<(), Error> {
+    fn run(r: Redis, args: &[&str]) -> Result<(), Error> {
         if args.len() != 3 {
             return Err(Error::generic(format!(
-                "Usage: {} <m1> <m2>",
-                self.name()
+                "Usage: {} <m1> <m2>", Self::name()
             ).as_str()));
         }
 
@@ -40,24 +38,16 @@ impl Command for HelloCommand {
 
         Ok(())
     }
-
-    // Should return any flags to be registered with the name as a string
-    // separated list. See the Redis module API documentation for a complete
-    // list of the ones that are available.
-    fn str_flags(&self) -> &'static str {
-        "write"
-    }
 }
 
 #[allow(non_snake_case)]
 #[no_mangle]
-pub extern "C" fn Hello_RedisCommand(
+pub extern "C" fn HelloCommand_Redis(
     ctx: *mut raw::RedisModuleCtx,
     argv: *mut *mut raw::RedisModuleString,
     argc: c_int,
 ) -> c_int {
-    let cmd = HelloCommand;
-    cmd.execute(ctx, argv, argc).into()
+    HelloCommand::execute(ctx, argv, argc).into()
 }
 
 #[allow(non_snake_case)]
@@ -67,18 +57,16 @@ pub extern "C" fn RedisModule_OnLoad(
     _argv: *mut *mut raw::RedisModuleString,
     _argc: c_int,
 ) -> c_int {
-
     if raw::init(ctx, MODULE_NAME, MODULE_VERSION) == raw::Status::Err {
         return raw::Status::Err.into();
     }
 
-    let command = HelloCommand;
     // TODO: Add this as a method on the Command trait?
     if raw::create_command(
         ctx,
-        command.name(),
-        Hello_RedisCommand,
-        command.str_flags(),
+        HelloCommand::name(),
+        HelloCommand_Redis,
+        HelloCommand::str_flags(),
         0,
         0,
         0,

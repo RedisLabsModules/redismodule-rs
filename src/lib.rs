@@ -59,20 +59,19 @@ pub enum Reply {
 /// module.
 pub trait Command {
     // Should return the name of the command to be registered.
-    fn name(&self) -> &'static str;
-
-    // Run the command.
-    fn run(&self, r: Redis, args: &[&str]) -> Result<(), Error>;
+    fn name() -> &'static str;
 
     // Should return any flags to be registered with the name as a string
     // separated list. See the Redis module API documentation for a complete
     // list of the ones that are available.
-    fn str_flags(&self) -> &'static str;
+    fn str_flags() -> &'static str;
+
+    // Run the command.
+    fn run(r: Redis, args: &[&str]) -> Result<(), Error>;
 
     /// Provides a basic wrapper for a command's implementation that parses
     /// arguments to Rust data types and handles the OK/ERR reply back to Redis.
     fn execute(
-        &self,
         ctx: *mut raw::RedisModuleCtx,
         argv: *mut *mut raw::RedisModuleString,
         argc: c_int,
@@ -82,7 +81,7 @@ pub trait Command {
 
         let r = Redis { ctx };
 
-        match self.run(r, str_args.as_slice()) {
+        match Self::run(r, str_args.as_slice()) {
             Ok(_) => raw::Status::Ok,
             Err(e) => {
                 let message = format!("Redis error: {}", e.description());
