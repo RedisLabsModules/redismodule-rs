@@ -69,6 +69,7 @@ impl Command for HelloAddCommand {
     // Run the command.
     fn run(r: Redis, args: &[&str]) -> Result<(), Error> {
         if args.len() != 3 {
+            // FIXME: Use RedisModule_WrongArity instead?
             return Err(Error::generic(format!(
                 "Usage: {} <m1> <m2>", Self::name()
             ).as_str()));
@@ -86,6 +87,8 @@ impl Command for HelloAddCommand {
         Ok(())
     }
 }
+
+// TODO: Write a macro to generate these glue functions
 
 #[allow(non_snake_case)]
 pub extern "C" fn HelloAddCommand_Redis(
