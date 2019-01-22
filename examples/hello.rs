@@ -12,12 +12,15 @@ use redismodule::Redis;
 const MODULE_NAME: &str = "hello";
 const MODULE_VERSION: c_int = 1;
 
+
 //////////////////////////////////////////////////////
 
 struct HelloMulCommand;
 
 impl Command for HelloMulCommand {
     fn name() -> &'static str { "hello.mul" }
+
+    fn external_command() -> raw::CommandFunc { HelloMulCommand_Redis }
 
     fn str_flags() -> &'static str { "write" }
 
@@ -43,7 +46,6 @@ impl Command for HelloMulCommand {
 }
 
 #[allow(non_snake_case)]
-#[no_mangle]
 pub extern "C" fn HelloMulCommand_Redis(
     ctx: *mut raw::RedisModuleCtx,
     argv: *mut *mut raw::RedisModuleString,
@@ -58,6 +60,8 @@ struct HelloAddCommand;
 
 impl Command for HelloAddCommand {
     fn name() -> &'static str { "hello.add" }
+
+    fn external_command() -> raw::CommandFunc { HelloAddCommand_Redis }
 
     fn str_flags() -> &'static str { "write" }
 
@@ -83,7 +87,6 @@ impl Command for HelloAddCommand {
 }
 
 #[allow(non_snake_case)]
-#[no_mangle]
 pub extern "C" fn HelloAddCommand_Redis(
     ctx: *mut raw::RedisModuleCtx,
     argv: *mut *mut raw::RedisModuleString,
@@ -105,21 +108,9 @@ pub extern "C" fn RedisModule_OnLoad(
         return raw::Status::Err.into();
     }
 
-    if raw::create_command(
-        ctx,
-        HelloMulCommand::name(),
-        HelloMulCommand_Redis,
-        HelloMulCommand::str_flags(),
-        0, 0, 0,
-    ) == raw::Status::Err { return raw::Status::Err.into(); }
-
-    if raw::create_command(
-        ctx,
-        HelloAddCommand::name(),
-        HelloAddCommand_Redis,
-        HelloAddCommand::str_flags(),
-        0, 0, 0,
-    ) == raw::Status::Err { return raw::Status::Err.into(); }
+    // TODO: Move the below calls to an external function that returns a Result<>
+    if HelloMulCommand::create(ctx) == raw::Status::Err { return raw::Status::Err.into(); }
+    if HelloAddCommand::create(ctx) == raw::Status::Err { return raw::Status::Err.into(); }
 
     raw::Status::Ok.into()
 }

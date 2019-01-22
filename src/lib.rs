@@ -55,11 +55,20 @@ pub enum Reply {
 }
 
 
+type CommandFuncPtr = extern "C" fn(
+    *mut raw::RedisModuleCtx,
+    *mut *mut raw::RedisModuleString,
+    c_int,
+) -> c_int;
+
+
 /// Command is a basic trait for a new command to be registered with a Redis
 /// module.
 pub trait Command {
     // Should return the name of the command to be registered.
     fn name() -> &'static str;
+
+    fn external_command() -> CommandFuncPtr;
 
     // Should return any flags to be registered with the name as a string
     // separated list. See the Redis module API documentation for a complete
@@ -95,6 +104,16 @@ pub trait Command {
                 raw::Status::Err
             }
         }
+    }
+
+    fn create(ctx: *mut raw::RedisModuleCtx) -> raw::Status {
+        raw::create_command(
+            ctx,
+            Self::name(),
+            Self::external_command(),
+            Self::str_flags(),
+            0, 0, 0,
+        )
     }
 }
 
