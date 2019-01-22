@@ -83,6 +83,15 @@ impl From<Status> for c_int {
     }
 }
 
+impl From<Status> for Result<(), ()> {
+    fn from(s: Status) -> Self {
+        match s {
+            Status::Ok => Ok(()),
+            Status::Err => Err(()),
+        }
+    }
+}
+
 pub type CommandFunc = extern "C" fn(
     ctx: *mut RedisModuleCtx,
     argv: *mut *mut RedisModuleString,
@@ -97,11 +106,11 @@ pub fn create_command(
     firstkey: i32,
     lastkey: i32,
     keystep: i32,
-) -> Status {
+) -> Result<(), ()> {
     let name = CString::new(name).unwrap();
     let strflags = CString::new(strflags).unwrap();
 
-    unsafe {
+    let status: Status = unsafe {
         RedisModule_CreateCommand.unwrap()(
             ctx,
             name.as_ptr(),
@@ -111,23 +120,28 @@ pub fn create_command(
             lastkey,
             keystep,
         ).into()
-    }
+    };
+
+    status.into()
 }
 
-pub fn init(
+pub fn module_init(
     ctx: *mut RedisModuleCtx,
     modulename: &str,
     module_version: c_int,
-) -> Status {
+) -> Result<(), ()> {
     let modulename = CString::new(modulename.as_bytes()).unwrap();
-    unsafe {
+
+    let status: Status = unsafe {
         Export_RedisModule_Init(
             ctx,
             modulename.as_ptr(),
             module_version,
             REDISMODULE_APIVER_1 as c_int,
         ).into()
-    }
+    };
+
+    status.into()
 }
 
 // This is the one static function we need to initialize a module.

@@ -106,7 +106,7 @@ pub trait Command {
         }
     }
 
-    fn create(ctx: *mut raw::RedisModuleCtx) -> raw::Status {
+    fn create(ctx: *mut raw::RedisModuleCtx) -> Result<(), ()> {
         raw::create_command(
             ctx,
             Self::name(),

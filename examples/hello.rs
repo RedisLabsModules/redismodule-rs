@@ -8,6 +8,7 @@ use redismodule::error::Error;
 use redismodule::Command;
 use redismodule::raw;
 use redismodule::Redis;
+use redismodule::raw::module_init;
 
 const MODULE_NAME: &str = "hello";
 const MODULE_VERSION: c_int = 1;
@@ -97,6 +98,15 @@ pub extern "C" fn HelloAddCommand_Redis(
 
 //////////////////////////////////////////////////////
 
+fn module_on_load(ctx: *mut raw::RedisModuleCtx) -> Result<(), ()> {
+    module_init(ctx, MODULE_NAME, MODULE_VERSION)?;
+
+    HelloMulCommand::create(ctx)?;
+    HelloAddCommand::create(ctx)?;
+
+    Ok(())
+}
+
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn RedisModule_OnLoad(
@@ -104,13 +114,10 @@ pub extern "C" fn RedisModule_OnLoad(
     _argv: *mut *mut raw::RedisModuleString,
     _argc: c_int,
 ) -> c_int {
-    if raw::init(ctx, MODULE_NAME, MODULE_VERSION) == raw::Status::Err {
-        return raw::Status::Err.into();
-    }
 
-    // TODO: Move the below calls to an external function that returns a Result<>
-    if HelloMulCommand::create(ctx) == raw::Status::Err { return raw::Status::Err.into(); }
-    if HelloAddCommand::create(ctx) == raw::Status::Err { return raw::Status::Err.into(); }
+    if let Err(_) = module_on_load(ctx) {
+        return raw::Status::Err.into()
+    }
 
     raw::Status::Ok.into()
 }

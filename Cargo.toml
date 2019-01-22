@@ -12,10 +12,6 @@ repository = ""
 name = "hello"
 crate-type = ["cdylib"]
 
-[[example]]
-name = "helloraw"
-crate-type = ["cdylib"]
-
 [dependencies]
 bitflags = "1.0"
 libc = "0.2"
