@@ -4,16 +4,15 @@ use std::os::raw::{c_int, c_void};
 
 use crate::raw;
 
-pub struct RedisModuleType<'a> {
-    name: &'a str,
+pub struct RedisModuleType {
     raw_type: *mut raw::RedisModuleType,
 }
 
 // We want to be able to create static instances of this type,
 // which means we need to implement Sync.
-unsafe impl<'a> Sync for RedisModuleType<'a> {}
+unsafe impl Sync for RedisModuleType {}
 
-fn redis_log(
+pub fn redis_log(
     ctx: *mut raw::RedisModuleCtx,
     msg: &str,
 ) {
@@ -24,10 +23,9 @@ fn redis_log(
     }
 }
 
-impl<'a> RedisModuleType<'a> {
-    pub const fn new(name: &'a str) -> Self {
+impl RedisModuleType {
+    pub const fn new() -> Self {
         RedisModuleType {
-            name,
             raw_type: ptr::null_mut(),
         }
     }
@@ -35,10 +33,16 @@ impl<'a> RedisModuleType<'a> {
     pub fn create_data_type(
         &mut self,
         ctx: *mut raw::RedisModuleCtx,
-    ) -> Result<(), ()> {
-        let type_name = CString::new(self.name).unwrap();
+        name: &str,
+    ) -> Result<(), &str> {
 
-        redis_log(ctx, "Here 1");
+        if name.len() != 9 {
+            let msg = "Redis requires the length of native type names to be exactly 9 characters";
+            redis_log(ctx, format!("{}, name is: '{}'", msg, name).as_str());
+            return Err(msg);
+        }
+
+        let type_name = CString::new(name).unwrap();
 
         let mut type_methods = raw::RedisModuleTypeMethods {
             version: raw::REDISMODULE_TYPE_METHOD_VERSION as u64,
@@ -53,8 +57,6 @@ impl<'a> RedisModuleType<'a> {
             digest: None,
         };
 
-        redis_log(ctx, "Here 2");
-
         let redis_type = unsafe {
             raw::RedisModule_CreateDataType.unwrap()(
                 ctx,
@@ -64,18 +66,12 @@ impl<'a> RedisModuleType<'a> {
             )
         };
 
-        redis_log(ctx, "Here 3");
-
         if redis_type.is_null() {
             redis_log(ctx, "Error: created data type is null");
-            return Err(());
+            return Err("Error: created data type is null");
         }
 
-        redis_log(ctx, "Here 4");
-
         self.raw_type = redis_type;
-
-        redis_log(ctx, "Here 5");
 
         Ok(())
     }

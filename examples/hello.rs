@@ -102,7 +102,7 @@ pub extern "C" fn HelloAddCommand_Redis(
 
 //////////////////////////////////////////////////////
 
-fn module_on_load(ctx: *mut raw::RedisModuleCtx) -> Result<(), ()> {
+fn module_on_load(ctx: *mut raw::RedisModuleCtx) -> Result<(), &'static str> {
     module_init(ctx, MODULE_NAME, MODULE_VERSION)?;
 
     HelloMulCommand::create(ctx)?;

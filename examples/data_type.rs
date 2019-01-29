@@ -14,7 +14,8 @@ use redismodule::types::RedisModuleType;
 const MODULE_NAME: &str = "alloc";
 const MODULE_VERSION: c_int = 1;
 
-static mut MY_TYPE: RedisModuleType = RedisModuleType::new("mytype");
+// TODO: Can we use a safe smart pointer instead of an unsafe mutable static variable?
+static mut MY_TYPE: RedisModuleType = RedisModuleType::new();
 
 struct AllocSetCommand;
 
@@ -109,12 +110,11 @@ pub extern "C" fn AllocDelCommand_Redis(
     AllocDelCommand::execute(ctx, argv, argc).into()
 }
 
-//////////////////////////////////////////////////////
-
-fn module_on_load(ctx: *mut raw::RedisModuleCtx) -> Result<(), ()> {
+fn module_on_load(ctx: *mut raw::RedisModuleCtx) -> Result<(), &'static str> {
     module_init(ctx, MODULE_NAME, MODULE_VERSION)?;
 
-    unsafe { MY_TYPE.create_data_type(ctx) }?;
+    // FIXME: Make this safe (use a smart pointer?)
+    unsafe { MY_TYPE.create_data_type(ctx, "mytype123") }?;
 
     AllocSetCommand::create(ctx)?;
     AllocDelCommand::create(ctx)?;
@@ -129,7 +129,8 @@ pub extern "C" fn RedisModule_OnLoad(
     _argv: *mut *mut raw::RedisModuleString,
     _argc: c_int,
 ) -> c_int {
-    if let Err(_) = module_on_load(ctx) {
+    if let Err(msg) = module_on_load(ctx) {
+        eprintln!("Error loading module: {}", msg);
         return raw::Status::Err.into();
     }
 

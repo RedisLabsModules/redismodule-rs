@@ -84,11 +84,11 @@ impl From<Status> for c_int {
     }
 }
 
-impl From<Status> for Result<(), ()> {
+impl From<Status> for Result<(), &str> {
     fn from(s: Status) -> Self {
         match s {
             Status::Ok => Ok(()),
-            Status::Err => Err(()),
+            Status::Err => Err("Generic error"),
         }
     }
 }
@@ -107,7 +107,7 @@ pub fn create_command(
     firstkey: i32,
     lastkey: i32,
     keystep: i32,
-) -> Result<(), ()> {
+) -> Result<(), &'static str> {
     let name = CString::new(name).unwrap();
     let strflags = CString::new(strflags).unwrap();
 
@@ -130,7 +130,7 @@ pub fn module_init(
     ctx: *mut RedisModuleCtx,
     modulename: &str,
     module_version: c_int,
-) -> Result<(), ()> {
+) -> Result<(), &str> {
     let modulename = CString::new(modulename.as_bytes()).unwrap();
 
     let status: Status = unsafe {
