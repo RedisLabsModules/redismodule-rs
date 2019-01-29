@@ -9,19 +9,19 @@ use redismodule::Command;
 use redismodule::raw;
 use redismodule::Redis;
 use redismodule::raw::module_init;
+use redismodule::types::RedisModuleType;
 
-const MODULE_NAME: &str = "hello";
+const MODULE_NAME: &str = "alloc";
 const MODULE_VERSION: c_int = 1;
 
+static mut MY_TYPE: RedisModuleType = RedisModuleType::new("mytype");
 
-//////////////////////////////////////////////////////
+struct AllocSetCommand;
 
-struct HelloMulCommand;
+impl Command for AllocSetCommand {
+    fn name() -> &'static str { "alloc.set" }
 
-impl Command for HelloMulCommand {
-    fn name() -> &'static str { "hello.mul" }
-
-    fn external_command() -> raw::CommandFunc { HelloMulCommand_Redis }
+    fn external_command() -> raw::CommandFunc { AllocSetCommand_Redis }
 
     fn str_flags() -> &'static str { "write" }
 
@@ -29,60 +29,69 @@ impl Command for HelloMulCommand {
     fn run(r: Redis, args: &[&str]) -> Result<(), Error> {
         if args.len() != 3 {
             return Err(Error::generic(format!(
-                "Usage: {} <m1> <m2>", Self::name()
+                "Usage: {} <key> <size>", Self::name()
             ).as_str()));
         }
 
         // the first argument is command name (ignore it)
-        let m1 = parse_i64(args[1])?;
-        let m2 = parse_i64(args[2])?;
+        let key = args[1];
+        let size = parse_i64(args[2])?;
 
-        r.reply_array(3)?;
-        r.reply_integer(m1)?;
-        r.reply_integer(m2)?;
-        r.reply_integer(m1 * m2)?;
+        // TODO:
+        // 1. Open key
+        // 2. Allocate data
+        // 3. Set the key to the data
+        // 4. Activate custom allocator and compare Redis memory usage
+        let data: Vec<u8> = Vec::with_capacity(size as usize);
+        let k = r.open_key_writable(key);
+
+        /*
+        raw::RedisModule_ModuleTypeSetValue.unwrap()(
+            k,
+            t,
+            data,
+        );
+        */
+
+        r.reply_integer(size)?;
 
         Ok(())
     }
 }
 
 #[allow(non_snake_case)]
-pub extern "C" fn HelloMulCommand_Redis(
+pub extern "C" fn AllocSetCommand_Redis(
     ctx: *mut raw::RedisModuleCtx,
     argv: *mut *mut raw::RedisModuleString,
     argc: c_int,
 ) -> c_int {
-    HelloMulCommand::execute(ctx, argv, argc).into()
+    AllocSetCommand::execute(ctx, argv, argc).into()
 }
 
 //////////////////////////////////////////////////////
 
-struct HelloAddCommand;
+struct AllocDelCommand;
 
-impl Command for HelloAddCommand {
-    fn name() -> &'static str { "hello.add" }
+impl Command for AllocDelCommand {
+    fn name() -> &'static str { "alloc.del" }
 
-    fn external_command() -> raw::CommandFunc { HelloAddCommand_Redis }
+    fn external_command() -> raw::CommandFunc { AllocDelCommand_Redis }
 
     fn str_flags() -> &'static str { "write" }
 
     // Run the command.
     fn run(r: Redis, args: &[&str]) -> Result<(), Error> {
-        if args.len() != 3 {
+        if args.len() != 2 {
             // FIXME: Use RedisModule_WrongArity instead?
             return Err(Error::generic(format!(
-                "Usage: {} <m1> <m2>", Self::name()
+                "Usage: {} <key>", Self::name()
             ).as_str()));
         }
 
         // the first argument is command name (ignore it)
-        let m1 = parse_i64(args[1])?;
-        let m2 = parse_i64(args[2])?;
+        let key = args[1];
 
-        r.reply_array(3)?;
-        r.reply_integer(m1)?;
-        r.reply_integer(m2)?;
-        r.reply_integer(m1 + m2)?;
+        r.reply_string("OK")?;
 
         Ok(())
     }
@@ -92,12 +101,12 @@ impl Command for HelloAddCommand {
 // TODO: Look at https://github.com/faineance/redismodule which has some macros
 
 #[allow(non_snake_case)]
-pub extern "C" fn HelloAddCommand_Redis(
+pub extern "C" fn AllocDelCommand_Redis(
     ctx: *mut raw::RedisModuleCtx,
     argv: *mut *mut raw::RedisModuleString,
     argc: c_int,
 ) -> c_int {
-    HelloAddCommand::execute(ctx, argv, argc).into()
+    AllocDelCommand::execute(ctx, argv, argc).into()
 }
 
 //////////////////////////////////////////////////////
@@ -105,8 +114,10 @@ pub extern "C" fn HelloAddCommand_Redis(
 fn module_on_load(ctx: *mut raw::RedisModuleCtx) -> Result<(), ()> {
     module_init(ctx, MODULE_NAME, MODULE_VERSION)?;
 
-    HelloMulCommand::create(ctx)?;
-    HelloAddCommand::create(ctx)?;
+    unsafe { MY_TYPE.create_data_type(ctx) }?;
+
+    AllocSetCommand::create(ctx)?;
+    AllocDelCommand::create(ctx)?;
 
     Ok(())
 }
@@ -118,9 +129,8 @@ pub extern "C" fn RedisModule_OnLoad(
     _argv: *mut *mut raw::RedisModuleString,
     _argc: c_int,
 ) -> c_int {
-
     if let Err(_) = module_on_load(ctx) {
-        return raw::Status::Err.into()
+        return raw::Status::Err.into();
     }
 
     raw::Status::Ok.into()

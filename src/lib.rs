@@ -5,6 +5,7 @@ extern crate bitflags;
 
 pub mod redisraw;
 pub mod raw;
+pub mod types;
 
 // `raw` should not be public in the long run. Build an abstraction interface
 // instead.
@@ -32,6 +33,38 @@ mod macros;
 pub mod error;
 
 use crate::error::Error;
+
+////////////////////////////////////////////////////////////
+use std::alloc::{System, GlobalAlloc, Layout};
+use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT, Ordering::SeqCst};
+use std::ffi::c_void;
+
+struct RedisAlloc;
+
+static USE_REDIS_ALLOC: AtomicBool = ATOMIC_BOOL_INIT;
+
+unsafe impl GlobalAlloc for RedisAlloc {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        let use_redis = USE_REDIS_ALLOC.load(SeqCst);
+        if use_redis {
+            return raw::RedisModule_Alloc.unwrap()(layout.size()) as *mut u8;
+        }
+        System.alloc(layout)
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        let use_redis = USE_REDIS_ALLOC.load(SeqCst);
+        if use_redis {
+            return raw::RedisModule_Free.unwrap()(ptr as *mut c_void);
+        }
+        System.dealloc(ptr, layout);
+    }
+}
+
+#[global_allocator]
+static ALLOC: RedisAlloc = RedisAlloc;
+////////////////////////////////////////////////////////////
+
 
 /// `LogLevel` is a level of logging to be specified with a Redis log directive.
 #[derive(Clone, Copy, Debug)]

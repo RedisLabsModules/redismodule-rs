@@ -18,6 +18,7 @@ bitflags! {
     }
 }
 
+
 #[derive(Debug, PartialEq)]
 #[repr(i32)]
 pub enum ReplyType {
@@ -156,6 +157,9 @@ extern "C" {
         api_version: c_int,
     ) -> c_int;
 }
+
+///////////////////////////////////////////////////////////////
+
 
 // Helper functions for the raw bindings.
 // Taken from redis-cell.
