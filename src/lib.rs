@@ -28,16 +28,20 @@ extern crate time;
 use libc::size_t;
 
 #[macro_use]
+extern crate enum_primitive_derive;
+extern crate num_traits;
+
+#[macro_use]
 mod macros;
 
 pub mod error;
 
-use crate::error::Error;
-
-////////////////////////////////////////////////////////////
 use std::alloc::{System, GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT, Ordering::SeqCst};
 use std::ffi::c_void;
+
+use crate::error::Error;
+use crate::types::RedisModuleType;
 
 struct RedisAlloc;
 
@@ -356,6 +360,20 @@ impl RedisKeyWritable {
             raw::Status::Ok => Ok(()),
             raw::Status::Err => Err(error!("Error while setting key")),
         }
+    }
+
+    pub fn check_type(&self, redis_type: RedisModuleType) -> Result<(), Error> {
+        /*
+        int type = RedisModule_KeyType(key);
+        if (type != REDISMODULE_KEYTYPE_EMPTY &&
+            RedisModule_ModuleTypeGetType(key) != HelloType)
+        {
+            return RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
+        }
+        */
+        //raw::key_type(key)
+
+        Ok(())
     }
 }
 

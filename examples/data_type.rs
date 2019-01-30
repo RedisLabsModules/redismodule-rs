@@ -14,8 +14,7 @@ use redismodule::types::RedisModuleType;
 const MODULE_NAME: &str = "alloc";
 const MODULE_VERSION: c_int = 1;
 
-// TODO: Can we use a safe smart pointer instead of an unsafe mutable static variable?
-static mut MY_TYPE: RedisModuleType = RedisModuleType::new();
+static MY_TYPE: RedisModuleType = RedisModuleType::new();
 
 struct AllocSetCommand;
 
@@ -29,6 +28,8 @@ impl Command for AllocSetCommand {
     // Run the command.
     fn run(r: Redis, args: &[&str]) -> Result<(), Error> {
         if args.len() != 3 {
+            // FIXME: Use RedisModule_WrongArity instead. Return an ArityError here and
+            // in the low-level implementation call RM_WrongArity.
             return Err(Error::generic(format!(
                 "Usage: {} <key> <size>", Self::name()
             ).as_str()));
@@ -43,8 +44,13 @@ impl Command for AllocSetCommand {
         // 2. Allocate data
         // 3. Set the key to the data
         // 4. Activate custom allocator and compare Redis memory usage
-        let data: Vec<u8> = Vec::with_capacity(size as usize);
-        let k = r.open_key_writable(key);
+
+        //let data: Vec<u8> = Vec::with_capacity(size as usize);
+
+        let key = r.open_key_writable(key);
+
+        //key.check_type(MY_TYPE)?;
+        key.write(size.to_string().as_str())?;
 
         /*
         raw::RedisModule_ModuleTypeSetValue.unwrap()(
@@ -113,8 +119,7 @@ pub extern "C" fn AllocDelCommand_Redis(
 fn module_on_load(ctx: *mut raw::RedisModuleCtx) -> Result<(), &'static str> {
     module_init(ctx, MODULE_NAME, MODULE_VERSION)?;
 
-    // FIXME: Make this safe (use a smart pointer?)
-    unsafe { MY_TYPE.create_data_type(ctx, "mytype123") }?;
+    MY_TYPE.create_data_type(ctx, "mytype123")?;
 
     AllocSetCommand::create(ctx)?;
     AllocDelCommand::create(ctx)?;

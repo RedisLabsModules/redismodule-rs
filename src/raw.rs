@@ -6,6 +6,10 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
 
 extern crate libc;
+extern crate enum_primitive_derive;
+extern crate num_traits;
+
+use num_traits::{FromPrimitive, ToPrimitive};
 
 use libc::size_t;
 
@@ -18,64 +22,53 @@ bitflags! {
     }
 }
 
+#[derive(Primitive)]
+pub enum KeyType {
+    Empty = REDISMODULE_KEYTYPE_EMPTY as isize,
+    String = REDISMODULE_KEYTYPE_STRING as isize,
+    List = REDISMODULE_KEYTYPE_LIST as isize,
+    Hash = REDISMODULE_KEYTYPE_HASH as isize,
+    Set = REDISMODULE_KEYTYPE_SET as isize,
+    ZSet = REDISMODULE_KEYTYPE_ZSET as isize,
+    Module = REDISMODULE_KEYTYPE_MODULE as isize,
+}
 
-#[derive(Debug, PartialEq)]
-#[repr(i32)]
+impl From<c_int> for KeyType {
+    fn from(v: c_int) -> Self { KeyType::from_i32(v).unwrap() }
+}
+
+// This hack is required since derive(Primitive) requires all values to have the same type,
+// and REDISMODULE_REPLY_UNKNOWN is i32 while the rest are u32.
+// Casting to isize inside the enum definition breaks the derive(Primitive) macro.
+const REDISMODULE_REPLY_UNKNOWN_ISIZE: isize = REDISMODULE_REPLY_UNKNOWN as isize;
+const REDISMODULE_REPLY_STRING_ISIZE: isize = REDISMODULE_REPLY_STRING as isize;
+const REDISMODULE_REPLY_ERROR_ISIZE: isize  = REDISMODULE_REPLY_ERROR as isize;
+const REDISMODULE_REPLY_INTEGER_ISIZE: isize  = REDISMODULE_REPLY_INTEGER as isize;
+const REDISMODULE_REPLY_ARRAY_ISIZE: isize  = REDISMODULE_REPLY_ARRAY as isize;
+const REDISMODULE_REPLY_NULL_ISIZE: isize  = REDISMODULE_REPLY_NULL as isize;
+
+#[derive(Primitive, Debug, PartialEq)]
 pub enum ReplyType {
-    Unknown = REDISMODULE_REPLY_UNKNOWN as i32,
-    String = REDISMODULE_REPLY_STRING as i32,
-    Error = REDISMODULE_REPLY_ERROR as i32,
-    Integer = REDISMODULE_REPLY_INTEGER as i32,
-    Array = REDISMODULE_REPLY_ARRAY as i32,
-    Nil = REDISMODULE_REPLY_NULL as i32,
+    Unknown = REDISMODULE_REPLY_UNKNOWN_ISIZE,
+    String = REDISMODULE_REPLY_STRING_ISIZE,
+    Error = REDISMODULE_REPLY_ERROR_ISIZE,
+    Integer = REDISMODULE_REPLY_INTEGER_ISIZE,
+    Array = REDISMODULE_REPLY_ARRAY_ISIZE,
+    Nil = REDISMODULE_REPLY_NULL_ISIZE,
 }
 
-// Tools that can automate this:
-// https://crates.io/crates/enum_primitive
-// https://crates.io/crates/num_enum
-// https://crates.io/crates/enum-primitive-derive
-
-impl From<i32> for ReplyType {
-    fn from(v: i32) -> Self {
-        use crate::raw::ReplyType::*;
-
-        // TODO: Is there a way to do this with a `match`? We have different types of constants here.
-        if v == Unknown as i32 {
-            Unknown
-        } else if v == String as i32 {
-            String
-        } else if v == Error as i32 {
-            Error
-        } else if v == Integer as i32 {
-            Integer
-        } else if v == Array as i32 {
-            Array
-        } else if v == Nil as i32 {
-            Nil
-        } else {
-            panic!("Received unexpected reply type from Redis: {}", v)
-        }
-    }
+impl From<c_int> for ReplyType {
+    fn from(v: c_int) -> Self { ReplyType::from_i32(v).unwrap() }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-#[repr(i32)]
+#[derive(Primitive, Debug, PartialEq)]
 pub enum Status {
-    Ok = REDISMODULE_OK as i32,
-    Err = REDISMODULE_ERR as i32,
+    Ok = REDISMODULE_OK as isize,
+    Err = REDISMODULE_ERR as isize,
 }
 
 impl From<c_int> for Status {
-    fn from(v: c_int) -> Self {
-        // TODO: Is there a way to do this with a `match`? We have different types of constants here.
-        if v == REDISMODULE_OK as c_int {
-            Status::Ok
-        } else if v == REDISMODULE_ERR as c_int {
-            Status::Err
-        } else {
-            panic!("Received unexpected status from Redis: {}", v)
-        }
-    }
+    fn from(v: c_int) -> Self { Status::from_i32(v).unwrap() }
 }
 
 impl From<Status> for c_int {
@@ -92,6 +85,47 @@ impl From<Status> for Result<(), &str> {
         }
     }
 }
+
+
+#[derive(Debug)]
+pub enum CommandFlag {
+    Write,
+    Readonly,
+    Denyoom,
+    Admin,
+    Pubsub,
+    Noscript,
+    Random,
+    SortForScript,
+    Loading,
+    Stale,
+    SkipMonitor,
+    Asking,
+    Fast,
+    Movablekeys,
+}
+
+
+fn command_flag_repr(flag: &CommandFlag) -> &'static str {
+    use crate::raw::CommandFlag::*;
+    match flag {
+        Write => "write",
+        Readonly => "readonly",
+        Denyoom => "denyoom",
+        Admin => "admin",
+        Pubsub => "pubsub",
+        Noscript => "noscript",
+        Random => "random",
+        SortForScript => "sort_for_script",
+        Loading => "loading",
+        Stale => "stale",
+        SkipMonitor => "skip_monitor",
+        Asking => "asking",
+        Fast => "fast",
+        Movablekeys => "movablekeys",
+    }
+}
+
 
 pub type CommandFunc = extern "C" fn(
     ctx: *mut RedisModuleCtx,
@@ -120,8 +154,8 @@ pub fn create_command(
             firstkey,
             lastkey,
             keystep,
-        ).into()
-    };
+        )
+    }.into();
 
     status.into()
 }
@@ -160,9 +194,7 @@ extern "C" {
 
 ///////////////////////////////////////////////////////////////
 
-
 // Helper functions for the raw bindings.
-// Taken from redis-cell.
 
 pub fn call_reply_type(reply: *mut RedisModuleCallReply) -> ReplyType {
     unsafe {
@@ -269,4 +301,8 @@ pub fn string_ptr_len(str: *mut RedisModuleString, len: *mut size_t) -> *const c
 
 pub fn string_set(key: *mut RedisModuleKey, str: *mut RedisModuleString) -> Status {
     unsafe { RedisModule_StringSet.unwrap()(key, str).into() }
+}
+
+pub fn key_type(key: *mut RedisModuleKey) -> KeyType {
+    unsafe { RedisModule_KeyType.unwrap()(key) }.into()
 }
