@@ -51,18 +51,36 @@ impl Command for AllocSetCommand {
         // 2. Allocate data [OK]
         // 3. Set the key to the data [OK]
         // 4. Activate custom allocator and compare Redis memory usage [OK]
-        // 5. Handle deallocation of existing value
+        // 5. Handle deallocation of existing value [OK]
 
         let key = r.open_key_writable(key);
-        key.check_type(&MY_TYPE)?;
+        let key_type = key.verify_and_get_type(&MY_TYPE)?;
 
-        // TODO: If there is an existing value, reuse it or deallocate it.
-
-        let my = Box::into_raw(Box::new(
-            MyType {
-                data: "A".repeat(size as usize)
+        let my = match key_type {
+            raw::KeyType::Empty => {
+                // Create a new value
+                Box::new(
+                    MyType {
+                        data: "A".repeat(size as usize)
+                    }
+                )
             }
-        ));
+            _ => {
+                // There is an existing value, reuse it
+                let my = key.get_value() as *mut MyType;
+
+                if my.is_null() {
+                    r.reply_integer(0)?;
+                    return Ok(());
+                }
+
+                let mut my = unsafe { Box::from_raw(my) };
+                my.data = "B".repeat(size as usize);
+                my
+            }
+        };
+
+        let my = Box::into_raw(my);
 
         key.set_value(&MY_TYPE, my as *mut c_void)?;
         r.reply_integer(size)?;
@@ -105,9 +123,7 @@ impl Command for AllocGetCommand {
         let key = args[1];
 
         let key = r.open_key(key);
-
-        key.check_type(&MY_TYPE)?;
-
+        key.verify_and_get_type(&MY_TYPE)?;
         let my = key.get_value() as *mut MyType;
 
         if my.is_null() {
@@ -179,7 +195,7 @@ pub extern "C" fn AllocDelCommand_Redis(
 fn module_on_load(ctx: *mut raw::RedisModuleCtx) -> Result<(), &'static str> {
     module_init(ctx, MODULE_NAME, MODULE_VERSION)?;
 
-    // TODO: Call this from inside module_init
+// TODO: Call this from inside module_init
     redismodule::use_redis_alloc();
 
     MY_TYPE.create_data_type(ctx, "mytype123")?;

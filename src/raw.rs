@@ -15,6 +15,7 @@ use libc::size_t;
 
 pub use crate::redisraw::bindings::*;
 use crate::types::redis_log;
+use crate::error::Error;
 
 bitflags! {
     pub struct KeyMode: c_int {
@@ -332,11 +333,11 @@ pub fn module_type_set_value(
     }.into()
 }
 
-pub fn check_key_type(
+pub fn verify_and_get_type(
     ctx: *mut RedisModuleCtx,
     key: *mut RedisModuleKey,
     redis_type: *mut RedisModuleType,
-) -> Result<(), &'static str> {
+) -> Result<KeyType, Error> {
 
     let key_type = key_type(key);
 
@@ -346,12 +347,12 @@ pub fn check_key_type(
     if key_type != KeyType::Empty {
         let raw_type = module_type_get_type(key);
         if raw_type != redis_type{
-            return Err("Key has existing value with wrong Redis type");
+            return Err(Error::generic("Key has existing value with wrong Redis type"));
         }
         redis_log(ctx, "Existing key has the correct type");
     }
 
     redis_log(ctx, "All OK");
 
-    Ok(())
+    Ok(key_type)
 }

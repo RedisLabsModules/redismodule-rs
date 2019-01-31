@@ -4,6 +4,7 @@
 extern crate bitflags;
 
 pub mod redisraw;
+pub mod error;
 pub mod raw;
 pub mod types;
 
@@ -34,7 +35,6 @@ extern crate num_traits;
 #[macro_use]
 mod macros;
 
-pub mod error;
 
 use std::alloc::{System, GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT, Ordering::SeqCst};
@@ -254,10 +254,6 @@ pub enum KeyMode {
     ReadWrite,
 }
 
-trait RedisKeyType {
-    fn check_type(&self, redis_type: &RedisType) -> Result<(), Error>;
-}
-
 /// `RedisKey` is an abstraction over a Redis key that allows readonly
 /// operations.
 ///
@@ -299,15 +295,12 @@ impl RedisKey {
         Ok(val)
     }
 
-    pub fn check_type(&self, redis_type: &RedisType) -> Result<(), Error> {
-        match raw::check_key_type(
+    pub fn verify_and_get_type(&self, redis_type: &RedisType) -> Result<raw::KeyType, Error> {
+        raw::verify_and_get_type(
             self.ctx,
             self.key_inner,
             *redis_type.raw_type.borrow_mut(),
-        ) {
-            Ok(_) => Ok(()),
-            Err(s) => Err(Error::generic(s))
-        }
+        )
     }
 
     pub fn get_value(&self) -> *mut c_void {
@@ -386,15 +379,16 @@ impl RedisKeyWritable {
         }
     }
 
-    pub fn check_type(&self, redis_type: &RedisType) -> Result<(), Error> {
-        match raw::check_key_type(
+    pub fn verify_and_get_type(&self, redis_type: &RedisType) -> Result<raw::KeyType, Error> {
+        raw::verify_and_get_type(
             self.ctx,
             self.key_inner,
             *redis_type.raw_type.borrow_mut(),
-        ) {
-            Ok(_) => Ok(()),
-            Err(s) => Err(Error::generic(s))
-        }
+        )
+    }
+
+    pub fn get_value(&self) -> *mut c_void {
+        raw::module_type_get_value(self.key_inner)
     }
 
     pub fn set_value(&self, redis_type: &RedisType, value: *mut c_void) -> Result<(), Error> {
