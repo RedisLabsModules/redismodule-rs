@@ -67,6 +67,11 @@ unsafe impl GlobalAlloc for RedisAlloc {
 
 #[global_allocator]
 static ALLOC: RedisAlloc = RedisAlloc;
+
+pub fn use_redis_alloc() {
+    eprintln!("Using Redis allocator");
+    USE_REDIS_ALLOC.store(true, SeqCst);
+}
 ////////////////////////////////////////////////////////////
 
 

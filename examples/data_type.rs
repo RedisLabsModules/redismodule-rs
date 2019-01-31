@@ -50,10 +50,13 @@ impl Command for AllocSetCommand {
         // 1. Open key [OK]
         // 2. Allocate data [OK]
         // 3. Set the key to the data [OK]
-        // 4. Activate custom allocator and compare Redis memory usage
+        // 4. Activate custom allocator and compare Redis memory usage [OK]
+        // 5. Handle deallocation of existing value
 
         let key = r.open_key_writable(key);
         key.check_type(&MY_TYPE)?;
+
+        // TODO: If there is an existing value, reuse it or deallocate it.
 
         let my = Box::into_raw(Box::new(
             MyType {
@@ -175,6 +178,9 @@ pub extern "C" fn AllocDelCommand_Redis(
 
 fn module_on_load(ctx: *mut raw::RedisModuleCtx) -> Result<(), &'static str> {
     module_init(ctx, MODULE_NAME, MODULE_VERSION)?;
+
+    // TODO: Call this from inside module_init
+    redismodule::use_redis_alloc();
 
     MY_TYPE.create_data_type(ctx, "mytype123")?;
 
