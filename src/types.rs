@@ -5,17 +5,17 @@ use std::os::raw::{c_int, c_void};
 
 use crate::raw;
 
-pub struct RedisModuleType {
-    raw_type: RefCell<*mut raw::RedisModuleType>,
+pub struct RedisType {
+    pub raw_type: RefCell<*mut raw::RedisModuleType>,
 }
 
 // We want to be able to create static instances of this type,
 // which means we need to implement Sync.
-unsafe impl Sync for RedisModuleType {}
+unsafe impl Sync for RedisType {}
 
-impl RedisModuleType {
+impl RedisType {
     pub const fn new() -> Self {
-        RedisModuleType {
+        RedisType {
             raw_type: RefCell::new(ptr::null_mut()),
         }
     }
@@ -70,7 +70,7 @@ impl RedisModuleType {
 
 // FIXME: Generate these methods with a macro, since we need a set for each custom data type.
 
-#[allow(non_snake_case)]
+#[allow(non_snake_case,unused)]
 #[no_mangle] // FIXME This should be unneeded
 pub unsafe extern "C" fn MyTypeRdbLoad(
     rdb: *mut raw::RedisModuleIO,
@@ -80,7 +80,7 @@ pub unsafe extern "C" fn MyTypeRdbLoad(
     ptr::null_mut()
 }
 
-#[allow(non_snake_case)]
+#[allow(non_snake_case,unused)]
 #[no_mangle]
 pub unsafe extern "C" fn MyTypeRdbSave(
     rdb: *mut raw::RedisModuleIO,
@@ -89,7 +89,7 @@ pub unsafe extern "C" fn MyTypeRdbSave(
 //    eprintln!("MyTypeRdbSave");
 }
 
-#[allow(non_snake_case)]
+#[allow(non_snake_case,unused)]
 #[no_mangle]
 pub unsafe extern "C" fn MyTypeAofRewrite(
     aof: *mut raw::RedisModuleIO,
@@ -99,7 +99,7 @@ pub unsafe extern "C" fn MyTypeAofRewrite(
 //    eprintln!("MyTypeAofRewrite");
 }
 
-#[allow(non_snake_case)]
+#[allow(non_snake_case,unused)]
 #[no_mangle]
 pub unsafe extern "C" fn MyTypeFree(
     value: *mut c_void,
@@ -107,6 +107,7 @@ pub unsafe extern "C" fn MyTypeFree(
 //    eprintln!("MyTypeFree");
 }
 
+// TODO: Move to raw
 pub fn redis_log(
     ctx: *mut raw::RedisModuleCtx,
     msg: &str,

@@ -3,17 +3,18 @@
 #![allow(dead_code)]
 
 use std::ffi::CString;
-use std::os::raw::{c_char, c_int, c_long, c_longlong};
+use std::os::raw::{c_char, c_int, c_long, c_longlong, c_void};
 
 extern crate libc;
 extern crate enum_primitive_derive;
 extern crate num_traits;
 
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 
 use libc::size_t;
 
 pub use crate::redisraw::bindings::*;
+use crate::types::redis_log;
 
 bitflags! {
     pub struct KeyMode: c_int {
@@ -22,7 +23,7 @@ bitflags! {
     }
 }
 
-#[derive(Primitive)]
+#[derive(Primitive, Debug, PartialEq)]
 pub enum KeyType {
     Empty = REDISMODULE_KEYTYPE_EMPTY as isize,
     String = REDISMODULE_KEYTYPE_STRING as isize,
@@ -42,10 +43,10 @@ impl From<c_int> for KeyType {
 // Casting to isize inside the enum definition breaks the derive(Primitive) macro.
 const REDISMODULE_REPLY_UNKNOWN_ISIZE: isize = REDISMODULE_REPLY_UNKNOWN as isize;
 const REDISMODULE_REPLY_STRING_ISIZE: isize = REDISMODULE_REPLY_STRING as isize;
-const REDISMODULE_REPLY_ERROR_ISIZE: isize  = REDISMODULE_REPLY_ERROR as isize;
-const REDISMODULE_REPLY_INTEGER_ISIZE: isize  = REDISMODULE_REPLY_INTEGER as isize;
-const REDISMODULE_REPLY_ARRAY_ISIZE: isize  = REDISMODULE_REPLY_ARRAY as isize;
-const REDISMODULE_REPLY_NULL_ISIZE: isize  = REDISMODULE_REPLY_NULL as isize;
+const REDISMODULE_REPLY_ERROR_ISIZE: isize = REDISMODULE_REPLY_ERROR as isize;
+const REDISMODULE_REPLY_INTEGER_ISIZE: isize = REDISMODULE_REPLY_INTEGER as isize;
+const REDISMODULE_REPLY_ARRAY_ISIZE: isize = REDISMODULE_REPLY_ARRAY as isize;
+const REDISMODULE_REPLY_NULL_ISIZE: isize = REDISMODULE_REPLY_NULL as isize;
 
 #[derive(Primitive, Debug, PartialEq)]
 pub enum ReplyType {
@@ -305,4 +306,52 @@ pub fn string_set(key: *mut RedisModuleKey, str: *mut RedisModuleString) -> Stat
 
 pub fn key_type(key: *mut RedisModuleKey) -> KeyType {
     unsafe { RedisModule_KeyType.unwrap()(key) }.into()
+}
+
+pub fn module_type_get_type(key: *mut RedisModuleKey) -> *mut RedisModuleType {
+    unsafe { RedisModule_ModuleTypeGetType.unwrap()(key) }
+}
+
+pub fn module_type_get_value(key: *mut RedisModuleKey) -> *mut c_void {
+    unsafe {
+        RedisModule_ModuleTypeGetValue.unwrap()(key)
+    }.into()
+}
+
+pub fn module_type_set_value(
+    key: *mut RedisModuleKey,
+    redis_type: *mut RedisModuleType,
+    value: *mut c_void,
+) -> Status {
+    unsafe {
+        RedisModule_ModuleTypeSetValue.unwrap()(
+            key,
+            redis_type,
+            value,
+        )
+    }.into()
+}
+
+pub fn check_key_type(
+    ctx: *mut RedisModuleCtx,
+    key: *mut RedisModuleKey,
+    redis_type: *mut RedisModuleType,
+) -> Result<(), &'static str> {
+
+    let key_type = key_type(key);
+
+    // TODO: Make log() a method of the Redis and Key structs.
+    redis_log(ctx, format!("key type: {:?}", key_type).as_str());
+
+    if key_type != KeyType::Empty {
+        let raw_type = module_type_get_type(key);
+        if raw_type != redis_type{
+            return Err("Key has existing value with wrong Redis type");
+        }
+        redis_log(ctx, "Existing key has the correct type");
+    }
+
+    redis_log(ctx, "All OK");
+
+    Ok(())
 }

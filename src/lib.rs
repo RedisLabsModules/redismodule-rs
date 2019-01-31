@@ -41,7 +41,7 @@ use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT, Ordering::SeqCst};
 use std::ffi::c_void;
 
 use crate::error::Error;
-use crate::types::RedisModuleType;
+use crate::types::RedisType;
 
 struct RedisAlloc;
 
@@ -249,6 +249,10 @@ pub enum KeyMode {
     ReadWrite,
 }
 
+trait RedisKeyType {
+    fn check_type(&self, redis_type: &RedisType) -> Result<(), Error>;
+}
+
 /// `RedisKey` is an abstraction over a Redis key that allows readonly
 /// operations.
 ///
@@ -288,6 +292,21 @@ impl RedisKey {
             Some(read_key(self.key_inner)?)
         };
         Ok(val)
+    }
+
+    pub fn check_type(&self, redis_type: &RedisType) -> Result<(), Error> {
+        match raw::check_key_type(
+            self.ctx,
+            self.key_inner,
+            *redis_type.raw_type.borrow_mut(),
+        ) {
+            Ok(_) => Ok(()),
+            Err(s) => Err(Error::generic(s))
+        }
+    }
+
+    pub fn get_value(&self) -> *mut c_void {
+        raw::module_type_get_value(self.key_inner)
     }
 }
 
@@ -362,20 +381,35 @@ impl RedisKeyWritable {
         }
     }
 
-    pub fn check_type(&self, redis_type: RedisModuleType) -> Result<(), Error> {
-        /*
-        int type = RedisModule_KeyType(key);
-        if (type != REDISMODULE_KEYTYPE_EMPTY &&
-            RedisModule_ModuleTypeGetType(key) != HelloType)
-        {
-            return RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
+    pub fn check_type(&self, redis_type: &RedisType) -> Result<(), Error> {
+        match raw::check_key_type(
+            self.ctx,
+            self.key_inner,
+            *redis_type.raw_type.borrow_mut(),
+        ) {
+            Ok(_) => Ok(()),
+            Err(s) => Err(Error::generic(s))
         }
-        */
-        //raw::key_type(key)
+    }
 
-        Ok(())
+    pub fn set_value(&self, redis_type: &RedisType, value: *mut c_void) -> Result<(), Error> {
+        raw::module_type_set_value(
+            self.key_inner,
+            *redis_type.raw_type.borrow_mut(),
+            value,
+        ).into()
     }
 }
+
+impl From<raw::Status> for Result<(), Error> {
+    fn from(s: raw::Status) -> Self {
+        match s {
+            raw::Status::Ok => Ok(()),
+            raw::Status::Err => Err(Error::generic("Generic error")),
+        }
+    }
+}
+
 
 impl Drop for RedisKeyWritable {
     // Frees resources appropriately as a RedisKey goes out of scope.

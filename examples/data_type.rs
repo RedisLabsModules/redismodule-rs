@@ -1,3 +1,5 @@
+use std::os::raw::c_void;
+
 extern crate libc;
 
 use libc::c_int;
@@ -9,12 +11,17 @@ use redismodule::Command;
 use redismodule::raw;
 use redismodule::Redis;
 use redismodule::raw::module_init;
-use redismodule::types::RedisModuleType;
+use redismodule::types::RedisType;
 
 const MODULE_NAME: &str = "alloc";
 const MODULE_VERSION: c_int = 1;
 
-static MY_TYPE: RedisModuleType = RedisModuleType::new();
+#[allow(unused)]
+struct MyType {
+    data: String,
+}
+
+static MY_TYPE: RedisType = RedisType::new();
 
 struct AllocSetCommand;
 
@@ -40,26 +47,21 @@ impl Command for AllocSetCommand {
         let size = parse_i64(args[2])?;
 
         // TODO:
-        // 1. Open key
-        // 2. Allocate data
-        // 3. Set the key to the data
+        // 1. Open key [OK]
+        // 2. Allocate data [OK]
+        // 3. Set the key to the data [OK]
         // 4. Activate custom allocator and compare Redis memory usage
 
-        //let data: Vec<u8> = Vec::with_capacity(size as usize);
-
         let key = r.open_key_writable(key);
+        key.check_type(&MY_TYPE)?;
 
-        //key.check_type(MY_TYPE)?;
-        key.write(size.to_string().as_str())?;
+        let my = Box::into_raw(Box::new(
+            MyType {
+                data: "A".repeat(size as usize)
+            }
+        ));
 
-        /*
-        raw::RedisModule_ModuleTypeSetValue.unwrap()(
-            k,
-            t,
-            data,
-        );
-        */
-
+        key.set_value(&MY_TYPE, my as *mut c_void)?;
         r.reply_integer(size)?;
 
         Ok(())
@@ -73,6 +75,61 @@ pub extern "C" fn AllocSetCommand_Redis(
     argc: c_int,
 ) -> c_int {
     AllocSetCommand::execute(ctx, argv, argc).into()
+}
+
+//////////////////////////////////////////////////////
+
+struct AllocGetCommand;
+
+impl Command for AllocGetCommand {
+    fn name() -> &'static str { "alloc.get" }
+
+    fn external_command() -> raw::CommandFunc { AllocGetCommand_Redis }
+
+    fn str_flags() -> &'static str { "" }
+
+    // Run the command.
+    fn run(r: Redis, args: &[&str]) -> Result<(), Error> {
+        if args.len() != 2 {
+            // FIXME: Use RedisModule_WrongArity instead. Return an ArityError here and
+            // in the low-level implementation call RM_WrongArity.
+            return Err(Error::generic(format!(
+                "Usage: {} <key>", Self::name()
+            ).as_str()));
+        }
+
+        // the first argument is command name (ignore it)
+        let key = args[1];
+
+        let key = r.open_key(key);
+
+        key.check_type(&MY_TYPE)?;
+
+        let my = key.get_value() as *mut MyType;
+
+        if my.is_null() {
+            r.reply_integer(0)?;
+            return Ok(());
+        }
+
+        let my = unsafe { &mut *my };
+        let size = my.data.len();
+
+        r.reply_array(2)?;
+        r.reply_integer(size as i64)?;
+        r.reply_string(my.data.as_str())?;
+
+        Ok(())
+    }
+}
+
+#[allow(non_snake_case)]
+pub extern "C" fn AllocGetCommand_Redis(
+    ctx: *mut raw::RedisModuleCtx,
+    argv: *mut *mut raw::RedisModuleString,
+    argc: c_int,
+) -> c_int {
+    AllocGetCommand::execute(ctx, argv, argc).into()
 }
 
 //////////////////////////////////////////////////////
@@ -96,7 +153,7 @@ impl Command for AllocDelCommand {
         }
 
         // the first argument is command name (ignore it)
-        let key = args[1];
+        let _key = args[1];
 
         r.reply_string("OK")?;
 
@@ -122,6 +179,7 @@ fn module_on_load(ctx: *mut raw::RedisModuleCtx) -> Result<(), &'static str> {
     MY_TYPE.create_data_type(ctx, "mytype123")?;
 
     AllocSetCommand::create(ctx)?;
+    AllocGetCommand::create(ctx)?;
     AllocDelCommand::create(ctx)?;
 
     Ok(())
