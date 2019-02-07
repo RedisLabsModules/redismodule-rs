@@ -2,7 +2,6 @@ use std::os::raw::c_long;
 use std::ffi::CString;
 
 use crate::raw;
-use crate::error::Error;
 use crate::LogLevel;
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::{RedisString, RedisError, RedisValue, RedisResult};
@@ -37,7 +36,7 @@ impl Context {
         let _ = command;
         let _ = args;
 
-        return Err(RedisError::String("not implemented"));
+        return Err(RedisError::Str("not implemented"));
     }
 
     pub fn reply(&self, r: RedisResult) -> raw::Status {
@@ -74,6 +73,11 @@ impl Context {
                 let msg = CString::new(s).unwrap();
                 raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
             }
+
+            Err(RedisError::Str(s)) => unsafe {
+                let msg = CString::new(s).unwrap();
+                raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
+            }
         }
     }
 
@@ -83,12 +87,5 @@ impl Context {
 
     pub fn open_key_writable(&self, key: &str) -> RedisKeyWritable {
         RedisKeyWritable::open(self.ctx, key)
-    }
-}
-
-fn handle_status(status: raw::Status, message: &str) -> Result<(), Error> {
-    match status {
-        raw::Status::Ok => Ok(()),
-        raw::Status::Err => Err(error!(message)),
     }
 }

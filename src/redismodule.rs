@@ -9,7 +9,8 @@ use crate::raw;
 #[derive(Debug)]
 pub enum RedisError {
     WrongArity,
-    String(&'static str),
+    Str(&'static str),
+    String(String),
 }
 
 #[derive(Debug)]

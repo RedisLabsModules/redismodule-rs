@@ -1,14 +1,8 @@
 use std::ffi::CString;
 
-extern crate libc;
-
-use libc::c_int;
-
 #[macro_use]
 extern crate redismodule;
-
-use redismodule::Context;
-use redismodule::{Command, RedisResult, RedisValue, RedisError};
+use redismodule::{Context, Command, RedisResult, RedisValue, RedisError};
 
 fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
     if args.len() != 3 {
@@ -31,7 +25,7 @@ fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
 
 fn parse_integer(arg: &str) -> Result<i64, RedisError> {
     arg.parse::<i64>()
-        .map_err(|_| RedisError::String("Couldn't parse as integer"))
+        .map_err(|_| RedisError::String(format!("Couldn't parse as integer: {}", arg)))
 }
 
 //////////////////////////////////////////////////////
