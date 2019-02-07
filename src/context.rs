@@ -1,10 +1,11 @@
-use std::os::raw::{c_long, c_longlong};
+use std::os::raw::c_long;
 use std::ffi::CString;
 
 use crate::raw;
 use crate::error::Error;
-use crate::{RedisString, LogLevel, Reply};
-use crate::key::{RedisKey,RedisKeyWritable};
+use crate::LogLevel;
+use crate::key::{RedisKey, RedisKeyWritable};
+use crate::{RedisString, RedisError, RedisValue, RedisResult};
 
 /// Redis is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
@@ -14,88 +15,74 @@ pub struct Context {
 
 impl Context {
     pub fn new(ctx: *mut raw::RedisModuleCtx) -> Self {
-        Self {ctx}
-    }
-
-    /// Coerces a Redis string as an integer.
-    ///
-    /// Redis is pretty dumb about data types. It nominally supports strings
-    /// versus integers, but an integer set in the store will continue to look
-    /// like a string (i.e. "1234") until some other operation like INCR forces
-    /// its coercion.
-    ///
-    /// This method coerces a Redis string that looks like an integer into an
-    /// integer response. All other types of replies are passed through
-    /// unmodified.
-    pub fn coerce_integer(
-        &self,
-        reply_res: Result<Reply, Error>,
-    ) -> Result<Reply, Error> {
-        match reply_res {
-            Ok(Reply::String(s)) => match s.parse::<i64>() {
-                Ok(n) => Ok(Reply::Integer(n)),
-                _ => Ok(Reply::String(s)),
-            },
-            _ => reply_res,
-        }
-    }
-
-    pub fn create_string(&self, s: &str) -> RedisString {
-        RedisString::create(self.ctx, s)
+        Self { ctx }
     }
 
     pub fn log(&self, level: LogLevel, message: &str) {
         let level = CString::new(format!("{:?}", level).to_lowercase()).unwrap();
         let fmt = CString::new(message).unwrap();
-        raw::log(
-            self.ctx,
-            level.as_ptr(),
-            fmt.as_ptr(),
-        );
+        unsafe { raw::RedisModule_Log.unwrap()(self.ctx, level.as_ptr(), fmt.as_ptr()) }
     }
 
     pub fn log_debug(&self, message: &str) {
-        // Note that we log our debug messages as notice level in Redis. This
-        // is so that they'll show up with default configuration. Our debug
-        // logging will get compiled out in a release build so this won't
-        // result in undue noise in production.
         self.log(LogLevel::Notice, message);
     }
 
-    /// Opens a Redis key for read access.
+    pub fn call(&self, command: &str, args: &[&str]) -> RedisResult {
+        let terminated_args: Vec<RedisString> = args.iter()
+            .map(|s| RedisString::create(self.ctx, s))
+            .collect();
+
+        let _ = terminated_args;
+        let _ = command;
+        let _ = args;
+
+        return Err(RedisError::String("not implemented"));
+    }
+
+    pub fn reply(&self, r: RedisResult) -> raw::Status {
+        match r {
+            Ok(RedisValue::Integer(v)) => unsafe {
+                raw::RedisModule_ReplyWithLongLong.unwrap()(self.ctx, v).into()
+            }
+
+            Ok(RedisValue::String(s)) => unsafe {
+                raw::RedisModule_ReplyWithString.unwrap()(
+                    self.ctx,
+                    RedisString::create(self.ctx, s.as_ref()).inner).into()
+            }
+
+            Ok(RedisValue::Array(array)) => {
+                unsafe {
+                    // According to the Redis source code this always succeeds,
+                    // so there is no point in checking its return value.
+                    raw::RedisModule_ReplyWithArray.unwrap()(self.ctx, array.len() as c_long);
+                }
+
+                for elem in array {
+                    self.reply(Ok(elem));
+                }
+
+                raw::Status::Ok
+            }
+
+            Err(RedisError::WrongArity) => unsafe {
+                raw::RedisModule_WrongArity.unwrap()(self.ctx).into()
+            }
+
+            Err(RedisError::String(s)) => unsafe {
+                let msg = CString::new(s).unwrap();
+                raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
+            }
+        }
+    }
+
     pub fn open_key(&self, key: &str) -> RedisKey {
         RedisKey::open(self.ctx, key)
     }
 
-    /// Opens a Redis key for read and write access.
     pub fn open_key_writable(&self, key: &str) -> RedisKeyWritable {
         RedisKeyWritable::open(self.ctx, key)
-    }
-
-    /// Tells Redis that we're about to reply with an (Redis) array.
-    ///
-    /// Used by invoking once with the expected length and then calling any
-    /// combination of the other reply_* methods exactly that number of times.
-    pub fn reply_array(&self, len: i64) -> Result<(), Error> {
-        handle_status(
-            raw::reply_with_array(self.ctx, len as c_long),
-            "Could not reply with long",
-        )
-    }
-
-    pub fn reply_integer(&self, integer: i64) -> Result<(), Error> {
-        handle_status(
-            raw::reply_with_long_long(self.ctx, integer as c_longlong),
-            "Could not reply with longlong",
-        )
-    }
-
-    pub fn reply_string(&self, message: &str) -> Result<(), Error> {
-        let redis_str = self.create_string(message);
-        handle_status(
-            raw::reply_with_string(self.ctx, redis_str.str_inner),
-            "Could not reply with string",
-        )
     }
 }
 

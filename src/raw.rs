@@ -73,12 +73,6 @@ impl From<c_int> for Status {
     fn from(v: c_int) -> Self { Status::from_i32(v).unwrap() }
 }
 
-impl From<Status> for c_int {
-    fn from(s: Status) -> Self {
-        s as c_int
-    }
-}
-
 impl From<Status> for Result<(), &str> {
     fn from(s: Status) -> Self {
         match s {
@@ -188,7 +182,7 @@ pub fn module_init(
 extern "C" {
     pub fn Export_RedisModule_Init(
         ctx: *mut RedisModuleCtx,
-        modulename: *const c_char,
+        module_name: *const c_char,
         module_version: c_int,
         api_version: c_int,
     ) -> c_int;
@@ -230,26 +224,6 @@ pub fn close_key(kp: *mut RedisModuleKey) {
     unsafe {
         RedisModule_CloseKey.unwrap()(kp)
     }
-}
-
-pub fn create_string(
-    ctx: *mut RedisModuleCtx,
-    ptr: *const c_char,
-    len: size_t,
-) -> *mut RedisModuleString {
-    unsafe { RedisModule_CreateString.unwrap()(ctx, ptr, len) }
-}
-
-pub fn free_string(ctx: *mut RedisModuleCtx, str: *mut RedisModuleString) {
-    unsafe { RedisModule_FreeString.unwrap()(ctx, str) }
-}
-
-pub fn get_selected_db(ctx: *mut RedisModuleCtx) -> c_int {
-    unsafe { RedisModule_GetSelectedDb.unwrap()(ctx) }
-}
-
-pub fn log(ctx: *mut RedisModuleCtx, level: *const c_char, fmt: *const c_char) {
-    unsafe { RedisModule_Log.unwrap()(ctx, level, fmt) }
 }
 
 pub fn open_key(

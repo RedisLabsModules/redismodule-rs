@@ -34,7 +34,7 @@ pub struct RedisKey {
 impl RedisKey {
     pub fn open(ctx: *mut raw::RedisModuleCtx, key: &str) -> RedisKey {
         let key_str = RedisString::create(ctx, key);
-        let key_inner = raw::open_key(ctx, key_str.str_inner, to_raw_mode(KeyMode::Read));
+        let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::Read));
         RedisKey {
             ctx,
             key_inner,
@@ -95,7 +95,7 @@ impl RedisKeyWritable {
     pub fn open(ctx: *mut raw::RedisModuleCtx, key: &str) -> RedisKeyWritable {
         let key_str = RedisString::create(ctx, key);
         let key_inner =
-            raw::open_key(ctx, key_str.str_inner, to_raw_mode(KeyMode::ReadWrite));
+            raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::ReadWrite));
         RedisKeyWritable {
             ctx,
             key_inner,
@@ -135,7 +135,7 @@ impl RedisKeyWritable {
 
     pub fn write(&self, val: &str) -> Result<(), Error> {
         let val_str = RedisString::create(self.ctx, val);
-        match raw::string_set(self.key_inner, val_str.str_inner) {
+        match raw::string_set(self.key_inner, val_str.inner) {
             raw::Status::Ok => Ok(()),
             raw::Status::Err => Err(error!("Error while setting key")),
         }

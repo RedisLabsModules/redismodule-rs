@@ -1,132 +1,93 @@
+use std::ffi::CString;
+
 extern crate libc;
 
 use libc::c_int;
 
 extern crate redismodule;
 
-use redismodule::error::Error;
-use redismodule::CommandOld;
 use redismodule::raw;
 use redismodule::Context;
-use redismodule::raw::module_init;
+use redismodule::{Command, RedisResult, RedisValue, RedisError};
 
 const MODULE_NAME: &str = "hello";
-const MODULE_VERSION: c_int = 1;
+const MODULE_VERSION: u32 = 1;
 
 
-//////////////////////////////////////////////////////
-
-struct HelloMulCommand;
-
-impl CommandOld for HelloMulCommand {
-    fn name() -> &'static str { "hello.mul" }
-
-    fn external_command() -> raw::CommandFunc { HelloMulCommand_Redis }
-
-    fn str_flags() -> &'static str { "write" }
-
-    // Run the command.
-    fn run(r: Context, args: &[&str]) -> Result<(), Error> {
-        if args.len() != 3 {
-            return Err(Error::generic(format!(
-                "Usage: {} <m1> <m2>", Self::name()
-            ).as_str()));
-        }
-
-        // the first argument is command name (ignore it)
-        let m1 = parse_i64(args[1])?;
-        let m2 = parse_i64(args[2])?;
-
-        r.reply_array(3)?;
-        r.reply_integer(m1)?;
-        r.reply_integer(m2)?;
-        r.reply_integer(m1 * m2)?;
-
-        Ok(())
+fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
+    if args.len() != 3 {
+        return Err(RedisError::WrongArity);
     }
-}
 
-#[allow(non_snake_case)]
-pub extern "C" fn HelloMulCommand_Redis(
-    ctx: *mut raw::RedisModuleCtx,
-    argv: *mut *mut raw::RedisModuleString,
-    argc: c_int,
-) -> c_int {
-    HelloMulCommand::execute(ctx, argv, argc).into()
-}
+    // TODO: Write generic RedisValue::parse method
+    if let RedisValue::Integer(m1) = parse_integer(&args[1])? {
+        if let RedisValue::Integer(m2) = parse_integer(&args[2])? {
+            let result = m1 * m2;
 
-//////////////////////////////////////////////////////
-
-struct HelloAddCommand;
-
-impl CommandOld for HelloAddCommand {
-    fn name() -> &'static str { "hello.add" }
-
-    fn external_command() -> raw::CommandFunc { HelloAddCommand_Redis }
-
-    fn str_flags() -> &'static str { "write" }
-
-    // Run the command.
-    fn run(r: Context, args: &[&str]) -> Result<(), Error> {
-        if args.len() != 3 {
-            // FIXME: Use RedisModule_WrongArity instead?
-            return Err(Error::generic(format!(
-                "Usage: {} <m1> <m2>", Self::name()
-            ).as_str()));
+            return Ok(RedisValue::Array(
+                vec![m1, m2, result]
+                    .into_iter()
+                    .map(|v| RedisValue::Integer(v))
+                    .collect()));
         }
-
-        // the first argument is command name (ignore it)
-        let m1 = parse_i64(args[1])?;
-        let m2 = parse_i64(args[2])?;
-
-        r.reply_array(3)?;
-        r.reply_integer(m1)?;
-        r.reply_integer(m2)?;
-        r.reply_integer(m1 + m2)?;
-
-        Ok(())
     }
-}
 
-// TODO: Write a macro to generate these glue functions
-// TODO: Look at https://github.com/faineance/redismodule which has some macros
-
-#[allow(non_snake_case)]
-pub extern "C" fn HelloAddCommand_Redis(
-    ctx: *mut raw::RedisModuleCtx,
-    argv: *mut *mut raw::RedisModuleString,
-    argc: c_int,
-) -> c_int {
-    HelloAddCommand::execute(ctx, argv, argc).into()
+    Err(RedisError::String("Something went wrong"))
 }
 
 //////////////////////////////////////////////////////
 
-fn module_on_load(ctx: *mut raw::RedisModuleCtx) -> Result<(), &'static str> {
-    module_init(ctx, MODULE_NAME, MODULE_VERSION)?;
-
-    HelloMulCommand::create(ctx)?;
-    HelloAddCommand::create(ctx)?;
-
-    Ok(())
-}
-
-#[allow(non_snake_case)]
 #[no_mangle]
+#[allow(non_snake_case)]
 pub extern "C" fn RedisModule_OnLoad(
     ctx: *mut raw::RedisModuleCtx,
     _argv: *mut *mut raw::RedisModuleString,
     _argc: c_int,
 ) -> c_int {
+    unsafe {
+        //////////////////
 
-    if let Err(_) = module_on_load(ctx) {
-        return raw::Status::Err.into()
+        let module_name = MODULE_NAME;
+        let module_version = MODULE_VERSION;
+
+        let commands = [
+            Command::new("hello.mul", hello_mul, "write"),
+        ];
+
+        //////////////////
+
+        let module_name = CString::new(module_name).unwrap();
+        let module_version = module_version as c_int;
+
+        if raw::Export_RedisModule_Init(
+            ctx,
+            module_name.as_ptr(),
+            module_version,
+            raw::REDISMODULE_APIVER_1 as c_int,
+        ) == raw::Status::Err as _ { return raw::Status::Err as _; }
+
+        for command in &commands {
+            let name = CString::new(command.name).unwrap();
+            let flags = CString::new(command.flags).unwrap();
+            let (firstkey, lastkey, keystep) = (1, 1, 1);
+
+            if raw::RedisModule_CreateCommand.unwrap()(
+                ctx,
+                name.as_ptr(),
+                command.wrap_handler(),
+                flags.as_ptr(),
+                firstkey, lastkey, keystep,
+            ) == raw::Status::Err as _ { return raw::Status::Err as _; }
+        }
+
+        raw::Status::Ok as _
     }
-
-    raw::Status::Ok.into()
 }
 
-fn parse_i64(arg: &str) -> Result<i64, Error> {
+fn parse_integer(arg: &str) -> RedisResult {
     arg.parse::<i64>()
-        .map_err(|_| Error::generic(format!("Couldn't parse as integer: {}", arg).as_str()))
+        .map_err(|_| RedisError::String("Couldn't parse as integer"))
+        .map(|v| RedisValue::Integer(v))
+    //Error::generic(format!("Couldn't parse as integer: {}", arg).as_str()))
 }
+

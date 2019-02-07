@@ -1,3 +1,4 @@
+/*
 use std::os::raw::c_void;
 
 extern crate libc;
@@ -228,3 +229,4 @@ fn parse_i64(arg: &str) -> Result<i64, Error> {
     arg.parse::<i64>()
         .map_err(|_| Error::generic(format!("Couldn't parse as integer: {}", arg).as_str()))
 }
+*/
