@@ -7,11 +7,11 @@ use libc::c_int;
 extern crate redismodule;
 
 use redismodule::error::Error;
-use redismodule::Command;
+use redismodule::CommandOld;
 use redismodule::raw;
-use redismodule::Redis;
+use redismodule::Context;
 use redismodule::raw::module_init;
-use redismodule::types::RedisType;
+use redismodule::native_types::RedisType;
 
 const MODULE_NAME: &str = "alloc";
 const MODULE_VERSION: c_int = 1;
@@ -25,7 +25,7 @@ static MY_TYPE: RedisType = RedisType::new();
 
 struct AllocSetCommand;
 
-impl Command for AllocSetCommand {
+impl CommandOld for AllocSetCommand {
     fn name() -> &'static str { "alloc.set" }
 
     fn external_command() -> raw::CommandFunc { AllocSetCommand_Redis }
@@ -33,7 +33,7 @@ impl Command for AllocSetCommand {
     fn str_flags() -> &'static str { "write" }
 
     // Run the command.
-    fn run(r: Redis, args: &[&str]) -> Result<(), Error> {
+    fn run(r: Context, args: &[&str]) -> Result<(), Error> {
         if args.len() != 3 {
             // FIXME: Use RedisModule_WrongArity instead. Return an ArityError here and
             // in the low-level implementation call RM_WrongArity.
@@ -102,7 +102,7 @@ pub extern "C" fn AllocSetCommand_Redis(
 
 struct AllocGetCommand;
 
-impl Command for AllocGetCommand {
+impl CommandOld for AllocGetCommand {
     fn name() -> &'static str { "alloc.get" }
 
     fn external_command() -> raw::CommandFunc { AllocGetCommand_Redis }
@@ -110,7 +110,7 @@ impl Command for AllocGetCommand {
     fn str_flags() -> &'static str { "" }
 
     // Run the command.
-    fn run(r: Redis, args: &[&str]) -> Result<(), Error> {
+    fn run(r: Context, args: &[&str]) -> Result<(), Error> {
         if args.len() != 2 {
             // FIXME: Use RedisModule_WrongArity instead. Return an ArityError here and
             // in the low-level implementation call RM_WrongArity.
@@ -155,7 +155,7 @@ pub extern "C" fn AllocGetCommand_Redis(
 
 struct AllocDelCommand;
 
-impl Command for AllocDelCommand {
+impl CommandOld for AllocDelCommand {
     fn name() -> &'static str { "alloc.del" }
 
     fn external_command() -> raw::CommandFunc { AllocDelCommand_Redis }
@@ -163,7 +163,7 @@ impl Command for AllocDelCommand {
     fn str_flags() -> &'static str { "write" }
 
     // Run the command.
-    fn run(r: Redis, args: &[&str]) -> Result<(), Error> {
+    fn run(r: Context, args: &[&str]) -> Result<(), Error> {
         if args.len() != 2 {
             // FIXME: Use RedisModule_WrongArity instead?
             return Err(Error::generic(format!(
@@ -195,8 +195,10 @@ pub extern "C" fn AllocDelCommand_Redis(
 fn module_on_load(ctx: *mut raw::RedisModuleCtx) -> Result<(), &'static str> {
     module_init(ctx, MODULE_NAME, MODULE_VERSION)?;
 
-// TODO: Call this from inside module_init
-    redismodule::use_redis_alloc();
+    // TODO: Call this from inside module_init
+    if true {
+        redismodule::alloc::use_redis_alloc();
+    }
 
     MY_TYPE.create_data_type(ctx, "mytype123")?;
 

@@ -5,9 +5,9 @@ use libc::c_int;
 extern crate redismodule;
 
 use redismodule::error::Error;
-use redismodule::Command;
+use redismodule::CommandOld;
 use redismodule::raw;
-use redismodule::Redis;
+use redismodule::Context;
 use redismodule::raw::module_init;
 
 const MODULE_NAME: &str = "hello";
@@ -18,7 +18,7 @@ const MODULE_VERSION: c_int = 1;
 
 struct HelloMulCommand;
 
-impl Command for HelloMulCommand {
+impl CommandOld for HelloMulCommand {
     fn name() -> &'static str { "hello.mul" }
 
     fn external_command() -> raw::CommandFunc { HelloMulCommand_Redis }
@@ -26,7 +26,7 @@ impl Command for HelloMulCommand {
     fn str_flags() -> &'static str { "write" }
 
     // Run the command.
-    fn run(r: Redis, args: &[&str]) -> Result<(), Error> {
+    fn run(r: Context, args: &[&str]) -> Result<(), Error> {
         if args.len() != 3 {
             return Err(Error::generic(format!(
                 "Usage: {} <m1> <m2>", Self::name()
@@ -59,7 +59,7 @@ pub extern "C" fn HelloMulCommand_Redis(
 
 struct HelloAddCommand;
 
-impl Command for HelloAddCommand {
+impl CommandOld for HelloAddCommand {
     fn name() -> &'static str { "hello.add" }
 
     fn external_command() -> raw::CommandFunc { HelloAddCommand_Redis }
@@ -67,7 +67,7 @@ impl Command for HelloAddCommand {
     fn str_flags() -> &'static str { "write" }
 
     // Run the command.
-    fn run(r: Redis, args: &[&str]) -> Result<(), Error> {
+    fn run(r: Context, args: &[&str]) -> Result<(), Error> {
         if args.len() != 3 {
             // FIXME: Use RedisModule_WrongArity instead?
             return Err(Error::generic(format!(

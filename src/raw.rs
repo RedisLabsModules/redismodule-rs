@@ -14,7 +14,7 @@ use num_traits::FromPrimitive;
 use libc::size_t;
 
 pub use crate::redisraw::bindings::*;
-use crate::types::redis_log;
+use crate::native_types::redis_log;
 use crate::error::Error;
 
 bitflags! {
