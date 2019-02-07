@@ -2,9 +2,9 @@ use std::slice;
 use std::str;
 use std::ffi::CString;
 
-use crate::raw;
+pub type RedisResult = Result<RedisValue, RedisError>;
 
-pub type RedisResult = ::std::result::Result<RedisValue, RedisError>;
+use crate::raw;
 
 #[derive(Debug)]
 pub enum RedisError {
@@ -34,7 +34,6 @@ impl RedisString {
 
         RedisString { ctx, inner }
     }
-
 
     pub fn from_ptr<'a>(ptr: *mut raw::RedisModuleString) -> Result<&'a str, str::Utf8Error> {
         let mut len: libc::size_t = 0;
