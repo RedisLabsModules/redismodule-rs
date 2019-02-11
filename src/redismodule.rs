@@ -20,6 +20,17 @@ pub enum RedisValue {
     Array(Vec<RedisValue>),
 }
 
+impl From<Vec<i64>> for RedisValue {
+    fn from(nums: Vec<i64>) -> Self {
+        RedisValue::Array(nums
+            .into_iter()
+            .map(RedisValue::Integer)
+            .collect())
+    }
+}
+
+///////////////////////////////////////////////////
+
 #[derive(Debug)]
 pub struct RedisString {
     ctx: *mut raw::RedisModuleCtx,
