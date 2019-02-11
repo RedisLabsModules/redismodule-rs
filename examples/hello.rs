@@ -1,13 +1,7 @@
-//#[macro_use]
-//extern crate failure;
-
 #[macro_use]
 extern crate redismodule;
 
-use std::iter;
 use std::ffi::CString;
-
-//use failure::Error;
 
 use redismodule::{Context, Command, RedisResult, RedisError};
 
