@@ -1,3 +1,4 @@
+use std::iter;
 use std::ffi::CString;
 
 //#[macro_use]
@@ -10,28 +11,27 @@ fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
         return Err(RedisError::WrongArity);
     }
 
-    let maybe_nums: Vec<_> = args
-        .into_iter()
-        .skip(1) // The command itself
-        .map(parse_integer)
-        .collect();
-
     let mut nums = vec![];
-    for n in maybe_nums {
-        nums.push(n?);
+
+    for arg in args.into_iter().skip(1) {
+        nums.push(parse_integer(&arg)?);
     }
 
-    nums.push(nums.iter().product());
+    let product = nums.iter().product();
 
-    return Ok(RedisValue::Array(nums
+    let results = nums
         .into_iter()
-        .map(RedisValue::Integer)
-        .collect()));
+        .chain(iter::once(product));
+
+    return Ok(RedisValue::Array(
+        results
+            .map(RedisValue::Integer)
+            .collect()));
 }
 
 //////////////////////////////////////////////////////
 
-fn parse_integer(arg: String) -> Result<i64, RedisError> {
+fn parse_integer(arg: &str) -> Result<i64, RedisError> {
     arg.parse::<i64>()
         .map_err(|_| RedisError::String(format!("Couldn't parse as integer: {}", arg)))
 }
