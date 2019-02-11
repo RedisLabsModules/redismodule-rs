@@ -6,6 +6,7 @@ use std::os::raw::{c_int, c_void};
 use crate::raw;
 
 pub struct RedisType {
+    name: &'static str,
     pub raw_type: RefCell<*mut raw::RedisModuleType>,
 }
 
@@ -14,8 +15,9 @@ pub struct RedisType {
 unsafe impl Sync for RedisType {}
 
 impl RedisType {
-    pub const fn new() -> Self {
+    pub const fn new(name: &'static str) -> Self {
         RedisType {
+            name,
             raw_type: RefCell::new(ptr::null_mut()),
         }
     }
@@ -23,15 +25,14 @@ impl RedisType {
     pub fn create_data_type(
         &self,
         ctx: *mut raw::RedisModuleCtx,
-        name: &str,
     ) -> Result<(), &str> {
-        if name.len() != 9 {
+        if self.name.len() != 9 {
             let msg = "Redis requires the length of native type names to be exactly 9 characters";
-            redis_log(ctx, format!("{}, name is: '{}'", msg, name).as_str());
+            redis_log(ctx, format!("{}, name is: '{}'", msg, self.name).as_str());
             return Err(msg);
         }
 
-        let type_name = CString::new(name).unwrap();
+        let type_name = CString::new(self.name).unwrap();
 
         let mut type_methods = raw::RedisModuleTypeMethods {
             version: raw::REDISMODULE_TYPE_METHOD_VERSION as u64,
@@ -62,7 +63,7 @@ impl RedisType {
 
         *self.raw_type.borrow_mut() = redis_type;
 
-        redis_log(ctx, format!("Created new data type '{}'", name).as_str());
+        redis_log(ctx, format!("Created new data type '{}'", self.name).as_str());
 
         Ok(())
     }

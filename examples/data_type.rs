@@ -15,7 +15,7 @@ impl Default for MyType {
     }
 }
 
-static MY_REDIS_TYPE: RedisType = RedisType::new();
+static MY_REDIS_TYPE: RedisType = RedisType::new("mytype123");
 
 fn alloc_set(ctx: &Context, args: Vec<String>) -> RedisResult {
     let mut args = args.into_iter().skip(1);
@@ -79,6 +79,13 @@ fn alloc_get(ctx: &Context, args: Vec<String>) -> RedisResult {
 const MODULE_NAME: &str = "alloc";
 const MODULE_VERSION: c_int = 1;
 
-redis_module!(MODULE_NAME, MODULE_VERSION, [
-    Command::new("alloc.set", alloc_set, "write"),
-]);
+redis_module!(
+    MODULE_NAME,
+    MODULE_VERSION,
+    [
+        &MY_REDIS_TYPE,
+    ],
+    [
+        Command::new("alloc.set", alloc_set, "write"),
+    ]
+);

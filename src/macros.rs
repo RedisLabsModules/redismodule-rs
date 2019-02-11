@@ -23,7 +23,7 @@ macro_rules! log_debug {
 
 #[macro_export]
 macro_rules! redis_module (
-    ($module_name:expr, $module_version:expr, $commands:expr) => (
+    ($module_name:expr, $module_version:expr, $data_types:expr, $commands:expr) => (
         use std::os::raw::c_int;
         use std::ffi::CString;
 
@@ -46,6 +46,12 @@ macro_rules! redis_module (
                     module_version,
                     raw::REDISMODULE_APIVER_1 as c_int,
                 ) == raw::Status::Err as _ { return raw::Status::Err as _; }
+
+                for data_type in &$data_types {
+                    if data_type.create_data_type(ctx).is_err() {
+                        return raw::Status::Err as _;
+                    }
+                }
 
                 if true {
                     redismodule::alloc::use_redis_alloc();
