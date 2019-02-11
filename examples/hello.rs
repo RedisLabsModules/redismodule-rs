@@ -12,7 +12,7 @@ use std::ffi::CString;
 use redismodule::{Context, Command, RedisResult, RedisValue, RedisError};
 
 fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
-    if args.len() < 3 {
+    if args.len() < 2 {
         return Err(RedisError::WrongArity);
     }
 
@@ -24,15 +24,15 @@ fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
 
     let product = nums.iter().product();
 
+    let response = nums
+        .into_iter()
+        .chain(iter::once(product));
+
     return Ok(RedisValue::Array(
-        nums
-            .into_iter()
-            .chain(iter::once(product))
+        response
             .map(RedisValue::Integer)
             .collect()));
 }
-
-//////////////////////////////////////////////////////
 
 fn parse_integer(arg: String) -> Result<i64, RedisError> {
     arg.parse::<i64>()
@@ -91,4 +91,3 @@ mod tests {
         }
     }
 }
-
