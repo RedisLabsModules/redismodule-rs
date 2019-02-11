@@ -173,7 +173,7 @@ impl RedisKeyWritable {
         Ok("OK".into())
     }
 
-    pub fn get_value<T: Default>(&self, redis_type: &RedisType) -> Result<T, RedisError> {
+    pub fn get_value<T: Default>(&self, redis_type: &RedisType) -> Result<&mut T, RedisError> {
         self.verify_type(redis_type)?;
 
         let value = unsafe {
@@ -181,12 +181,12 @@ impl RedisKeyWritable {
         };
 
         if value.is_null() {
-            return Ok(T::default());
+            return Err(RedisError::MissingValue);
         }
 
-        let value = unsafe { Box::from_raw(value) };
+        let value = unsafe { &mut *value };
 
-        Ok(*value)
+        Ok(value)
     }
 
     pub fn set_value<T: Debug>(&self, redis_type: &RedisType, value: T) -> Result<(), RedisError> {

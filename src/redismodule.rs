@@ -11,6 +11,7 @@ pub enum RedisError {
     WrongArity,
     Str(&'static str),
     String(String),
+    MissingValue,
 }
 
 #[derive(Debug, PartialEq)]

@@ -83,6 +83,10 @@ impl Context {
                 let msg = CString::new(s).unwrap();
                 raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
             }
+
+            Err(RedisError::MissingValue) => unsafe {
+                raw::RedisModule_ReplyWithNull.unwrap()(self.ctx).into()
+            }
         }
     }
 

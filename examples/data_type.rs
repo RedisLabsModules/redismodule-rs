@@ -37,11 +37,11 @@ fn alloc_set(ctx: &Context, args: Vec<String>) -> RedisResult {
     } else {
         ctx.log_debug(format!("key exists; getting value").as_str());
 
-        let value: MyType = key.get_value(&MY_REDIS_TYPE)?;
+        let value: &mut MyType = key.get_value(&MY_REDIS_TYPE)?;
         ctx.log_debug(format!("got value: '{:?}'", value).as_str());
 
-        //value.data = "B".repeat(size as usize);
-        //ctx.log_debug(format!("new value: '{:?}'", value).as_str());
+        value.data = "B".repeat(size as usize);
+        ctx.log_debug(format!("new value: '{:?}'", value).as_str());
     };
 
     Ok(size.into())
