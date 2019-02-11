@@ -1,6 +1,7 @@
 use std::ptr;
 use std::string;
 use std::os::raw::c_void;
+use std::fmt::Debug;
 
 use libc::size_t;
 
@@ -9,6 +10,9 @@ use crate::error::Error;
 use crate::RedisString;
 use crate::native_types::RedisType;
 use crate::from_byte_string;
+use crate::RedisResult;
+use crate::RedisError;
+use crate::native_types::redis_log;
 
 /// `RedisKey` is an abstraction over a Redis key that allows readonly
 /// operations.
@@ -56,18 +60,6 @@ impl RedisKey {
         };
         Ok(val)
     }
-
-    pub fn verify_and_get_type(&self, redis_type: &RedisType) -> Result<raw::KeyType, Error> {
-        raw::verify_and_get_type(
-            self.ctx,
-            self.key_inner,
-            *redis_type.raw_type.borrow_mut(),
-        )
-    }
-
-    pub fn get_value(&self) -> *mut c_void {
-        raw::module_type_get_value(self.key_inner)
-    }
 }
 
 impl Drop for RedisKey {
@@ -109,7 +101,8 @@ impl RedisKeyWritable {
     /// as you open the key in read mode, but when asking for write Redis
     /// returns a non-null pointer to allow us to write to even an empty key,
     /// so we have to check the key's value instead.
-    pub fn is_empty(&self) -> Result<bool, Error> {
+    /*
+    fn is_empty_old(&self) -> Result<bool, Error> {
         match self.read()? {
             Some(s) => match s.as_str() {
                 "" => Ok(true),
@@ -118,6 +111,7 @@ impl RedisKeyWritable {
             _ => Ok(false),
         }
     }
+    */
 
     pub fn read(&self) -> Result<Option<String>, Error> {
         Ok(Some(read_key(self.key_inner)?))
@@ -141,32 +135,88 @@ impl RedisKeyWritable {
         }
     }
 
-    pub fn verify_and_get_type(&self, redis_type: &RedisType) -> Result<raw::KeyType, Error> {
-        raw::verify_and_get_type(
-            self.ctx,
-            self.key_inner,
-            *redis_type.raw_type.borrow_mut(),
-        )
+    pub fn is_empty(&self) -> bool {
+        use raw::KeyType;
+
+        let key_type: KeyType = unsafe {
+            raw::RedisModule_KeyType.unwrap()(self.key_inner)
+        }.into();
+
+        key_type == KeyType::Empty
     }
 
-    pub fn get_value(&self) -> *mut c_void {
-        raw::module_type_get_value(self.key_inner)
+    fn verify_type(&self, redis_type: &RedisType) -> RedisResult {
+        use raw::KeyType;
+
+        let key_type: KeyType = unsafe {
+            raw::RedisModule_KeyType.unwrap()(self.key_inner)
+        }.into();
+
+        redis_log(self.ctx, format!("key type: {:?}", key_type).as_str());
+
+        if key_type != KeyType::Empty {
+            // The key exists; check its type
+            let raw_type = unsafe {
+                raw::RedisModule_ModuleTypeGetType.unwrap()(self.key_inner)
+            };
+
+            if raw_type != *redis_type.raw_type.borrow() {
+                return Err(RedisError::String(format!(
+                    "Existing key has wrong Redis type")));
+            }
+
+            redis_log(self.ctx, "Existing key is of the correct type");
+        }
+
+        redis_log(self.ctx, "All OK");
+
+        Ok("OK".into())
     }
 
-    pub fn set_value(&self, redis_type: &RedisType, value: *mut c_void) -> Result<(), Error> {
-        raw::module_type_set_value(
-            self.key_inner,
-            *redis_type.raw_type.borrow_mut(),
-            value,
-        ).into()
+    pub fn get_value<T: Default>(&self, redis_type: &RedisType) -> Result<T, RedisError> {
+        self.verify_type(redis_type)?;
+
+        let value = unsafe {
+            raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner) as *mut T
+        };
+
+        if value.is_null() {
+            return Ok(T::default());
+        }
+
+        let value = unsafe { Box::from_raw(value) };
+
+        Ok(*value)
+    }
+
+    pub fn set_value<T: Debug>(&self, redis_type: &RedisType, value: T) -> Result<(), RedisError> {
+        self.verify_type(redis_type)?;
+
+        redis_log(self.ctx, format!("1. Going to set value to {:?}", &value).as_str());
+
+        let value = Box::into_raw(Box::new(value)) as *mut c_void;
+
+        redis_log(self.ctx, "2. Going to set value");
+
+        let status: raw::Status = unsafe {
+            raw::RedisModule_ModuleTypeSetValue.unwrap()(
+                self.key_inner,
+                *redis_type.raw_type.borrow(),
+                value,
+            )
+        }.into();
+
+        redis_log(self.ctx, "3. Finished setting value");
+
+        status.into()
     }
 }
 
-impl From<raw::Status> for Result<(), Error> {
+impl From<raw::Status> for Result<(), RedisError> {
     fn from(s: raw::Status) -> Self {
         match s {
             raw::Status::Ok => Ok(()),
-            raw::Status::Err => Err(Error::generic("Generic error")),
+            raw::Status::Err => Err(RedisError::String("Generic error".to_string())),
         }
     }
 }

@@ -22,7 +22,7 @@ libc = "0.2"
 time = "0.1"
 enum-primitive-derive = "^0.1"
 num-traits = "^0.1"
-failure = "0.1"
+#failure = "0.1"
 
 [build-dependencies]
 bindgen = "0.47"

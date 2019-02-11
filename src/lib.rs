@@ -21,14 +21,12 @@ pub mod native_types;
 #[macro_use]
 mod macros;
 mod command;
-mod command_old;
 mod context;
 mod key;
 
 pub use command::Command;
-pub use command_old::CommandOld;
 pub use context::Context;
-pub use redismodule::{RedisString, RedisError, RedisValue, RedisResult};
+pub use redismodule::*;
 
 #[global_allocator]
 static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc;

@@ -2,8 +2,7 @@
 // point.
 #![allow(dead_code)]
 
-use std::ffi::CString;
-use std::os::raw::{c_char, c_int, c_long, c_longlong, c_void};
+use std::os::raw::{c_char, c_int, c_long, c_longlong};
 
 extern crate libc;
 extern crate enum_primitive_derive;
@@ -14,8 +13,6 @@ use num_traits::FromPrimitive;
 use libc::size_t;
 
 pub use crate::redisraw::bindings::*;
-use crate::native_types::redis_log;
-use crate::error::Error;
 
 bitflags! {
     pub struct KeyMode: c_int {
@@ -123,58 +120,6 @@ fn command_flag_repr(flag: &CommandFlag) -> &'static str {
 }
 
 
-pub type CommandFunc = extern "C" fn(
-    ctx: *mut RedisModuleCtx,
-    argv: *mut *mut RedisModuleString,
-    argc: c_int,
-) -> c_int;
-
-pub fn create_command(
-    ctx: *mut RedisModuleCtx,
-    name: &str,
-    cmdfunc: CommandFunc,
-    strflags: &str,
-    firstkey: i32,
-    lastkey: i32,
-    keystep: i32,
-) -> Result<(), &'static str> {
-    let name = CString::new(name).unwrap();
-    let strflags = CString::new(strflags).unwrap();
-
-    let status: Status = unsafe {
-        RedisModule_CreateCommand.unwrap()(
-            ctx,
-            name.as_ptr(),
-            Some(cmdfunc),
-            strflags.as_ptr(),
-            firstkey,
-            lastkey,
-            keystep,
-        )
-    }.into();
-
-    status.into()
-}
-
-pub fn module_init(
-    ctx: *mut RedisModuleCtx,
-    modulename: &str,
-    module_version: c_int,
-) -> Result<(), &str> {
-    let modulename = CString::new(modulename.as_bytes()).unwrap();
-
-    let status: Status = unsafe {
-        Export_RedisModule_Init(
-            ctx,
-            modulename.as_ptr(),
-            module_version,
-            REDISMODULE_APIVER_1 as c_int,
-        ).into()
-    };
-
-    status.into()
-}
-
 // This is the one static function we need to initialize a module.
 // bindgen does not generate it for us (probably since it's defined as static in redismodule.h).
 #[allow(improper_ctypes)]
@@ -277,56 +222,4 @@ pub fn string_ptr_len(str: *mut RedisModuleString, len: *mut size_t) -> *const c
 
 pub fn string_set(key: *mut RedisModuleKey, str: *mut RedisModuleString) -> Status {
     unsafe { RedisModule_StringSet.unwrap()(key, str).into() }
-}
-
-pub fn key_type(key: *mut RedisModuleKey) -> KeyType {
-    unsafe { RedisModule_KeyType.unwrap()(key) }.into()
-}
-
-pub fn module_type_get_type(key: *mut RedisModuleKey) -> *mut RedisModuleType {
-    unsafe { RedisModule_ModuleTypeGetType.unwrap()(key) }
-}
-
-pub fn module_type_get_value(key: *mut RedisModuleKey) -> *mut c_void {
-    unsafe {
-        RedisModule_ModuleTypeGetValue.unwrap()(key)
-    }.into()
-}
-
-pub fn module_type_set_value(
-    key: *mut RedisModuleKey,
-    redis_type: *mut RedisModuleType,
-    value: *mut c_void,
-) -> Status {
-    unsafe {
-        RedisModule_ModuleTypeSetValue.unwrap()(
-            key,
-            redis_type,
-            value,
-        )
-    }.into()
-}
-
-pub fn verify_and_get_type(
-    ctx: *mut RedisModuleCtx,
-    key: *mut RedisModuleKey,
-    redis_type: *mut RedisModuleType,
-) -> Result<KeyType, Error> {
-
-    let key_type = key_type(key);
-
-    // TODO: Make log() a method of the Redis and Key structs.
-    redis_log(ctx, format!("key type: {:?}", key_type).as_str());
-
-    if key_type != KeyType::Empty {
-        let raw_type = module_type_get_type(key);
-        if raw_type != redis_type{
-            return Err(Error::generic("Key has existing value with wrong Redis type"));
-        }
-        redis_log(ctx, "Existing key has the correct type");
-    }
-
-    redis_log(ctx, "All OK");
-
-    Ok(key_type)
 }

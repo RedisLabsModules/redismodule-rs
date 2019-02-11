@@ -20,6 +20,18 @@ pub enum RedisValue {
     Array(Vec<RedisValue>),
 }
 
+impl From<i64> for RedisValue {
+    fn from(i: i64) -> Self {
+        RedisValue::Integer(i)
+    }
+}
+
+impl From<&str> for RedisValue {
+    fn from(s: &str) -> Self {
+        RedisValue::String(s.to_string())
+    }
+}
+
 impl From<Vec<i64>> for RedisValue {
     fn from(nums: Vec<i64>) -> Self {
         RedisValue::Array(nums
@@ -27,6 +39,30 @@ impl From<Vec<i64>> for RedisValue {
             .map(RedisValue::Integer)
             .collect())
     }
+}
+
+///////////////////////////////////////////////////
+
+pub trait NextArg: Iterator {
+    fn next_string(&mut self) -> Result<String, RedisError>;
+    fn next_i64(&mut self) -> Result<i64, RedisError>;
+}
+
+impl<T: Iterator<Item=String>> NextArg for T {
+    fn next_string(&mut self) -> Result<String, RedisError> {
+        self.next()
+            .map_or(Err(RedisError::WrongArity), Result::Ok)
+    }
+
+    fn next_i64(&mut self) -> Result<i64, RedisError> {
+        self.next()
+            .map_or(Err(RedisError::WrongArity), parse_integer)
+    }
+}
+
+pub fn parse_integer(arg: String) -> Result<i64, RedisError> {
+    arg.parse::<i64>()
+        .map_err(|_| RedisError::String(format!("Couldn't parse as integer: {}", arg)))
 }
 
 ///////////////////////////////////////////////////

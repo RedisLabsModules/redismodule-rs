@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate redismodule;
 
-use redismodule::{Context, Command, RedisResult, RedisError};
+use redismodule::{Context, Command, RedisResult, RedisError, parse_integer};
 
 fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
     if args.len() < 2 {
@@ -20,11 +20,6 @@ fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
     response.push(product);
 
     return Ok(response.into());
-}
-
-fn parse_integer(arg: String) -> Result<i64, RedisError> {
-    arg.parse::<i64>()
-        .map_err(|_| RedisError::String(format!("Couldn't parse as integer: {}", arg)))
 }
 
 //////////////////////////////////////////////////////
@@ -79,3 +74,4 @@ mod tests {
         }
     }
 }
+

@@ -47,6 +47,12 @@ macro_rules! redis_module (
                     raw::REDISMODULE_APIVER_1 as c_int,
                 ) == raw::Status::Err as _ { return raw::Status::Err as _; }
 
+                if true {
+                    redismodule::alloc::use_redis_alloc();
+                } else {
+                    eprintln!("*** NOT USING Redis allocator ***");
+                }
+
                 for command in &$commands {
                     let name = CString::new(command.name).unwrap();
                     let flags = CString::new(command.flags).unwrap();
