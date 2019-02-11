@@ -1,8 +1,6 @@
 #[macro_use]
 extern crate redismodule;
 
-use std::ffi::CString;
-
 use redismodule::{Context, Command, RedisResult, RedisError};
 
 fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {

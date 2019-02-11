@@ -25,6 +25,8 @@ macro_rules! log_debug {
 macro_rules! redis_module (
     ($module_name:expr, $module_version:expr, $commands:expr) => (
         use std::os::raw::c_int;
+        use std::ffi::CString;
+
         use redismodule::raw;
 
         #[no_mangle]
