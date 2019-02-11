@@ -1,3 +1,4 @@
+use std::ptr;
 use std::os::raw::c_long;
 use std::ffi::CString;
 
@@ -15,6 +16,10 @@ pub struct Context {
 impl Context {
     pub fn new(ctx: *mut raw::RedisModuleCtx) -> Self {
         Self { ctx }
+    }
+
+    pub fn dummy() -> Self {
+        Self { ctx: ptr::null_mut() }
     }
 
     pub fn log(&self, level: LogLevel, message: &str) {

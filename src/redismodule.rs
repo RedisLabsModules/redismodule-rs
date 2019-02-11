@@ -13,7 +13,7 @@ pub enum RedisError {
     String(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum RedisValue {
     String(String),
     Integer(i64),
