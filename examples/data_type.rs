@@ -9,12 +9,6 @@ struct MyType {
     data: String,
 }
 
-impl Default for MyType {
-    fn default() -> Self {
-        MyType { data: Default::default() }
-    }
-}
-
 static MY_REDIS_TYPE: RedisType = RedisType::new("mytype123");
 
 fn alloc_set(ctx: &Context, args: Vec<String>) -> RedisResult {

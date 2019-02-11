@@ -27,6 +27,12 @@ impl From<i64> for RedisValue {
     }
 }
 
+impl From<String> for RedisValue {
+    fn from(s: String) -> Self {
+        RedisValue::String(s)
+    }
+}
+
 impl From<&str> for RedisValue {
     fn from(s: &str) -> Self {
         RedisValue::String(s.to_string())

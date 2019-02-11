@@ -173,7 +173,7 @@ impl RedisKeyWritable {
         Ok("OK".into())
     }
 
-    pub fn get_value<T: Default>(&self, redis_type: &RedisType) -> Result<&mut T, RedisError> {
+    pub fn get_value<T: Debug>(&self, redis_type: &RedisType) -> Result<&mut T, RedisError> {
         self.verify_type(redis_type)?;
 
         let value = unsafe {
@@ -185,6 +185,8 @@ impl RedisKeyWritable {
         }
 
         let value = unsafe { &mut *value };
+
+        redis_log(self.ctx, format!("got value: '{:?}'", value).as_str());
 
         Ok(value)
     }
