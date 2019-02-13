@@ -22,8 +22,8 @@ macro_rules! log_debug {
 }
 
 #[macro_export]
-macro_rules! redis_module (
-    ($module_name:expr, $module_version:expr, $data_types:expr, $commands:expr) => (
+macro_rules! redis_module {
+    ($module_name:expr, $module_version:expr, $data_types:expr, $commands:expr) => {
         use std::os::raw::c_int;
         use std::ffi::CString;
 
@@ -76,5 +76,5 @@ macro_rules! redis_module (
                 raw::Status::Ok as _
             }
         }
-    )
-);
+    }
+}
