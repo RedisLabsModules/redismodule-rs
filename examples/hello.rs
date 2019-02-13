@@ -2,7 +2,6 @@
 extern crate redismodule;
 
 use redismodule::{Context, RedisResult, RedisError, parse_integer};
-use redismodule::native_types::RedisType;
 
 fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
     if args.len() < 2 {
@@ -25,19 +24,14 @@ fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
 
 //////////////////////////////////////////////////////
 
-const MODULE_NAME: &str = "hello";
-const MODULE_VERSION: i32 = 1;
-
-/*
 redis_module!{
-    MODULE_NAME,
-    MODULE_VERSION,
-    [] as [RedisType; 0],
-    [
-        Command::new("hello.mul", hello_mul, "write"),
-    ]
+    name: "hello",
+    version: 1,
+    data_types: [],
+    commands: [
+        ["hello.mul", hello_mul, ""],
+    ],
 }
-*/
 
 //////////////////////////////////////////////////////
 

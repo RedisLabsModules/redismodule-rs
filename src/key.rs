@@ -117,21 +117,21 @@ impl RedisKeyWritable {
         Ok(Some(read_key(self.key_inner)?))
     }
 
-    pub fn set_expire(&self, expire: time::Duration) -> Result<(), Error> {
+    pub fn set_expire(&self, expire: time::Duration) -> RedisResult {
         match raw::set_expire(self.key_inner, expire.num_milliseconds()) {
-            raw::Status::Ok => Ok(()),
+            raw::Status::Ok => Ok("OK".into()),
 
             // Error may occur if the key wasn't open for writing or is an
             // empty key.
-            raw::Status::Err => Err(error!("Error while setting key expire")),
+            raw::Status::Err => Err(RedisError::Str("Error while setting key expire")),
         }
     }
 
-    pub fn write(&self, val: &str) -> Result<(), Error> {
+    pub fn write(&self, val: &str) -> RedisResult {
         let val_str = RedisString::create(self.ctx, val);
         match raw::string_set(self.key_inner, val_str.inner) {
-            raw::Status::Ok => Ok(()),
-            raw::Status::Err => Err(error!("Error while setting key")),
+            raw::Status::Ok => Ok("OK".into()),
+            raw::Status::Err => Err(RedisError::Str("Error while setting key")),
         }
     }
 

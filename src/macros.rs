@@ -1,33 +1,62 @@
-macro_rules! error {
-    ($message:expr) => {
-        Error::generic($message)
-    };
-    ($message:expr, $($arg:tt)*) => {
-        Error::generic(format!($message, $($arg)+).as_str())
-    }
-}
+#[macro_export]
+macro_rules! redis_command {
+    ($ctx: expr, $command_name:expr, $command_handler:expr, $command_flags:expr) => {
+        {
+            let name = CString::new($command_name).unwrap();
+            let flags = CString::new($command_flags).unwrap();
+            let (firstkey, lastkey, keystep) = (1, 1, 1);
 
-#[allow(unused_macros)]
-macro_rules! log_debug {
-    ($logger:expr, $target:expr) => {
-        if cfg!(debug_assertions) {
-            $logger.log_debug($target)
-        }
-    };
-    ($logger:expr, $target:expr, $($arg:tt)*) => {
-        if cfg!(debug_assertions) {
-            $logger.log_debug(format!($target, $($arg)+).as_str())
+            /////////////////////
+            extern fn do_command(
+                ctx: *mut raw::RedisModuleCtx,
+                argv: *mut *mut raw::RedisModuleString,
+                argc: c_int,
+            ) -> c_int {
+                let context = Context::new(ctx);
+
+                let args: Vec<String> = unsafe { slice::from_raw_parts(argv, argc as usize) }
+                    .into_iter()
+                    .map(|a| RedisString::from_ptr(*a).expect("UTF8 encoding error in handler args").to_string())
+                    .collect();
+
+                let response = $command_handler(&context, args);
+                context.reply(response) as c_int
+            }
+            /////////////////////
+
+            if raw::RedisModule_CreateCommand.unwrap()(
+                $ctx,
+                name.as_ptr(),
+                Some(do_command),
+                flags.as_ptr(),
+                firstkey, lastkey, keystep,
+            ) == raw::Status::Err as _ { return raw::Status::Err as _; }
         }
     }
 }
 
 #[macro_export]
 macro_rules! redis_module {
-    ($module_name:expr, $module_version:expr, $data_types:expr, $commands:expr) => {
+    (
+        name: $module_name:expr,
+        version: $module_version:expr,
+        data_types: [
+            $($data_type:ident),* $(,)*
+        ],
+        commands: [
+            $([
+                $name:expr,
+                $command:ident,
+                $flags:expr
+              ]),* $(,)*
+        ] $(,)*
+    ) => {
         use std::os::raw::c_int;
         use std::ffi::CString;
+        use std::slice;
 
         use redismodule::raw;
+        use redismodule::RedisString;
 
         #[no_mangle]
         #[allow(non_snake_case)]
@@ -47,11 +76,11 @@ macro_rules! redis_module {
                     raw::REDISMODULE_APIVER_1 as c_int,
                 ) == raw::Status::Err as _ { return raw::Status::Err as _; }
 
-                for data_type in &$data_types {
-                    if data_type.create_data_type(ctx).is_err() {
+                $(
+                    if (&$data_type).create_data_type(ctx).is_err() {
                         return raw::Status::Err as _;
                     }
-                }
+                )*
 
                 if true {
                     redismodule::alloc::use_redis_alloc();
@@ -59,19 +88,9 @@ macro_rules! redis_module {
                     eprintln!("*** NOT USING Redis allocator ***");
                 }
 
-                for command in &$commands {
-                    let name = CString::new(command.name).unwrap();
-                    let flags = CString::new(command.flags).unwrap();
-                    let (firstkey, lastkey, keystep) = (1, 1, 1);
-
-                    if raw::RedisModule_CreateCommand.unwrap()(
-                        ctx,
-                        name.as_ptr(),
-                        command.wrap_handler(),
-                        flags.as_ptr(),
-                        firstkey, lastkey, keystep,
-                    ) == raw::Status::Err as _ { return raw::Status::Err as _; }
-                }
+                $(
+                    redis_command!(ctx, $name, $command, $flags);
+                )*
 
                 raw::Status::Ok as _
             }
