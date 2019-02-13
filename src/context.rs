@@ -70,6 +70,10 @@ impl Context {
                 raw::Status::Ok
             }
 
+            Ok(RedisValue::None) => unsafe {
+                raw::RedisModule_ReplyWithNull.unwrap()(self.ctx).into()
+            }
+
             Err(RedisError::WrongArity) => unsafe {
                 raw::RedisModule_WrongArity.unwrap()(self.ctx).into()
             }
@@ -82,10 +86,6 @@ impl Context {
             Err(RedisError::Str(s)) => unsafe {
                 let msg = CString::new(s).unwrap();
                 raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
-            }
-
-            Err(RedisError::MissingValue) => unsafe {
-                raw::RedisModule_ReplyWithNull.unwrap()(self.ctx).into()
             }
         }
     }

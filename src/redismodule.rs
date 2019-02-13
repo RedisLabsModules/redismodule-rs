@@ -11,7 +11,6 @@ pub enum RedisError {
     WrongArity,
     Str(&'static str),
     String(String),
-    MissingValue,
 }
 
 #[derive(Debug, PartialEq)]
@@ -19,6 +18,7 @@ pub enum RedisValue {
     String(String),
     Integer(i64),
     Array(Vec<RedisValue>),
+    None,
 }
 
 impl From<i64> for RedisValue {

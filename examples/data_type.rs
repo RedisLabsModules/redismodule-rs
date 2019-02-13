@@ -3,6 +3,7 @@ extern crate redismodule;
 
 use redismodule::{Context, Command, RedisResult, NextArg};
 use redismodule::native_types::RedisType;
+use redismodule::redismodule::RedisValue;
 
 #[derive(Debug)]
 struct MyType {
@@ -20,53 +21,38 @@ fn alloc_set(ctx: &Context, args: Vec<String>) -> RedisResult {
 
     let key = ctx.open_key_writable(&key);
 
-    if key.is_empty() {
-        let value = MyType {
-            data: "A".repeat(size as usize)
-        };
+    match key.get_value::<MyType>(&MY_REDIS_TYPE)? {
+        None => {
+            let value = MyType {
+                data: "A".repeat(size as usize)
+            };
 
-        ctx.log_debug(format!("key is empty; setting to value: '{:?}'", value).as_str());
-
-        key.set_value(&MY_REDIS_TYPE, value)?;
-    } else {
-        ctx.log_debug(format!("key exists; getting value").as_str());
-
-        let value: &mut MyType = key.get_value(&MY_REDIS_TYPE)?;
-        ctx.log_debug(format!("got value: '{:?}'", value).as_str());
-
-        value.data = "B".repeat(size as usize);
-        ctx.log_debug(format!("new value: '{:?}'", value).as_str());
-    };
+            key.set_value(&MY_REDIS_TYPE, value)?;
+        }
+        Some(value) => {
+            value.data = "B".repeat(size as usize);
+        }
+    }
 
     Ok(size.into())
 }
 
-
-/*
 fn alloc_get(ctx: &Context, args: Vec<String>) -> RedisResult {
     let mut args = args.into_iter().skip(1);
     let key = args.next_string()?;
 
-    let key = ctx.open_key(&key);
+    let key = ctx.open_key_writable(&key); // TODO: Use read-only key
 
-    key.verify_and_get_type(&MY_REDIS_TYPE)?;
-    let my = key.get_value() as *mut MyType;
-
-    if my.is_null() {
-        r.reply_integer(0)?;
-        return Ok(());
+    match key.get_value::<MyType>(&MY_REDIS_TYPE)? {
+        None => Ok(RedisValue::None),
+        Some(value) => {
+            // TODO: Use the value
+            let _ = value;
+            Ok("some value".into())
+        }
     }
 
-    let my = unsafe { &mut *my };
-    let size = my.data.len();
-
-    r.reply_array(2)?;
-    r.reply_integer(size as i64)?;
-    r.reply_string(my.data.as_str())?;
-
-    Ok(())
 }
-*/
 
 //////////////////////////////////////////////////////
 

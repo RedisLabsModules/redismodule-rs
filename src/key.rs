@@ -173,22 +173,24 @@ impl RedisKeyWritable {
         Ok("OK".into())
     }
 
-    pub fn get_value<T: Debug>(&self, redis_type: &RedisType) -> Result<&mut T, RedisError> {
+    pub fn get_value<T: Debug>(&self, redis_type: &RedisType) -> Result<Option<&mut T>, RedisError> {
         self.verify_type(redis_type)?;
+
+        redis_log(self.ctx, "Going to get value");
 
         let value = unsafe {
             raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner) as *mut T
         };
 
         if value.is_null() {
-            return Err(RedisError::MissingValue);
+            return Ok(None)
         }
 
         let value = unsafe { &mut *value };
 
         redis_log(self.ctx, format!("got value: '{:?}'", value).as_str());
 
-        Ok(value)
+        Ok(Some(value))
     }
 
     pub fn set_value<T: Debug>(&self, redis_type: &RedisType, value: T) -> Result<(), RedisError> {
