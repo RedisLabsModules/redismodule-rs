@@ -1,7 +1,7 @@
 //#[macro_use]
 extern crate redismodule;
 
-use redismodule::{Context, Command, RedisResult, NextArg};
+use redismodule::{Context, RedisResult, NextArg};
 use redismodule::native_types::RedisType;
 use redismodule::redismodule::RedisValue;
 
@@ -55,35 +55,9 @@ fn alloc_get(ctx: &Context, args: Vec<String>) -> RedisResult {
 
 //////////////////////////////////////////////////////
 
-const MODULE_NAME: &str = "alloc";
-const MODULE_VERSION: c_int = 1;
-
-const COMMANDS: &[Command] = &[
-    Command { name: "alloc.set", handler: alloc_set, flags: "write" },
-    Command { name: "alloc.get", handler: alloc_get, flags: "write" },
-];
-
-/*
-redis_module!(
-    MODULE_NAME,
-    MODULE_VERSION,
-    [
-        &MY_REDIS_TYPE,
-    ],
-    [
-        Command::new("alloc.set", alloc_set, "write"),
-    ]
-);
-*/
-
 macro_rules! redis_command {
     ($ctx: expr, $command_name:expr, $command_handler:expr, $command_flags:expr) => {
         {
-            ///////////////////////////
-            //let command_name = "alloc.set";
-            //let command_flags = "write";
-            ///////////////////////////
-
             let name = CString::new($command_name).unwrap();
             let flags = CString::new($command_flags).unwrap();
             let (firstkey, lastkey, keystep) = (1, 1, 1);
@@ -118,56 +92,76 @@ macro_rules! redis_command {
 }
 
 
-use std::os::raw::c_int;
-use std::ffi::CString;
-use std::slice;
+macro_rules! redis_module2 {
+    (
+        name: $module_name:expr,
+        version: $module_version:expr,
+        data_types: [
+            $($data_type:ident),* $(,)*
+        ],
+        commands: [
+            $([
+                $name:expr,
+                $command:ident,
+                $flags:expr
+              ]),* $(,)*
+        ] $(,)*
+    ) => {
+        use std::os::raw::c_int;
+        use std::ffi::CString;
+        use std::slice;
 
-use redismodule::raw;
-use redismodule::RedisString;
+        use redismodule::raw;
+        use redismodule::RedisString;
 
-#[no_mangle]
-#[allow(non_snake_case)]
-pub extern "C" fn RedisModule_OnLoad(
-    ctx: *mut raw::RedisModuleCtx,
-    _argv: *mut *mut raw::RedisModuleString,
-    _argc: c_int,
-) -> c_int {
-    unsafe {
-        ///////////////////////////////////////
-        let module_name = MODULE_NAME;
-        let module_version = MODULE_VERSION;
-        let data_types = vec![&MY_REDIS_TYPE];
+        #[no_mangle]
+        #[allow(non_snake_case)]
+        pub extern "C" fn RedisModule_OnLoad(
+            ctx: *mut raw::RedisModuleCtx,
+            _argv: *mut *mut raw::RedisModuleString,
+            _argc: c_int,
+        ) -> c_int {
+            unsafe {
+                let module_name = CString::new($module_name).unwrap();
+                let module_version = $module_version as c_int;
 
-        ///////////////////////////////////////
+                if raw::Export_RedisModule_Init(
+                    ctx,
+                    module_name.as_ptr(),
+                    module_version,
+                    raw::REDISMODULE_APIVER_1 as c_int,
+                ) == raw::Status::Err as _ { return raw::Status::Err as _; }
 
-        let module_name = CString::new(module_name).unwrap();
-        let module_version = module_version as c_int;
+                $(
+                    if (&$data_type).create_data_type(ctx).is_err() {
+                        return raw::Status::Err as _;
+                    }
+                )*
 
-        if raw::Export_RedisModule_Init(
-            ctx,
-            module_name.as_ptr(),
-            module_version,
-            raw::REDISMODULE_APIVER_1 as c_int,
-        ) == raw::Status::Err as _ { return raw::Status::Err as _; }
+                if true {
+                    redismodule::alloc::use_redis_alloc();
+                } else {
+                    eprintln!("*** NOT USING Redis allocator ***");
+                }
 
-        for data_type in data_types {
-            if data_type.create_data_type(ctx).is_err() {
-                return raw::Status::Err as _;
+                $(
+                    redis_command!(ctx, $name, $command, $flags);
+                )*
+
+                raw::Status::Ok as _
             }
         }
-
-        if true {
-            redismodule::alloc::use_redis_alloc();
-        } else {
-            eprintln!("*** NOT USING Redis allocator ***");
-        }
-
-//        for command in COMMANDS {
-//            redis_command!(ctx, command.name, command.handler, command.flags);
-//        }
-        redis_command!(ctx, "alloc.set", alloc_set, "write");
-        redis_command!(ctx, "alloc.get", alloc_get, "write");
-
-        raw::Status::Ok as _
     }
+}
+
+redis_module2!{
+    name: "alloc",
+    version: 1,
+    data_types: [
+        MY_REDIS_TYPE,
+    ],
+    commands: [
+        ["alloc.set", alloc_set, "write"],
+        ["alloc.get", alloc_get, ""],
+    ],
 }

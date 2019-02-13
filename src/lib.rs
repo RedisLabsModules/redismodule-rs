@@ -20,11 +20,9 @@ pub mod native_types;
 
 #[macro_use]
 mod macros;
-mod command;
 mod context;
 mod key;
 
-pub use command::Command;
 pub use context::Context;
 pub use redismodule::*;
 
