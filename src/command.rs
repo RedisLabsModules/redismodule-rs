@@ -5,12 +5,13 @@ use crate::raw;
 use crate::context::Context;
 use crate::{RedisString, RedisResult};
 
-pub struct Command<F> where F: Fn(&Context, Vec<String>) -> RedisResult {
+pub struct Command {
     pub name: &'static str,
+    pub handler: fn(&Context, Vec<String>) -> RedisResult,
     pub flags: &'static str,
-    pub handler: F,
 }
 
+/*
 impl<F> Command<F>
     where F: Fn(&Context, Vec<String>) -> RedisResult {
     pub fn new(name: &'static str, handler: F, flags: &'static str) -> Command<F> {
@@ -47,3 +48,4 @@ impl<F> Command<F>
         Some(do_command::<F> as _)
     }
 }
+*/

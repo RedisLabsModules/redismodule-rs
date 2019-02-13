@@ -28,6 +28,7 @@ fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
 const MODULE_NAME: &str = "hello";
 const MODULE_VERSION: u32 = 1;
 
+/*
 redis_module!(
     MODULE_NAME,
     MODULE_VERSION,
@@ -36,6 +37,7 @@ redis_module!(
         Command::new("hello.mul", hello_mul, "write"),
     ]
 );
+*/
 
 //////////////////////////////////////////////////////
 

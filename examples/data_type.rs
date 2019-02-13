@@ -58,6 +58,11 @@ fn alloc_get(ctx: &Context, args: Vec<String>) -> RedisResult {
 const MODULE_NAME: &str = "alloc";
 const MODULE_VERSION: c_int = 1;
 
+const COMMANDS: &[Command] = &[
+    Command { name: "alloc.set", handler: alloc_set, flags: "write" },
+    Command { name: "alloc.get", handler: alloc_get, flags: "write" },
+];
+
 /*
 redis_module!(
     MODULE_NAME,
@@ -70,6 +75,48 @@ redis_module!(
     ]
 );
 */
+
+macro_rules! redis_command {
+    ($ctx: expr, $command_name:expr, $command_handler:expr, $command_flags:expr) => {
+        {
+            ///////////////////////////
+            //let command_name = "alloc.set";
+            //let command_flags = "write";
+            ///////////////////////////
+
+            let name = CString::new($command_name).unwrap();
+            let flags = CString::new($command_flags).unwrap();
+            let (firstkey, lastkey, keystep) = (1, 1, 1);
+
+            /////////////////////
+            extern fn do_command(
+                ctx: *mut raw::RedisModuleCtx,
+                argv: *mut *mut raw::RedisModuleString,
+                argc: c_int,
+            ) -> c_int {
+                let context = Context::new(ctx);
+
+                let args: Vec<String> = unsafe { slice::from_raw_parts(argv, argc as usize) }
+                    .into_iter()
+                    .map(|a| RedisString::from_ptr(*a).expect("UTF8 encoding error in handler args").to_string())
+                    .collect();
+
+                let response = $command_handler(&context, args);
+                context.reply(response) as c_int
+            }
+            /////////////////////
+
+            if raw::RedisModule_CreateCommand.unwrap()(
+                $ctx,
+                name.as_ptr(),
+                Some(do_command),
+                flags.as_ptr(),
+                firstkey, lastkey, keystep,
+            ) == raw::Status::Err as _ { return raw::Status::Err as _; }
+        }
+    }
+}
+
 
 use std::os::raw::c_int;
 use std::ffi::CString;
@@ -115,85 +162,11 @@ pub extern "C" fn RedisModule_OnLoad(
             eprintln!("*** NOT USING Redis allocator ***");
         }
 
-        //////////////////////////////
-        // Command 1
-        {
-            ///////////////////////////
-            let command_name = "alloc.set";
-            let command_flags = "write";
-            ///////////////////////////
-
-            let name = CString::new(command_name).unwrap();
-            let flags = CString::new(command_flags).unwrap();
-            let (firstkey, lastkey, keystep) = (1, 1, 1);
-
-            /////////////////////
-            extern fn do_command(
-                ctx: *mut raw::RedisModuleCtx,
-                argv: *mut *mut raw::RedisModuleString,
-                argc: c_int,
-            ) -> c_int {
-                let context = Context::new(ctx);
-
-                let args: Vec<String> = unsafe { slice::from_raw_parts(argv, argc as usize) }
-                    .into_iter()
-                    .map(|a| RedisString::from_ptr(*a).expect("UTF8 encoding error in handler args").to_string())
-                    .collect();
-
-                let response = alloc_set(&context, args);
-                context.reply(response) as c_int
-            }
-            /////////////////////
-
-            if raw::RedisModule_CreateCommand.unwrap()(
-                ctx,
-                name.as_ptr(),
-                Some(do_command),
-                flags.as_ptr(),
-                firstkey, lastkey, keystep,
-            ) == raw::Status::Err as _ { return raw::Status::Err as _; }
-        }
-        //////////////////////////////
-
-        //////////////////////////////
-        // Command 2
-        {
-            ///////////////////////////
-            let command_name = "alloc.get";
-            let command_flags = "write";
-            ///////////////////////////
-
-            let name = CString::new(command_name).unwrap();
-            let flags = CString::new(command_flags).unwrap();
-            let (firstkey, lastkey, keystep) = (1, 1, 1);
-
-            /////////////////////
-            extern fn do_command(
-                ctx: *mut raw::RedisModuleCtx,
-                argv: *mut *mut raw::RedisModuleString,
-                argc: c_int,
-            ) -> c_int {
-                let context = Context::new(ctx);
-
-                let args: Vec<String> = unsafe { slice::from_raw_parts(argv, argc as usize) }
-                    .into_iter()
-                    .map(|a| RedisString::from_ptr(*a).expect("UTF8 encoding error in handler args").to_string())
-                    .collect();
-
-                let response = alloc_get(&context, args);
-                context.reply(response) as c_int
-            }
-            /////////////////////
-
-            if raw::RedisModule_CreateCommand.unwrap()(
-                ctx,
-                name.as_ptr(),
-                Some(do_command),
-                flags.as_ptr(),
-                firstkey, lastkey, keystep,
-            ) == raw::Status::Err as _ { return raw::Status::Err as _; }
-        }
-        //////////////////////////////
+//        for command in COMMANDS {
+//            redis_command!(ctx, command.name, command.handler, command.flags);
+//        }
+        redis_command!(ctx, "alloc.set", alloc_set, "write");
+        redis_command!(ctx, "alloc.get", alloc_get, "write");
 
         raw::Status::Ok as _
     }
