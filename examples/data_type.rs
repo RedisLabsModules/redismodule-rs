@@ -21,15 +21,15 @@ fn alloc_set(ctx: &Context, args: Vec<String>) -> RedisResult {
     let key = ctx.open_key_writable(&key);
 
     match key.get_value::<MyType>(&MY_REDIS_TYPE)? {
+        Some(value) => {
+            value.data = "B".repeat(size as usize);
+        }
         None => {
             let value = MyType {
                 data: "A".repeat(size as usize)
             };
 
             key.set_value(&MY_REDIS_TYPE, value)?;
-        }
-        Some(value) => {
-            value.data = "B".repeat(size as usize);
         }
     }
 
@@ -43,12 +43,12 @@ fn alloc_get(ctx: &Context, args: Vec<String>) -> RedisResult {
     let key = ctx.open_key_writable(&key); // TODO: Use read-only key
 
     let value = match key.get_value::<MyType>(&MY_REDIS_TYPE)? {
-        None => ().into(),
         Some(value) => {
             // TODO: Use the value
             let _ = value;
             "some value".into()
         }
+        None => ().into()
     };
 
     Ok(value)
@@ -56,7 +56,7 @@ fn alloc_get(ctx: &Context, args: Vec<String>) -> RedisResult {
 
 //////////////////////////////////////////////////////
 
-redis_module!{
+redis_module! {
     name: "alloc",
     version: 1,
     data_types: [

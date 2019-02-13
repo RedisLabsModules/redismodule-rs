@@ -30,7 +30,7 @@ macro_rules! redis_command {
                 Some(do_command),
                 flags.as_ptr(),
                 firstkey, lastkey, keystep,
-            ) == raw::Status::Err as _ { return raw::Status::Err as _; }
+            ) == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
         }
     }
 }
@@ -74,11 +74,11 @@ macro_rules! redis_module {
                     module_name.as_ptr(),
                     module_version,
                     raw::REDISMODULE_APIVER_1 as c_int,
-                ) == raw::Status::Err as _ { return raw::Status::Err as _; }
+                ) == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
 
                 $(
                     if (&$data_type).create_data_type(ctx).is_err() {
-                        return raw::Status::Err as _;
+                        return raw::Status::Err as c_int;
                     }
                 )*
 
@@ -92,7 +92,7 @@ macro_rules! redis_module {
                     redis_command!(ctx, $name, $command, $flags);
                 )*
 
-                raw::Status::Ok as _
+                raw::Status::Ok as c_int
             }
         }
     }
