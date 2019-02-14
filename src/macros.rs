@@ -1,38 +1,45 @@
 #[macro_export]
 macro_rules! redis_command {
-    ($ctx: expr, $command_name:expr, $command_handler:expr, $command_flags:expr) => {
-        {
-            let name = CString::new($command_name).unwrap();
-            let flags = CString::new($command_flags).unwrap();
-            let (firstkey, lastkey, keystep) = (1, 1, 1);
+    ($ctx: expr, $command_name:expr, $command_handler:expr, $command_flags:expr) => {{
+        let name = CString::new($command_name).unwrap();
+        let flags = CString::new($command_flags).unwrap();
+        let (firstkey, lastkey, keystep) = (1, 1, 1);
 
-            /////////////////////
-            extern fn do_command(
-                ctx: *mut raw::RedisModuleCtx,
-                argv: *mut *mut raw::RedisModuleString,
-                argc: c_int,
-            ) -> c_int {
-                let context = Context::new(ctx);
+        /////////////////////
+        extern "C" fn do_command(
+            ctx: *mut raw::RedisModuleCtx,
+            argv: *mut *mut raw::RedisModuleString,
+            argc: c_int,
+        ) -> c_int {
+            let context = Context::new(ctx);
 
-                let args: Vec<String> = unsafe { slice::from_raw_parts(argv, argc as usize) }
-                    .into_iter()
-                    .map(|a| RedisString::from_ptr(*a).expect("UTF8 encoding error in handler args").to_string())
-                    .collect();
+            let args: Vec<String> = unsafe { slice::from_raw_parts(argv, argc as usize) }
+                .into_iter()
+                .map(|a| {
+                    RedisString::from_ptr(*a)
+                        .expect("UTF8 encoding error in handler args")
+                        .to_string()
+                })
+                .collect();
 
-                let response = $command_handler(&context, args);
-                context.reply(response) as c_int
-            }
-            /////////////////////
-
-            if raw::RedisModule_CreateCommand.unwrap()(
-                $ctx,
-                name.as_ptr(),
-                Some(do_command),
-                flags.as_ptr(),
-                firstkey, lastkey, keystep,
-            ) == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
+            let response = $command_handler(&context, args);
+            context.reply(response) as c_int
         }
-    }
+        /////////////////////
+
+        if raw::RedisModule_CreateCommand.unwrap()(
+            $ctx,
+            name.as_ptr(),
+            Some(do_command),
+            flags.as_ptr(),
+            firstkey,
+            lastkey,
+            keystep,
+        ) == raw::Status::Err as c_int
+        {
+            return raw::Status::Err as c_int;
+        }
+    }};
 }
 
 #[macro_export]

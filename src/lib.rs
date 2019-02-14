@@ -1,7 +1,7 @@
 //#![allow(dead_code)]
 
-use std::string;
 use std::os::raw::c_char;
+use std::string;
 
 #[macro_use]
 extern crate bitflags;
@@ -11,12 +11,12 @@ extern crate num_traits;
 
 use libc::size_t;
 
-pub mod redismodule;
 pub mod alloc;
-pub mod redisraw;
 pub mod error;
-pub mod raw;
 pub mod native_types;
+pub mod raw;
+pub mod redismodule;
+pub mod redisraw;
 
 #[macro_use]
 mod macros;
@@ -28,7 +28,6 @@ pub use redismodule::*;
 
 #[global_allocator]
 static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc;
-
 
 /// `LogLevel` is a level of logging to be specified with a Redis log directive.
 #[derive(Clone, Copy, Debug)]
@@ -51,7 +50,6 @@ pub enum Reply {
     Unknown,
 }
 
-
 fn from_byte_string(
     byte_str: *const c_char,
     length: size_t,
@@ -64,4 +62,3 @@ fn from_byte_string(
 
     String::from_utf8(vec_str)
 }
-
