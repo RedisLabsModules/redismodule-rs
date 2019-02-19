@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate redismodule;
 
-use redismodule::{Context, RedisResult, RedisError, parse_integer};
+use redismodule::{parse_integer, Context, RedisError, RedisResult};
 
 fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
     if args.len() < 2 {
@@ -24,7 +24,7 @@ fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
 
 //////////////////////////////////////////////////////
 
-redis_module!{
+redis_module! {
     name: "hello",
     version: 1,
     data_types: [],
@@ -42,10 +42,7 @@ mod tests {
     fn run_hello_mul(args: &[&str]) -> RedisResult {
         hello_mul(
             &Context::dummy(),
-            args
-                .iter()
-                .map(|v| String::from(*v))
-                .collect(),
+            args.iter().map(|v| String::from(*v)).collect(),
         )
     }
 
@@ -55,12 +52,15 @@ mod tests {
 
         match result {
             Ok(RedisValue::Array(v)) => {
-                assert_eq!(v, vec![10, 20, 30, 6000]
-                    .into_iter()
-                    .map(RedisValue::Integer)
-                    .collect::<Vec<_>>());
+                assert_eq!(
+                    v,
+                    vec![10, 20, 30, 6000]
+                        .into_iter()
+                        .map(RedisValue::Integer)
+                        .collect::<Vec<_>>()
+                );
             }
-            _ => assert!(false, "Bad result: {:?}", result)
+            _ => assert!(false, "Bad result: {:?}", result),
         }
     }
 
@@ -72,8 +72,7 @@ mod tests {
             Err(RedisError::String(s)) => {
                 assert_eq!(s, "Couldn't parse as integer: xx");
             }
-            _ => assert!(false, "Bad result: {:?}", result)
+            _ => assert!(false, "Bad result: {:?}", result),
         }
     }
 }
-

@@ -1,6 +1,6 @@
+use std::alloc::{GlobalAlloc, Layout, System};
 use std::os::raw::c_void;
-use std::alloc::{System, GlobalAlloc, Layout};
-use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT, Ordering::SeqCst};
+use std::sync::atomic::{AtomicBool, Ordering::SeqCst, ATOMIC_BOOL_INIT};
 
 use crate::raw;
 

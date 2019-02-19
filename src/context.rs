@@ -1,11 +1,11 @@
-use std::ptr;
-use std::os::raw::c_long;
 use std::ffi::CString;
+use std::os::raw::c_long;
+use std::ptr;
 
+use crate::key::{RedisKey, RedisKeyWritable};
 use crate::raw;
 use crate::LogLevel;
-use crate::key::{RedisKey, RedisKeyWritable};
-use crate::{RedisString, RedisError, RedisValue, RedisResult};
+use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
 /// Redis is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
@@ -19,7 +19,9 @@ impl Context {
     }
 
     pub fn dummy() -> Self {
-        Self { ctx: ptr::null_mut() }
+        Self {
+            ctx: ptr::null_mut(),
+        }
     }
 
     pub fn log(&self, level: LogLevel, message: &str) {
@@ -33,7 +35,8 @@ impl Context {
     }
 
     pub fn call(&self, command: &str, args: &[&str]) -> RedisResult {
-        let terminated_args: Vec<RedisString> = args.iter()
+        let terminated_args: Vec<RedisString> = args
+            .iter()
             .map(|s| RedisString::create(self.ctx, s))
             .collect();
 
@@ -48,13 +51,15 @@ impl Context {
         match r {
             Ok(RedisValue::Integer(v)) => unsafe {
                 raw::RedisModule_ReplyWithLongLong.unwrap()(self.ctx, v).into()
-            }
+            },
 
             Ok(RedisValue::String(s)) => unsafe {
                 raw::RedisModule_ReplyWithString.unwrap()(
                     self.ctx,
-                    RedisString::create(self.ctx, s.as_ref()).inner).into()
-            }
+                    RedisString::create(self.ctx, s.as_ref()).inner,
+                )
+                .into()
+            },
 
             Ok(RedisValue::Array(array)) => {
                 unsafe {
@@ -72,21 +77,21 @@ impl Context {
 
             Ok(RedisValue::None) => unsafe {
                 raw::RedisModule_ReplyWithNull.unwrap()(self.ctx).into()
-            }
+            },
 
             Err(RedisError::WrongArity) => unsafe {
                 raw::RedisModule_WrongArity.unwrap()(self.ctx).into()
-            }
+            },
 
             Err(RedisError::String(s)) => unsafe {
                 let msg = CString::new(s).unwrap();
                 raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
-            }
+            },
 
             Err(RedisError::Str(s)) => unsafe {
                 let msg = CString::new(s).unwrap();
                 raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
-            }
+            },
         }
     }
 

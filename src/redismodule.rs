@@ -1,6 +1,6 @@
+use std::ffi::CString;
 use std::slice;
 use std::str;
-use std::ffi::CString;
 
 pub type RedisResult = Result<RedisValue, RedisError>;
 
@@ -47,10 +47,7 @@ impl From<&str> for RedisValue {
 
 impl From<Vec<i64>> for RedisValue {
     fn from(nums: Vec<i64>) -> Self {
-        RedisValue::Array(nums
-            .into_iter()
-            .map(RedisValue::Integer)
-            .collect())
+        RedisValue::Array(nums.into_iter().map(RedisValue::Integer).collect())
     }
 }
 
@@ -61,10 +58,9 @@ pub trait NextArg: Iterator {
     fn next_i64(&mut self) -> Result<i64, RedisError>;
 }
 
-impl<T: Iterator<Item=String>> NextArg for T {
+impl<T: Iterator<Item = String>> NextArg for T {
     fn next_string(&mut self) -> Result<String, RedisError> {
-        self.next()
-            .map_or(Err(RedisError::WrongArity), Result::Ok)
+        self.next().map_or(Err(RedisError::WrongArity), Result::Ok)
     }
 
     fn next_i64(&mut self) -> Result<i64, RedisError> {
@@ -89,9 +85,7 @@ pub struct RedisString {
 impl RedisString {
     pub fn create(ctx: *mut raw::RedisModuleCtx, s: &str) -> RedisString {
         let str = CString::new(s).unwrap();
-        let inner = unsafe {
-            raw::RedisModule_CreateString.unwrap()(ctx, str.as_ptr(), s.len())
-        };
+        let inner = unsafe { raw::RedisModule_CreateString.unwrap()(ctx, str.as_ptr(), s.len()) };
 
         RedisString { ctx, inner }
     }
@@ -111,4 +105,3 @@ impl Drop for RedisString {
         }
     }
 }
-

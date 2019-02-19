@@ -4,8 +4,8 @@
 
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
 
-extern crate libc;
 extern crate enum_primitive_derive;
+extern crate libc;
 extern crate num_traits;
 
 use num_traits::FromPrimitive;
@@ -33,7 +33,9 @@ pub enum KeyType {
 }
 
 impl From<c_int> for KeyType {
-    fn from(v: c_int) -> Self { KeyType::from_i32(v).unwrap() }
+    fn from(v: c_int) -> Self {
+        KeyType::from_i32(v).unwrap()
+    }
 }
 
 // This hack is required since derive(Primitive) requires all values to have the same type,
@@ -57,7 +59,9 @@ pub enum ReplyType {
 }
 
 impl From<c_int> for ReplyType {
-    fn from(v: c_int) -> Self { ReplyType::from_i32(v).unwrap() }
+    fn from(v: c_int) -> Self {
+        ReplyType::from_i32(v).unwrap()
+    }
 }
 
 #[derive(Primitive, Debug, PartialEq)]
@@ -67,7 +71,9 @@ pub enum Status {
 }
 
 impl From<c_int> for Status {
-    fn from(v: c_int) -> Self { Status::from_i32(v).unwrap() }
+    fn from(v: c_int) -> Self {
+        Status::from_i32(v).unwrap()
+    }
 }
 
 impl From<Status> for Result<(), &str> {
@@ -78,7 +84,6 @@ impl From<Status> for Result<(), &str> {
         }
     }
 }
-
 
 #[derive(Debug)]
 pub enum CommandFlag {
@@ -97,7 +102,6 @@ pub enum CommandFlag {
     Fast,
     Movablekeys,
 }
-
 
 fn command_flag_repr(flag: &CommandFlag) -> &'static str {
     use crate::raw::CommandFlag::*;
@@ -118,7 +122,6 @@ fn command_flag_repr(flag: &CommandFlag) -> &'static str {
         Movablekeys => "movablekeys",
     }
 }
-
 
 // This is the one static function we need to initialize a module.
 // bindgen does not generate it for us (probably since it's defined as static in redismodule.h).
@@ -145,30 +148,19 @@ pub fn call_reply_type(reply: *mut RedisModuleCallReply) -> ReplyType {
 }
 
 pub fn free_call_reply(reply: *mut RedisModuleCallReply) {
-    unsafe {
-        RedisModule_FreeCallReply.unwrap()(reply)
-    }
+    unsafe { RedisModule_FreeCallReply.unwrap()(reply) }
 }
 
 pub fn call_reply_integer(reply: *mut RedisModuleCallReply) -> c_longlong {
-    unsafe {
-        RedisModule_CallReplyInteger.unwrap()(reply)
-    }
+    unsafe { RedisModule_CallReplyInteger.unwrap()(reply) }
 }
 
-pub fn call_reply_string_ptr(
-    str: *mut RedisModuleCallReply,
-    len: *mut size_t,
-) -> *const c_char {
-    unsafe {
-        RedisModule_CallReplyStringPtr.unwrap()(str, len)
-    }
+pub fn call_reply_string_ptr(str: *mut RedisModuleCallReply, len: *mut size_t) -> *const c_char {
+    unsafe { RedisModule_CallReplyStringPtr.unwrap()(str, len) }
 }
 
 pub fn close_key(kp: *mut RedisModuleKey) {
-    unsafe {
-        RedisModule_CloseKey.unwrap()(kp)
-    }
+    unsafe { RedisModule_CloseKey.unwrap()(kp) }
 }
 
 pub fn open_key(
@@ -176,9 +168,7 @@ pub fn open_key(
     keyname: *mut RedisModuleString,
     mode: KeyMode,
 ) -> *mut RedisModuleKey {
-    unsafe {
-        RedisModule_OpenKey.unwrap()(ctx, keyname, mode.bits) as *mut RedisModuleKey
-    }
+    unsafe { RedisModule_OpenKey.unwrap()(ctx, keyname, mode.bits) as *mut RedisModuleKey }
 }
 
 pub fn reply_with_array(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
@@ -186,17 +176,16 @@ pub fn reply_with_array(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
 }
 
 pub fn reply_with_error(ctx: *mut RedisModuleCtx, err: *const c_char) {
-    unsafe { RedisModule_ReplyWithError.unwrap()(ctx, err); }
+    unsafe {
+        RedisModule_ReplyWithError.unwrap()(ctx, err);
+    }
 }
 
 pub fn reply_with_long_long(ctx: *mut RedisModuleCtx, ll: c_longlong) -> Status {
     unsafe { RedisModule_ReplyWithLongLong.unwrap()(ctx, ll).into() }
 }
 
-pub fn reply_with_string(
-    ctx: *mut RedisModuleCtx,
-    str: *mut RedisModuleString,
-) -> Status {
+pub fn reply_with_string(ctx: *mut RedisModuleCtx, str: *mut RedisModuleString) -> Status {
     unsafe { RedisModule_ReplyWithString.unwrap()(ctx, str).into() }
 }
 
@@ -207,11 +196,7 @@ pub fn set_expire(key: *mut RedisModuleKey, expire: c_longlong) -> Status {
     unsafe { RedisModule_SetExpire.unwrap()(key, expire).into() }
 }
 
-pub fn string_dma(
-    key: *mut RedisModuleKey,
-    len: *mut size_t,
-    mode: KeyMode,
-) -> *const c_char {
+pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> *const c_char {
     unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits) }
 }
 

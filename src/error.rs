@@ -1,7 +1,7 @@
 use std;
 use std::error;
 use std::fmt;
-use std::fmt::{Display};
+use std::fmt::Display;
 
 #[derive(Debug)]
 pub enum Error {

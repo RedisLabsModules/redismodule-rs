@@ -1,8 +1,8 @@
 #[macro_use]
 extern crate redismodule;
 
-use redismodule::{Context, RedisResult, NextArg};
 use redismodule::native_types::RedisType;
+use redismodule::{Context, NextArg, RedisResult};
 
 #[derive(Debug)]
 struct MyType {
@@ -26,7 +26,7 @@ fn alloc_set(ctx: &Context, args: Vec<String>) -> RedisResult {
         }
         None => {
             let value = MyType {
-                data: "A".repeat(size as usize)
+                data: "A".repeat(size as usize),
             };
 
             key.set_value(&MY_REDIS_TYPE, value)?;
@@ -48,7 +48,7 @@ fn alloc_get(ctx: &Context, args: Vec<String>) -> RedisResult {
             let _ = value;
             "some value".into()
         }
-        None => ().into()
+        None => ().into(),
     };
 
     Ok(value)

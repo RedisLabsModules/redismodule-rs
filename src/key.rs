@@ -1,18 +1,18 @@
+use std::fmt::Debug;
+use std::os::raw::c_void;
 use std::ptr;
 use std::string;
-use std::os::raw::c_void;
-use std::fmt::Debug;
 
 use libc::size_t;
 
-use crate::raw;
 use crate::error::Error;
-use crate::RedisString;
-use crate::native_types::RedisType;
 use crate::from_byte_string;
-use crate::RedisResult;
-use crate::RedisError;
 use crate::native_types::redis_log;
+use crate::native_types::RedisType;
+use crate::raw;
+use crate::RedisError;
+use crate::RedisResult;
+use crate::RedisString;
 
 /// `RedisKey` is an abstraction over a Redis key that allows readonly
 /// operations.
@@ -86,8 +86,7 @@ pub struct RedisKeyWritable {
 impl RedisKeyWritable {
     pub fn open(ctx: *mut raw::RedisModuleCtx, key: &str) -> RedisKeyWritable {
         let key_str = RedisString::create(ctx, key);
-        let key_inner =
-            raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::ReadWrite));
+        let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::ReadWrite));
         RedisKeyWritable {
             ctx,
             key_inner,
@@ -138,9 +137,7 @@ impl RedisKeyWritable {
     pub fn is_empty(&self) -> bool {
         use raw::KeyType;
 
-        let key_type: KeyType = unsafe {
-            raw::RedisModule_KeyType.unwrap()(self.key_inner)
-        }.into();
+        let key_type: KeyType = unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into();
 
         key_type == KeyType::Empty
     }
@@ -148,21 +145,18 @@ impl RedisKeyWritable {
     fn verify_type(&self, redis_type: &RedisType) -> RedisResult {
         use raw::KeyType;
 
-        let key_type: KeyType = unsafe {
-            raw::RedisModule_KeyType.unwrap()(self.key_inner)
-        }.into();
+        let key_type: KeyType = unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into();
 
         redis_log(self.ctx, format!("key type: {:?}", key_type).as_str());
 
         if key_type != KeyType::Empty {
             // The key exists; check its type
-            let raw_type = unsafe {
-                raw::RedisModule_ModuleTypeGetType.unwrap()(self.key_inner)
-            };
+            let raw_type = unsafe { raw::RedisModule_ModuleTypeGetType.unwrap()(self.key_inner) };
 
             if raw_type != *redis_type.raw_type.borrow() {
                 return Err(RedisError::String(format!(
-                    "Existing key has wrong Redis type")));
+                    "Existing key has wrong Redis type"
+                )));
             }
 
             redis_log(self.ctx, "Existing key is of the correct type");
@@ -173,17 +167,19 @@ impl RedisKeyWritable {
         Ok("OK".into())
     }
 
-    pub fn get_value<T: Debug>(&self, redis_type: &RedisType) -> Result<Option<&mut T>, RedisError> {
+    pub fn get_value<T: Debug>(
+        &self,
+        redis_type: &RedisType,
+    ) -> Result<Option<&mut T>, RedisError> {
         self.verify_type(redis_type)?;
 
         redis_log(self.ctx, "Going to get value");
 
-        let value = unsafe {
-            raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner) as *mut T
-        };
+        let value =
+            unsafe { raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner) as *mut T };
 
         if value.is_null() {
-            return Ok(None)
+            return Ok(None);
         }
 
         let value = unsafe { &mut *value };
@@ -196,7 +192,10 @@ impl RedisKeyWritable {
     pub fn set_value<T: Debug>(&self, redis_type: &RedisType, value: T) -> Result<(), RedisError> {
         self.verify_type(redis_type)?;
 
-        redis_log(self.ctx, format!("1. Going to set value to {:?}", &value).as_str());
+        redis_log(
+            self.ctx,
+            format!("1. Going to set value to {:?}", &value).as_str(),
+        );
 
         let value = Box::into_raw(Box::new(value)) as *mut c_void;
 
@@ -208,7 +207,8 @@ impl RedisKeyWritable {
                 *redis_type.raw_type.borrow(),
                 value,
             )
-        }.into();
+        }
+        .into();
 
         redis_log(self.ctx, "3. Finished setting value");
 
@@ -224,7 +224,6 @@ impl From<raw::Status> for Result<(), RedisError> {
         }
     }
 }
-
 
 impl Drop for RedisKeyWritable {
     // Frees resources appropriately as a RedisKey goes out of scope.
