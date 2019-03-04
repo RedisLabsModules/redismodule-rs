@@ -11,6 +11,10 @@ jobs:
           name: Version information
           command: rustc --version; cargo --version; rustup --version
 
+      - run:
+          name: Install prerequisite
+          command: sudo apt-get install -y clang
+
       - restore_cache:
           keys:
             - v1-dependencies-{{ arch }}-{{ checksum "Cargo.lock" }}
