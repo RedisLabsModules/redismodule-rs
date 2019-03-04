@@ -51,6 +51,12 @@ impl From<Vec<i64>> for RedisValue {
     }
 }
 
+impl From<usize> for RedisValue {
+    fn from(i: usize) -> Self {
+        (i as i64).into()
+    }
+}
+
 ///////////////////////////////////////////////////
 
 pub trait NextArg: Iterator {
