@@ -16,6 +16,10 @@ crate-type = ["cdylib"]
 name = "data_type"
 crate-type = ["cdylib"]
 
+[[example]]
+name = "hello_redisearch"
+crate-type = ["cdylib"]
+
 [dependencies]
 bitflags = "1.0"
 libc = "0.2"

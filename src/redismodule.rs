@@ -4,7 +4,7 @@ use std::str;
 
 pub type RedisResult = Result<RedisValue, RedisError>;
 
-use crate::raw;
+pub use crate::raw;
 
 #[derive(Debug)]
 pub enum RedisError {
@@ -46,6 +46,12 @@ impl From<String> for RedisValue {
 impl From<&str> for RedisValue {
     fn from(s: &str) -> Self {
         s.to_string().into()
+    }
+}
+
+impl From<Vec<String>> for RedisValue {
+    fn from(strings: Vec<String>) -> Self {
+        RedisValue::Array(strings.into_iter().map(RedisValue::BulkString).collect())
     }
 }
 

@@ -15,8 +15,9 @@ pub mod alloc;
 pub mod error;
 pub mod native_types;
 pub mod raw;
-pub mod redismodule;
+mod redismodule;
 pub mod redisraw;
+pub mod redisearch;
 
 #[macro_use]
 mod macros;
