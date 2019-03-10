@@ -9,7 +9,11 @@ extern "C" {
 
 #define REDISEARCH_CAPI_VERSION 1
 
+#ifdef __cplusplus
 #define MODULE_API_FUNC(T, N) extern T(*N)
+#else
+#define MODULE_API_FUNC(T, N) T(*N)
+#endif
 
 typedef struct IndexSpec RSIndex;
 typedef struct FieldSpec RSField;
