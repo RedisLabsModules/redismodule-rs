@@ -38,6 +38,7 @@ redis_module! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use redismodule::RedisValue;
 
     fn run_hello_mul(args: &[&str]) -> RedisResult {
         hello_mul(
