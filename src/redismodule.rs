@@ -15,8 +15,8 @@ pub enum RedisError {
 
 #[derive(Debug, PartialEq)]
 pub enum RedisValue {
-    Str(String),
-    String(String),
+    SimpleString(String),
+    BulkString(String),
     Integer(i64),
     Array(Vec<RedisValue>),
     None,
@@ -36,13 +36,13 @@ impl From<()> for RedisValue {
 
 impl From<String> for RedisValue {
     fn from(s: String) -> Self {
-        RedisValue::String(s)
+        RedisValue::SimpleString(s)
     }
 }
 
 impl From<&str> for RedisValue {
     fn from(s: &str) -> Self {
-        RedisValue::Str(s.to_string())
+        s.to_string().into()
     }
 }
 
