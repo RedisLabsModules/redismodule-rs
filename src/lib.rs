@@ -38,18 +38,6 @@ pub enum LogLevel {
     Warning,
 }
 
-/// Reply represents the various types of a replies that we can receive after
-/// executing a Redis command.
-#[derive(Debug)]
-pub enum Reply {
-    Array,
-    Error,
-    Integer(i64),
-    Nil,
-    String(String),
-    Unknown,
-}
-
 fn from_byte_string(
     byte_str: *const c_char,
     length: size_t,
