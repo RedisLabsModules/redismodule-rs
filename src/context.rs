@@ -53,6 +53,11 @@ impl Context {
                 raw::RedisModule_ReplyWithLongLong.unwrap()(self.ctx, v).into()
             },
 
+            Ok(RedisValue::SimpleStringStatic(s)) => unsafe {
+                let msg = CString::new(s).unwrap();
+                raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into()
+            },
+
             Ok(RedisValue::SimpleString(s)) => unsafe {
                 let msg = CString::new(s).unwrap();
                 raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into()

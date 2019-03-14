@@ -15,6 +15,7 @@ pub enum RedisError {
 
 #[derive(Debug, PartialEq)]
 pub enum RedisValue {
+    SimpleStringStatic(&'static str),
     SimpleString(String),
     BulkString(String),
     Integer(i64),
@@ -22,7 +23,7 @@ pub enum RedisValue {
     None,
 }
 
-pub const REDIS_OK: RedisResult = Ok(RedisValue::SimpleString("OK".to_owned()));
+pub const REDIS_OK: RedisResult = Ok(RedisValue::SimpleStringStatic("OK"));
 
 impl From<i64> for RedisValue {
     fn from(i: i64) -> Self {
