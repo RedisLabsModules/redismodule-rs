@@ -22,6 +22,8 @@ pub enum RedisValue {
     None,
 }
 
+pub const REDIS_OK: RedisResult = Ok(RedisValue::SimpleString("OK".to_owned()));
+
 impl From<i64> for RedisValue {
     fn from(i: i64) -> Self {
         RedisValue::Integer(i)
