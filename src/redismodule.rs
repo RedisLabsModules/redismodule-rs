@@ -13,6 +13,12 @@ pub enum RedisError {
     String(String),
 }
 
+impl From<&'static str> for RedisError {
+    fn from(s: &'static str) -> Self {
+        RedisError::Str(s)
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum RedisValue {
     SimpleStringStatic(&'static str),
