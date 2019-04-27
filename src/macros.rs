@@ -88,7 +88,11 @@ macro_rules! redis_module {
                         return raw::Status::Err as c_int;
                     }
                 )*
+            }
 
+            // Using another block to make sure all memory allocated before we
+            // switch to Redis allocator will be out of scope
+            unsafe {
                 if true {
                     redismodule::alloc::use_redis_alloc();
                 } else {
