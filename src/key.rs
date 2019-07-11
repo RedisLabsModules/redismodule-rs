@@ -237,7 +237,7 @@ fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> R
 
     if key_type != KeyType::Empty {
         // The key exists; check its type
-        let raw_type = unsafe { raw::לRedisModule_ModuleTypeGetType.unwrap()(key_inner) };
+        let raw_type = unsafe { raw::RedisModule_ModuleTypeGetType.unwrap()(key_inner) };
 
         if raw_type != *redis_type.raw_type.borrow() {
             return Err(RedisError::String(format!(
