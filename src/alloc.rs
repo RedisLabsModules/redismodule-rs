@@ -1,12 +1,12 @@
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::os::raw::c_void;
-use std::sync::atomic::{AtomicBool, Ordering::SeqCst, ATOMIC_BOOL_INIT};
+use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 
 use crate::raw;
 
 pub struct RedisAlloc;
 
-static USE_REDIS_ALLOC: AtomicBool = ATOMIC_BOOL_INIT;
+static USE_REDIS_ALLOC: AtomicBool = AtomicBool::new(false);
 
 unsafe impl GlobalAlloc for RedisAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
