@@ -14,6 +14,7 @@ use num_traits::FromPrimitive;
 use libc::size_t;
 
 pub use crate::redisraw::bindings::*;
+use crate::RedisString;
 
 bitflags! {
     pub struct KeyMode: c_int {
@@ -228,4 +229,15 @@ pub fn string_set(key: *mut RedisModuleKey, str: *mut RedisModuleString) -> Stat
 
 pub fn replicate_verbatim(ctx: *mut RedisModuleCtx) -> Status {
     unsafe { RedisModule_ReplicateVerbatim.unwrap()(ctx).into() }
+}
+
+pub fn load_string(rdb: *mut RedisModuleIO) -> String {
+    let p = unsafe { RedisModule_LoadString.unwrap()(rdb) };
+    RedisString::from_ptr(p)
+        .expect("UTF8 encoding error in load string")
+        .to_string()
+}
+
+pub fn save_string(rdb: *mut RedisModuleIO, buf: &String) {
+    unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr() as *mut i8, buf.len()) };
 }
