@@ -1,4 +1,3 @@
-use std::fmt::Debug;
 use std::os::raw::c_void;
 use std::ptr;
 use std::string;
@@ -47,7 +46,7 @@ impl RedisKey {
         }
     }
 
-    pub fn get_value<T: Debug>(
+    pub fn get_value<T>(
         &self,
         redis_type: &RedisType,
     ) -> Result<Option<&T>, RedisError> {
@@ -166,7 +165,7 @@ impl RedisKeyWritable {
         key_type == KeyType::Empty
     }
 
-    pub fn get_value<T: Debug>(
+    pub fn get_value<T>(
         &self,
         redis_type: &RedisType,
     ) -> Result<Option<&mut T>, RedisError> {
@@ -182,7 +181,7 @@ impl RedisKeyWritable {
         Ok(Some(value))
     }
 
-    pub fn set_value<T: Debug>(&self, redis_type: &RedisType, value: T) -> Result<(), RedisError> {
+    pub fn set_value<T>(&self, redis_type: &RedisType, value: T) -> Result<(), RedisError> {
         verify_type(self.key_inner, redis_type)?;
         let value = Box::into_raw(Box::new(value)) as *mut c_void;
         let status: raw::Status = unsafe {

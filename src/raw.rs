@@ -2,14 +2,15 @@
 // point.
 #![allow(dead_code)]
 
-use std::os::raw::{c_char, c_int, c_long, c_longlong};
+use std::os::raw::{c_char, c_int, c_long, c_longlong, c_double};
 
 extern crate enum_primitive_derive;
 extern crate libc;
 extern crate num_traits;
 
+use std::slice;
+use std::ptr::null_mut;
 use num_traits::FromPrimitive;
-
 use libc::size_t;
 
 pub use crate::redisraw::bindings::*;
@@ -159,6 +160,14 @@ pub fn call_reply_string_ptr(str: *mut RedisModuleCallReply, len: *mut size_t) -
     unsafe { RedisModule_CallReplyStringPtr.unwrap()(str, len) }
 }
 
+pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
+    unsafe {
+        let len: *mut size_t = null_mut();
+        let str: *mut u8 = RedisModule_CallReplyStringPtr.unwrap()(reply, len) as *mut u8;
+        String::from_utf8(slice::from_raw_parts(str, *len).into_iter().map(|v| *v).collect()).unwrap()
+    }
+}
+
 pub fn close_key(kp: *mut RedisModuleKey) {
     unsafe { RedisModule_CloseKey.unwrap()(kp) }
 }
@@ -185,6 +194,10 @@ pub fn reply_with_long_long(ctx: *mut RedisModuleCtx, ll: c_longlong) -> Status 
     unsafe { RedisModule_ReplyWithLongLong.unwrap()(ctx, ll).into() }
 }
 
+pub fn reply_with_double(ctx: *mut RedisModuleCtx, f: c_double) -> Status {
+    unsafe { RedisModule_ReplyWithDouble.unwrap()(ctx, f).into() }
+}
+
 pub fn reply_with_string(ctx: *mut RedisModuleCtx, str: *mut RedisModuleString) -> Status {
     unsafe { RedisModule_ReplyWithString.unwrap()(ctx, str).into() }
 }
@@ -207,4 +220,12 @@ pub fn string_ptr_len(str: *mut RedisModuleString, len: *mut size_t) -> *const c
 
 pub fn string_set(key: *mut RedisModuleKey, str: *mut RedisModuleString) -> Status {
     unsafe { RedisModule_StringSet.unwrap()(key, str).into() }
+}
+
+// replicate commands
+// pub fn replicate() {
+// }
+
+pub fn replicate_verbatim(ctx: *mut RedisModuleCtx) -> Status {
+    unsafe { RedisModule_ReplicateVerbatim.unwrap()(ctx).into() }
 }
