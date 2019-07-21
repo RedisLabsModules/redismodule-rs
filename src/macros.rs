@@ -61,9 +61,9 @@ macro_rules! redis_module {
         use std::os::raw::c_int;
         use std::ffi::CString;
         use std::slice;
-
         use redismodule::raw;
-        use redismodule::RedisString;
+
+        use redismodule::{RedisString, LogLevel};
 
         #[no_mangle]
         #[allow(non_snake_case)]
@@ -75,6 +75,7 @@ macro_rules! redis_module {
             unsafe {
                 let module_name = CString::new($module_name).unwrap();
                 let module_version = $module_version as c_int;
+                let context = Context::new(ctx);
 
                 if raw::Export_RedisModule_Init(
                     ctx,
@@ -84,8 +85,25 @@ macro_rules! redis_module {
                 ) == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
 
                 $(
-                    if (&$data_type).create_data_type(ctx).is_err() {
-                        return raw::Status::Err as c_int;
+                    {
+                        let type_name = CString::new($data_type::REDIS_TYPE.name).unwrap();
+
+                        let redis_type = unsafe {
+                            raw::RedisModule_CreateDataType.unwrap()(
+                                ctx,
+                                type_name.as_ptr(),
+                                0, // Encoding version
+                                &mut $data_type::TYPE_METHODS
+                            )
+                        };
+
+                        if redis_type.is_null() {
+                            context.log(LogLevel::Warning, "Error: created data type is null");
+                            return raw::Status::Err as c_int;
+                        }
+
+                        *$data_type::REDIS_TYPE.raw_type.borrow_mut() = redis_type;
+                        context.log(LogLevel::Notice, format!("Created new data type '{}'", $data_type::REDIS_TYPE.name).as_str());
                     }
                 )*
             }
