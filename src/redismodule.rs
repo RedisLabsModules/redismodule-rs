@@ -1,7 +1,7 @@
 use std::ffi::CString;
 use std::slice;
 use std::str;
-use core::num::ParseFloatError;
+use core::num::{ParseFloatError, ParseIntError};
 
 pub type RedisResult = Result<RedisValue, RedisError>;
 
@@ -22,6 +22,12 @@ impl From<&'static str> for RedisError {
 
 impl From<ParseFloatError> for RedisError {
     fn from(e: ParseFloatError) -> Self {
+        RedisError::String(e.to_string())
+    }
+}
+
+impl From<ParseIntError> for RedisError {
+    fn from(e: ParseIntError) -> Self {
         RedisError::String(e.to_string())
     }
 }
