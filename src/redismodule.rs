@@ -74,6 +74,12 @@ impl From<Vec<String>> for RedisValue {
     }
 }
 
+impl From<Vec<&String>> for RedisValue {
+    fn from(strings: Vec<&String>) -> Self {
+        RedisValue::Array(strings.into_iter().map(|s| RedisValue::BulkString(s.to_string())).collect())
+    }
+}
+
 impl From<Vec<i64>> for RedisValue {
     fn from(nums: Vec<i64>) -> Self {
         RedisValue::Array(nums.into_iter().map(RedisValue::Integer).collect())
