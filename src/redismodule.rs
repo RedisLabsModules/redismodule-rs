@@ -150,12 +150,12 @@ impl<T: Iterator<Item = String>> NextArg for T {
 }
 
 pub fn parse_integer(arg: &String) -> Result<i64, RedisError> {
-    arg.parse::<i64>()
+    arg.parse()
         .map_err(|_| RedisError::String(format!("Couldn't parse as integer: {}", arg)))
 }
 
 pub fn parse_float(arg: &String) -> Result<f64, RedisError> {
-    arg.parse::<f64>()
+    arg.parse()
         .map_err(|_| RedisError::String(format!("Couldn't parse as float: {}", arg)))
 }
 
