@@ -1,7 +1,7 @@
+use core::num::{ParseFloatError, ParseIntError};
 use std::ffi::CString;
 use std::slice;
 use std::str;
-use core::num::ParseFloatError;
 
 pub type RedisResult = Result<RedisValue, RedisError>;
 
@@ -22,6 +22,12 @@ impl From<&'static str> for RedisError {
 
 impl From<ParseFloatError> for RedisError {
     fn from(e: ParseFloatError) -> Self {
+        RedisError::String(e.to_string())
+    }
+}
+
+impl From<ParseIntError> for RedisError {
+    fn from(e: ParseIntError) -> Self {
         RedisError::String(e.to_string())
     }
 }
@@ -69,9 +75,35 @@ impl From<&str> for RedisValue {
     }
 }
 
+impl From<Option<String>> for RedisValue {
+    fn from(s: Option<String>) -> Self {
+        match s {
+            Some(v) => RedisValue::SimpleString(v),
+            None => RedisValue::None,
+        }
+    }
+}
+
+impl From<Vec<Option<String>>> for RedisValue {
+    fn from(strings: Vec<Option<String>>) -> Self {
+        RedisValue::Array(strings.into_iter().map(|v| v.into()).collect())
+    }
+}
+
 impl From<Vec<String>> for RedisValue {
     fn from(strings: Vec<String>) -> Self {
         RedisValue::Array(strings.into_iter().map(RedisValue::BulkString).collect())
+    }
+}
+
+impl From<Vec<&String>> for RedisValue {
+    fn from(strings: Vec<&String>) -> Self {
+        RedisValue::Array(
+            strings
+                .into_iter()
+                .map(|s| RedisValue::BulkString(s.to_string()))
+                .collect(),
+        )
     }
 }
 
