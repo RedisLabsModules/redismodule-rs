@@ -4,7 +4,7 @@
 
 # redismodule-rs
 
-The Rust API for Redis is based on the https://github.com/brandur/redis-cell project.
+The Rust API for Redis Modules API is based on the https://github.com/brandur/redis-cell project.
 
 # Running the example module
 1. install [rust and cargo](https://www.rust-lang.org/tools/install) 
