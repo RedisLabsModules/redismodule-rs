@@ -11,7 +11,7 @@ fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
     let nums = args
         .into_iter()
         .skip(1)
-        .map(parse_integer)
+        .map(|s| parse_integer(&s))
         .collect::<Result<Vec<i64>, RedisError>>()?;
 
     let product = nums.iter().product();
