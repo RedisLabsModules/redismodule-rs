@@ -13,17 +13,29 @@ macro_rules! redis_command {
         ) -> c_int {
             let context = Context::new(ctx);
 
+            let mut error = RedisError::WrongArity;
             let args: Vec<String> = unsafe { slice::from_raw_parts(argv, argc as usize) }
                 .into_iter()
                 .map(|a| {
-                    RedisString::from_ptr(*a)
-                        .expect("UTF8 encoding error in handler args")
-                        .to_string()
+
+                    let res = match RedisString::from_ptr(*a) {
+                        Ok(s) => s,
+                        Err(_) => {
+                            error = RedisError::Str("UTF8 encoding error in handler args");
+                            ""
+                        },
+                    };
+                    res.to_string()
                 })
                 .collect();
 
-            let response = $command_handler(&context, args);
-            context.reply(response) as c_int
+            match error {
+                RedisError::WrongArity => {
+                    let response = $command_handler(&context, args);
+                    context.reply(response) as c_int
+                },
+                _ => context.reply(Err(error)) as c_int
+            }
         }
         /////////////////////
 
