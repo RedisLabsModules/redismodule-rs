@@ -29,5 +29,5 @@ num-traits = "^0.1"
 #failure = "0.1"
 
 [build-dependencies]
-bindgen = "0.47"
+bindgen = "0.51"
 cc = "1.0"
