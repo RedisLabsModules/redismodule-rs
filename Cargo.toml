@@ -21,7 +21,7 @@ name = "hello_redisearch"
 crate-type = ["cdylib"]
 
 [dependencies]
-bitflags = "1.0"
+bitflags = "1.1"
 libc = "0.2"
 time = "0.1"
 enum-primitive-derive = "^0.1"
