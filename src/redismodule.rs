@@ -84,6 +84,12 @@ impl From<Option<String>> for RedisValue {
     }
 }
 
+impl From<Vec<RedisValue>> for RedisValue {
+    fn from(values: Vec<RedisValue>) -> Self {
+        RedisValue::Array(values)
+    }
+}
+
 impl From<Vec<Option<String>>> for RedisValue {
     fn from(strings: Vec<Option<String>>) -> Self {
         RedisValue::Array(strings.into_iter().map(|v| v.into()).collect())
