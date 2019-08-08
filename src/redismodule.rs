@@ -14,6 +14,12 @@ pub enum RedisError {
     String(String),
 }
 
+impl RedisError {
+    pub fn nonexistent_key() -> Self {
+        RedisError::Str("ERR could not perform this operation on a key that doesn't exist")
+    }
+}
+
 impl From<&'static str> for RedisError {
     fn from(s: &'static str) -> Self {
         RedisError::Str(s)
