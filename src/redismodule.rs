@@ -143,6 +143,7 @@ pub trait NextArg: Iterator {
     fn next_string(&mut self) -> Result<String, RedisError>;
     fn next_i64(&mut self) -> Result<i64, RedisError>;
     fn next_f64(&mut self) -> Result<f64, RedisError>;
+    fn done(&mut self) -> Result<(), RedisError>;
 }
 
 impl<T: Iterator<Item = String>> NextArg for T {
@@ -158,6 +159,11 @@ impl<T: Iterator<Item = String>> NextArg for T {
     fn next_f64(&mut self) -> Result<f64, RedisError> {
         self.next()
             .map_or(Err(RedisError::WrongArity), |v| parse_float(&v))
+    }
+
+    /// Return an error if there are any more arguments
+    fn done(&mut self) -> Result<(), RedisError> {
+        self.next().map_or(Ok(()), |_| Err(RedisError::WrongArity))
     }
 }
 
