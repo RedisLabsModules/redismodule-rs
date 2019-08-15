@@ -9,16 +9,19 @@ struct MyType {
     data: String,
 }
 
-static MY_REDIS_TYPE: RedisType = RedisType::new("mytype123", 0, raw::RedisModuleTypeMethods {
-                                                     version: raw::REDISMODULE_TYPE_METHOD_VERSION as u64,
-                                                     rdb_load: None,
-                                                     rdb_save: None,
-                                                     aof_rewrite: None, //
-                                                     free: None,
-                                                     // Currently unused by Redis
-                                                     mem_usage: None,
-                                                     digest: None,
-                                                 }
+static MY_REDIS_TYPE: RedisType = RedisType::new(
+    "mytype123",
+    0,
+    raw::RedisModuleTypeMethods {
+        version: raw::REDISMODULE_TYPE_METHOD_VERSION as u64,
+        rdb_load: None,
+        rdb_save: None,
+        aof_rewrite: None, //
+        free: None,
+        // Currently unused by Redis
+        mem_usage: None,
+        digest: None,
+    },
 );
 
 fn alloc_set(ctx: &Context, args: Vec<String>) -> RedisResult {

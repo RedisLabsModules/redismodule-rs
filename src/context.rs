@@ -35,7 +35,9 @@ impl Context {
     }
 
     pub fn auto_memory(&self) {
-        unsafe {raw::RedisModule_AutoMemory.unwrap()(self.ctx);}
+        unsafe {
+            raw::RedisModule_AutoMemory.unwrap()(self.ctx);
+        }
     }
 
     pub fn call(&self, command: &str, args: &[&str]) -> RedisResult {

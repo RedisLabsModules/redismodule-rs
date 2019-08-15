@@ -16,7 +16,11 @@ pub struct RedisType {
 unsafe impl Sync for RedisType {}
 
 impl RedisType {
-    pub const fn new(name: &'static str, version: i32, type_methods: raw::RedisModuleTypeMethods) -> Self {
+    pub const fn new(
+        name: &'static str,
+        version: i32,
+        type_methods: raw::RedisModuleTypeMethods,
+    ) -> Self {
         RedisType {
             name,
             version,

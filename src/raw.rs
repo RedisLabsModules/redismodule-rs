@@ -2,14 +2,14 @@
 // point.
 #![allow(dead_code)]
 
-use std::os::raw::{c_char, c_int, c_long, c_longlong, c_double};
+use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
 
 extern crate enum_primitive_derive;
 extern crate libc;
 extern crate num_traits;
 
-use num_traits::FromPrimitive;
 use libc::size_t;
+use num_traits::FromPrimitive;
 
 pub use crate::redisraw::bindings::*;
 use crate::RedisString;
