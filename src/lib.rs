@@ -16,16 +16,18 @@ pub mod error;
 pub mod native_types;
 pub mod raw;
 pub mod redisearch;
+pub mod rediserror;
 mod redismodule;
 pub mod redisraw;
+pub mod redisvalue;
 
 #[macro_use]
 mod macros;
 mod context;
 mod key;
 
-pub use context::Context;
-pub use redismodule::*;
+pub use crate::context::Context;
+pub use crate::redismodule::*;
 
 #[global_allocator]
 static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc;
