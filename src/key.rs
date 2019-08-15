@@ -9,11 +9,10 @@ use crate::error::Error;
 use crate::from_byte_string;
 use crate::native_types::RedisType;
 use crate::raw;
+use crate::redismodule::REDIS_OK;
 use crate::RedisError;
 use crate::RedisResult;
 use crate::RedisString;
-use crate::redismodule::REDIS_OK;
-
 
 /// `RedisKey` is an abstraction over a Redis key that allows readonly
 /// operations.
@@ -47,10 +46,7 @@ impl RedisKey {
         }
     }
 
-    pub fn get_value<T: Debug>(
-        &self,
-        redis_type: &RedisType,
-    ) -> Result<Option<&T>, RedisError> {
+    pub fn get_value<T: Debug>(&self, redis_type: &RedisType) -> Result<Option<&T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
 
         let value =
@@ -60,7 +56,7 @@ impl RedisKey {
             return Ok(None);
         }
 
-        let value = unsafe { & *value };
+        let value = unsafe { &*value };
 
         Ok(Some(value))
     }
@@ -228,7 +224,6 @@ fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
         KeyMode::ReadWrite => raw::KeyMode::READ | raw::KeyMode::WRITE,
     }
 }
-
 
 fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> RedisResult {
     use raw::KeyType;
