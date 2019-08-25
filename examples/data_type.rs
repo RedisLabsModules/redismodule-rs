@@ -2,7 +2,7 @@
 extern crate redismodule;
 
 use redismodule::native_types::RedisType;
-use redismodule::{Context, NextArg, RedisResult};
+use redismodule::{Context, NextArg, RedisResult, RedisError};
 
 #[derive(Debug)]
 struct MyType {
