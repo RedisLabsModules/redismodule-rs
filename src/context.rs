@@ -48,25 +48,29 @@ impl Context {
             .map(|s| RedisString::create(self.ctx, s))
             .collect();
 
-        let inner_args :Vec<*mut raw::RedisModuleString> = terminated_args.iter().map(|s| s.inner).collect();
+        let inner_args: Vec<*mut raw::RedisModuleString> =
+            terminated_args.iter().map(|s| s.inner).collect();
 
         let cmd = CString::new(command).unwrap();
         let reply: *mut raw::RedisModuleCallReply = unsafe {
             let p_call = raw::RedisModule_Call.unwrap();
-            p_call(self.ctx, cmd.as_ptr(), FMT, inner_args.as_ptr() as *mut i8, terminated_args.len())
+            p_call(
+                self.ctx,
+                cmd.as_ptr(),
+                FMT,
+                inner_args.as_ptr() as *mut i8,
+                terminated_args.len(),
+            )
         };
 
         let result = match raw::call_reply_type(reply) {
             raw::ReplyType::Unknown | raw::ReplyType::Error => {
                 Err(RedisError::String(raw::call_reply_string(reply)))
             }
-            _ => {
-                Ok(RedisValue::SimpleStringStatic("OK"))
-            }
+            _ => Ok(RedisValue::SimpleStringStatic("OK")),
         };
         raw::free_call_reply(reply);
         result
-
     }
 
     pub fn reply(&self, r: RedisResult) -> raw::Status {

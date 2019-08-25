@@ -9,9 +9,9 @@ extern crate libc;
 extern crate num_traits;
 
 use libc::size_t;
-use std::slice;
-use std::ptr::null_mut;
 use num_traits::FromPrimitive;
+use std::ptr::null_mut;
+use std::slice;
 
 pub use crate::redisraw::bindings::*;
 use crate::RedisString;
@@ -165,7 +165,13 @@ pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
     unsafe {
         let len: *mut size_t = null_mut();
         let str: *mut u8 = RedisModule_CallReplyStringPtr.unwrap()(reply, len) as *mut u8;
-        String::from_utf8(slice::from_raw_parts(str, *len).into_iter().map(|v| *v).collect()).unwrap()
+        String::from_utf8(
+            slice::from_raw_parts(str, *len)
+                .into_iter()
+                .map(|v| *v)
+                .collect(),
+        )
+        .unwrap()
     }
 }
 
