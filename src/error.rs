@@ -51,7 +51,7 @@ impl error::Error for Error {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             // N.B. Both of these implicitly cast `err` from their concrete
             // types (either `&io::Error` or `&num::ParseIntError`)
@@ -88,7 +88,7 @@ impl<'a> error::Error for GenericError {
         self.message.as_str()
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         None
     }
 }
