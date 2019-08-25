@@ -157,8 +157,8 @@ pub fn call_reply_integer(reply: *mut RedisModuleCallReply) -> c_longlong {
     unsafe { RedisModule_CallReplyInteger.unwrap()(reply) }
 }
 
-pub fn call_reply_string_ptr(str: *mut RedisModuleCallReply, len: *mut size_t) -> *const c_char {
-    unsafe { RedisModule_CallReplyStringPtr.unwrap()(str, len) }
+pub fn call_reply_string_ptr(reply: *mut RedisModuleCallReply, len: *mut size_t) -> *const c_char {
+    unsafe { RedisModule_CallReplyStringPtr.unwrap()(reply, len) }
 }
 
 pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
@@ -205,8 +205,8 @@ pub fn reply_with_double(ctx: *mut RedisModuleCtx, f: c_double) -> Status {
     unsafe { RedisModule_ReplyWithDouble.unwrap()(ctx, f).into() }
 }
 
-pub fn reply_with_string(ctx: *mut RedisModuleCtx, str: *mut RedisModuleString) -> Status {
-    unsafe { RedisModule_ReplyWithString.unwrap()(ctx, str).into() }
+pub fn reply_with_string(ctx: *mut RedisModuleCtx, s: *mut RedisModuleString) -> Status {
+    unsafe { RedisModule_ReplyWithString.unwrap()(ctx, s).into() }
 }
 
 // Sets the expiry on a key.
@@ -221,12 +221,12 @@ pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> 
 }
 
 // Returns pointer to the C string, and sets len to its length
-pub fn string_ptr_len(str: *mut RedisModuleString, len: *mut size_t) -> *const c_char {
-    unsafe { RedisModule_StringPtrLen.unwrap()(str, len) }
+pub fn string_ptr_len(s: *mut RedisModuleString, len: *mut size_t) -> *const c_char {
+    unsafe { RedisModule_StringPtrLen.unwrap()(s, len) }
 }
 
-pub fn string_set(key: *mut RedisModuleKey, str: *mut RedisModuleString) -> Status {
-    unsafe { RedisModule_StringSet.unwrap()(key, str).into() }
+pub fn string_set(key: *mut RedisModuleKey, s: *mut RedisModuleString) -> Status {
+    unsafe { RedisModule_StringSet.unwrap()(key, s).into() }
 }
 
 pub fn replicate_verbatim(ctx: *mut RedisModuleCtx) -> Status {
