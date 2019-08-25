@@ -34,6 +34,12 @@ impl Context {
         self.log(LogLevel::Notice, message);
     }
 
+    pub fn auto_memory(&self) {
+        unsafe {
+            raw::RedisModule_AutoMemory.unwrap()(self.ctx);
+        }
+    }
+
     pub fn call(&self, command: &str, args: &[&str]) -> RedisResult {
         let terminated_args: Vec<RedisString> = args
             .iter()
@@ -51,6 +57,10 @@ impl Context {
         match r {
             Ok(RedisValue::Integer(v)) => unsafe {
                 raw::RedisModule_ReplyWithLongLong.unwrap()(self.ctx, v).into()
+            },
+
+            Ok(RedisValue::Float(v)) => unsafe {
+                raw::RedisModule_ReplyWithDouble.unwrap()(self.ctx, v).into()
             },
 
             Ok(RedisValue::SimpleStringStatic(s)) => unsafe {
@@ -111,5 +121,9 @@ impl Context {
 
     pub fn open_key_writable(&self, key: &str) -> RedisKeyWritable {
         RedisKeyWritable::open(self.ctx, key)
+    }
+
+    pub fn replicate_verbatim(&self) {
+        raw::replicate_verbatim(self.ctx);
     }
 }

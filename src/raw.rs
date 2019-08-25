@@ -2,17 +2,17 @@
 // point.
 #![allow(dead_code)]
 
-use std::os::raw::{c_char, c_int, c_long, c_longlong};
+use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
 
 extern crate enum_primitive_derive;
 extern crate libc;
 extern crate num_traits;
 
+use libc::size_t;
 use num_traits::FromPrimitive;
 
-use libc::size_t;
-
 pub use crate::redisraw::bindings::*;
+use crate::RedisString;
 
 bitflags! {
     pub struct KeyMode: c_int {
@@ -185,6 +185,10 @@ pub fn reply_with_long_long(ctx: *mut RedisModuleCtx, ll: c_longlong) -> Status 
     unsafe { RedisModule_ReplyWithLongLong.unwrap()(ctx, ll).into() }
 }
 
+pub fn reply_with_double(ctx: *mut RedisModuleCtx, f: c_double) -> Status {
+    unsafe { RedisModule_ReplyWithDouble.unwrap()(ctx, f).into() }
+}
+
 pub fn reply_with_string(ctx: *mut RedisModuleCtx, str: *mut RedisModuleString) -> Status {
     unsafe { RedisModule_ReplyWithString.unwrap()(ctx, str).into() }
 }
@@ -207,4 +211,19 @@ pub fn string_ptr_len(str: *mut RedisModuleString, len: *mut size_t) -> *const c
 
 pub fn string_set(key: *mut RedisModuleKey, str: *mut RedisModuleString) -> Status {
     unsafe { RedisModule_StringSet.unwrap()(key, str).into() }
+}
+
+pub fn replicate_verbatim(ctx: *mut RedisModuleCtx) -> Status {
+    unsafe { RedisModule_ReplicateVerbatim.unwrap()(ctx).into() }
+}
+
+pub fn load_string(rdb: *mut RedisModuleIO) -> String {
+    let p = unsafe { RedisModule_LoadString.unwrap()(rdb) };
+    RedisString::from_ptr(p)
+        .expect("UTF8 encoding error in load string")
+        .to_string()
+}
+
+pub fn save_string(rdb: *mut RedisModuleIO, buf: &String) {
+    unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr() as *mut i8, buf.len()) };
 }

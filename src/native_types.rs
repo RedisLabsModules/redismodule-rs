@@ -1,12 +1,13 @@
 use std::cell::RefCell;
 use std::ffi::CString;
-use std::os::raw::{c_int, c_void};
 use std::ptr;
 
 use crate::raw;
 
 pub struct RedisType {
     name: &'static str,
+    version: i32,
+    type_methods: raw::RedisModuleTypeMethods,
     pub raw_type: RefCell<*mut raw::RedisModuleType>,
 }
 
@@ -15,9 +16,15 @@ pub struct RedisType {
 unsafe impl Sync for RedisType {}
 
 impl RedisType {
-    pub const fn new(name: &'static str) -> Self {
+    pub const fn new(
+        name: &'static str,
+        version: i32,
+        type_methods: raw::RedisModuleTypeMethods,
+    ) -> Self {
         RedisType {
             name,
+            version,
+            type_methods,
             raw_type: RefCell::new(ptr::null_mut()),
         }
     }
@@ -31,25 +38,12 @@ impl RedisType {
 
         let type_name = CString::new(self.name).unwrap();
 
-        let mut type_methods = raw::RedisModuleTypeMethods {
-            version: raw::REDISMODULE_TYPE_METHOD_VERSION as u64,
-
-            rdb_load: Some(MyTypeRdbLoad),
-            rdb_save: Some(MyTypeRdbSave),
-            aof_rewrite: Some(MyTypeAofRewrite),
-            free: Some(MyTypeFree),
-
-            // Currently unused by Redis
-            mem_usage: None,
-            digest: None,
-        };
-
         let redis_type = unsafe {
             raw::RedisModule_CreateDataType.unwrap()(
                 ctx,
                 type_name.as_ptr(),
-                0, // Encoding version
-                &mut type_methods,
+                self.version, // Encoding version
+                &mut self.type_methods.clone(),
             )
         };
 
@@ -67,37 +61,6 @@ impl RedisType {
 
         Ok(())
     }
-}
-
-// FIXME: Generate these methods with a macro, since we need a set for each custom data type.
-
-#[allow(non_snake_case, unused)]
-#[no_mangle] // FIXME This should be unneeded
-pub unsafe extern "C" fn MyTypeRdbLoad(rdb: *mut raw::RedisModuleIO, encver: c_int) -> *mut c_void {
-    //    eprintln!("MyTypeRdbLoad");
-    ptr::null_mut()
-}
-
-#[allow(non_snake_case, unused)]
-#[no_mangle]
-pub unsafe extern "C" fn MyTypeRdbSave(rdb: *mut raw::RedisModuleIO, value: *mut c_void) {
-    //    eprintln!("MyTypeRdbSave");
-}
-
-#[allow(non_snake_case, unused)]
-#[no_mangle]
-pub unsafe extern "C" fn MyTypeAofRewrite(
-    aof: *mut raw::RedisModuleIO,
-    key: *mut raw::RedisModuleString,
-    value: *mut c_void,
-) {
-    //    eprintln!("MyTypeAofRewrite");
-}
-
-#[allow(non_snake_case, unused)]
-#[no_mangle]
-pub unsafe extern "C" fn MyTypeFree(value: *mut c_void) {
-    //    eprintln!("MyTypeFree");
 }
 
 // TODO: Move to raw

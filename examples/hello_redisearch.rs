@@ -2,7 +2,7 @@
 extern crate redismodule;
 
 use redismodule::redisearch;
-use redismodule::{Context, RedisResult, NextArg};
+use redismodule::{Context, NextArg, RedisResult};
 
 fn hello_redisearch(_: &Context, args: Vec<String>) -> RedisResult {
     let mut args = args.into_iter().skip(1);

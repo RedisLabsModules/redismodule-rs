@@ -74,11 +74,7 @@ pub fn spec_add_document(index: &mut RSIndex, doc: &mut RSDoc) {
     unsafe { self::raw::RediSearch_SpecAddDocument.unwrap()(index, doc) }
 }
 
-pub fn search(
-    index: &mut RSIndex,
-    search_term: &str,
-    field_name: &str,
-) -> Vec<String> {
+pub fn search(index: &mut RSIndex, search_term: &str, field_name: &str) -> Vec<String> {
     use self::raw::*;
 
     let qn = create_query_node(index, search_term, field_name).unwrap();

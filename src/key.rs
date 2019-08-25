@@ -1,4 +1,3 @@
-use std::fmt::Debug;
 use std::os::raw::c_void;
 use std::ptr;
 use std::string;
@@ -9,11 +8,10 @@ use crate::error::Error;
 use crate::from_byte_string;
 use crate::native_types::RedisType;
 use crate::raw;
+use crate::redismodule::REDIS_OK;
 use crate::RedisError;
 use crate::RedisResult;
 use crate::RedisString;
-use crate::redismodule::REDIS_OK;
-
 
 /// `RedisKey` is an abstraction over a Redis key that allows readonly
 /// operations.
@@ -47,10 +45,7 @@ impl RedisKey {
         }
     }
 
-    pub fn get_value<T: Debug>(
-        &self,
-        redis_type: &RedisType,
-    ) -> Result<Option<&T>, RedisError> {
+    pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
 
         let value =
@@ -60,7 +55,7 @@ impl RedisKey {
             return Ok(None);
         }
 
-        let value = unsafe { & *value };
+        let value = unsafe { &*value };
 
         Ok(Some(value))
     }
@@ -166,10 +161,7 @@ impl RedisKeyWritable {
         key_type == KeyType::Empty
     }
 
-    pub fn get_value<T: Debug>(
-        &self,
-        redis_type: &RedisType,
-    ) -> Result<Option<&mut T>, RedisError> {
+    pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&mut T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
         let value =
             unsafe { raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner) as *mut T };
@@ -182,7 +174,7 @@ impl RedisKeyWritable {
         Ok(Some(value))
     }
 
-    pub fn set_value<T: Debug>(&self, redis_type: &RedisType, value: T) -> Result<(), RedisError> {
+    pub fn set_value<T>(&self, redis_type: &RedisType, value: T) -> Result<(), RedisError> {
         verify_type(self.key_inner, redis_type)?;
         let value = Box::into_raw(Box::new(value)) as *mut c_void;
         let status: raw::Status = unsafe {
@@ -228,7 +220,6 @@ fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
         KeyMode::ReadWrite => raw::KeyMode::READ | raw::KeyMode::WRITE,
     }
 }
-
 
 fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> RedisResult {
     use raw::KeyType;
