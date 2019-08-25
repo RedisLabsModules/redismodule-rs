@@ -7,6 +7,8 @@ use crate::raw;
 use crate::LogLevel;
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
+const FMT: *const i8 = b"v\0".as_ptr() as *const i8;
+
 /// Redis is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
@@ -46,11 +48,25 @@ impl Context {
             .map(|s| RedisString::create(self.ctx, s))
             .collect();
 
-        let _ = terminated_args;
-        let _ = command;
-        let _ = args;
+        let inner_args :Vec<*mut raw::RedisModuleString> = terminated_args.iter().map(|s| s.inner).collect();
 
-        return Err(RedisError::Str("not implemented"));
+        let cmd = CString::new(command).unwrap();
+        let reply: *mut raw::RedisModuleCallReply = unsafe {
+            let p_call = raw::RedisModule_Call.unwrap();
+            p_call(self.ctx, cmd.as_ptr(), FMT, inner_args.as_ptr() as *mut i8, terminated_args.len())
+        };
+
+        let result = match raw::call_reply_type(reply) {
+            raw::ReplyType::Unknown | raw::ReplyType::Error => {
+                Err(RedisError::String(raw::call_reply_string(reply)))
+            }
+            _ => {
+                Ok(RedisValue::SimpleStringStatic("OK"))
+            }
+        };
+        raw::free_call_reply(reply);
+        result
+
     }
 
     pub fn reply(&self, r: RedisResult) -> raw::Status {
