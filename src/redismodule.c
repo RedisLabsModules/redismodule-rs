@@ -1,3 +1,4 @@
+#define REDISMODULE_EXPERIMENTAL_API
 #include "redismodule.h"
 
 // RedisModule_Init is defined as a static function and so won't be exported as
