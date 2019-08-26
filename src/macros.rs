@@ -54,6 +54,7 @@ macro_rules! redis_module {
         data_types: [
             $($data_type:ident),* $(,)*
         ],
+        $(init: $init_func:ident,)* $(,)*
         commands: [
             $([
                 $name:expr,
@@ -86,6 +87,12 @@ macro_rules! redis_module {
                     module_version,
                     raw::REDISMODULE_APIVER_1 as c_int,
                 ) == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
+
+                $(
+                    if $init_func(ctx) == raw::Status::Err as c_int {
+                        return raw::Status::Err as c_int;
+                    }
+                )*
 
                 $(
                     if (&$data_type).create_data_type(ctx).is_err() {
