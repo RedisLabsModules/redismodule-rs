@@ -23,23 +23,4 @@ fn main() {
     bindings
         .write_to_file("src/redisraw/bindings.rs")
         .expect("failed to write bindings to file");
-
-    // Do the same trick for RediSearch
-
-    cc::Build::new()
-        .file("src/redisearch/redisearch_api.c")
-        //.include("src/include/") // For redismodule.h
-        .include("src/redisearch/include/")
-        .compile("redisearch_api");
-
-    let redisearch_bindings = bindgen::Builder::default()
-        .header("src/redisearch/include/redisearch_api.h")
-        //.clang_arg("-I src/include") // For redismodule.h
-        .whitelist_var("(RS|RediSearch).*")
-        .generate()
-        .expect("error generating RediSearch bindings");
-
-    redisearch_bindings
-        .write_to_file("src/redisearch/raw/bindings.rs")
-        .expect("failed to write RediSearch bindings to file");
 }

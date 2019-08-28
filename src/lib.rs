@@ -15,7 +15,6 @@ pub mod alloc;
 pub mod error;
 pub mod native_types;
 pub mod raw;
-pub mod redisearch;
 pub mod rediserror;
 mod redismodule;
 pub mod redisraw;
