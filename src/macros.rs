@@ -31,15 +31,17 @@ macro_rules! redis_command {
         }
         /////////////////////
 
-        if raw::RedisModule_CreateCommand.unwrap()(
-            $ctx,
-            name.as_ptr(),
-            Some(do_command),
-            flags.as_ptr(),
-            firstkey,
-            lastkey,
-            keystep,
-        ) == raw::Status::Err as c_int
+        if unsafe {
+            raw::RedisModule_CreateCommand.unwrap()(
+                $ctx,
+                name.as_ptr(),
+                Some(do_command),
+                flags.as_ptr(),
+                firstkey,
+                lastkey,
+                keystep,
+            )
+        } == raw::Status::Err as c_int
         {
             return raw::Status::Err as c_int;
         }
@@ -77,45 +79,43 @@ macro_rules! redis_module {
             _argv: *mut *mut raw::RedisModuleString,
             _argc: c_int,
         ) -> c_int {
-            unsafe {
+            {
+                // We use an explicit block here to make sure all memory allocated before we
+                // switch to the Redis allocator will be out of scope and thus deallocated.
                 let module_name = CString::new($module_name).unwrap();
                 let module_version = $module_version as c_int;
 
-                if raw::Export_RedisModule_Init(
+                if unsafe { raw::Export_RedisModule_Init(
                     ctx,
                     module_name.as_ptr(),
                     module_version,
                     raw::REDISMODULE_APIVER_1 as c_int,
-                ) == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
-
-                $(
-                    if $init_func(ctx) == raw::Status::Err as c_int {
-                        return raw::Status::Err as c_int;
-                    }
-                )*
-
-                $(
-                    if (&$data_type).create_data_type(ctx).is_err() {
-                        return raw::Status::Err as c_int;
-                    }
-                )*
+                ) } == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
             }
 
-            // Using another block to make sure all memory allocated before we
-            // switch to Redis allocator will be out of scope
-            unsafe {
-                if true {
-                    redismodule::alloc::use_redis_alloc();
-                } else {
-                    eprintln!("*** NOT USING Redis allocator ***");
+            if true {
+                redismodule::alloc::use_redis_alloc();
+            } else {
+                eprintln!("*** NOT USING Redis allocator ***");
+            }
+
+            $(
+                if $init_func(ctx) == raw::Status::Err as c_int {
+                    return raw::Status::Err as c_int;
                 }
+            )*
 
-                $(
-                    redis_command!(ctx, $name, $command, $flags);
-                )*
+            $(
+                if (&$data_type).create_data_type(ctx).is_err() {
+                    return raw::Status::Err as c_int;
+                }
+            )*
 
-                raw::Status::Ok as c_int
-            }
+            $(
+                redis_command!(ctx, $name, $command, $flags);
+            )*
+
+            raw::Status::Ok as c_int
         }
     }
 }
