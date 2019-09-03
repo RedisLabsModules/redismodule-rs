@@ -9,6 +9,7 @@ pub use crate::redisvalue::RedisValue;
 pub type RedisResult = Result<RedisValue, RedisError>;
 
 pub const REDIS_OK: RedisResult = Ok(RedisValue::SimpleStringStatic("OK"));
+pub const TYPE_METHOD_VERSION: u64 = raw::REDISMODULE_TYPE_METHOD_VERSION as u64;
 
 pub trait NextArg: Iterator {
     fn next_string(&mut self) -> Result<String, RedisError>;
