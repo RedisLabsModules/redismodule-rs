@@ -12,6 +12,8 @@ use libc::size_t;
 use num_traits::FromPrimitive;
 use std::ptr::null_mut;
 use std::slice;
+use std::ffi::CStr;
+
 
 pub use crate::redisraw::bindings::*;
 use crate::RedisString;
@@ -233,11 +235,34 @@ pub fn replicate_verbatim(ctx: *mut RedisModuleCtx) -> Status {
     unsafe { RedisModule_ReplicateVerbatim.unwrap()(ctx).into() }
 }
 
+pub fn load_unsigned(rdb: *mut RedisModuleIO) -> u64 {
+    unsafe { RedisModule_LoadUnsigned.unwrap()(rdb) }
+}
+
+pub fn load_signed(rdb: *mut RedisModuleIO) -> i64 {
+    unsafe { RedisModule_LoadSigned.unwrap()(rdb) }
+}
+
 pub fn load_string(rdb: *mut RedisModuleIO) -> String {
     let p = unsafe { RedisModule_LoadString.unwrap()(rdb) };
     RedisString::from_ptr(p)
         .expect("UTF8 encoding error in load string")
         .to_string()
+}
+
+pub fn load_string_buffer(rdb: *mut RedisModuleIO, str_len: &mut usize) -> &str {
+    unsafe { 
+        let c = RedisModule_LoadStringBuffer.unwrap()(rdb, str_len);
+        CStr::from_ptr(c).to_str().unwrap()
+    }
+}
+
+pub fn load_double(rdb: *mut RedisModuleIO) -> f64 {
+    unsafe { RedisModule_LoadDouble.unwrap()(rdb) }
+}
+
+pub fn load_float(rdb: *mut RedisModuleIO) -> f32 {
+    unsafe { RedisModule_LoadFloat.unwrap()(rdb) }
 }
 
 pub fn save_string(rdb: *mut RedisModuleIO, buf: &String) {
