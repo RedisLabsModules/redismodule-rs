@@ -1,6 +1,9 @@
 use std::ffi::CString;
+use std::ops::Index;
+use std::os::raw::{c_char, c_void};
 use std::slice;
 use std::str;
+use std::string::FromUtf8Error;
 
 pub use crate::raw;
 pub use crate::rediserror::RedisError;
@@ -77,6 +80,46 @@ impl Drop for RedisString {
     fn drop(&mut self) {
         unsafe {
             raw::RedisModule_FreeString.unwrap()(self.ctx, self.inner);
+        }
+    }
+}
+
+///////////////////////////////////////////////////
+
+#[derive(Debug)]
+pub struct RedisBuffer {
+    buffer: *mut c_char,
+    len: usize,
+}
+
+impl RedisBuffer {
+    pub fn new(buffer: *mut c_char, len: usize) -> RedisBuffer {
+        RedisBuffer { buffer, len }
+    }
+
+    pub fn to_string(&self) -> Result<String, FromUtf8Error> {
+        unsafe {
+            let slice = slice::from_raw_parts(self.buffer as *const u8, self.len);
+            String::from_utf8(slice.to_vec())
+        }
+    }
+}
+
+impl Index<usize> for RedisBuffer {
+    type Output = u8;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        unsafe {
+            let slice = slice::from_raw_parts(self.buffer as *const u8, self.len);
+            &slice[index]
+        }
+    }
+}
+
+impl Drop for RedisBuffer {
+    fn drop(&mut self) {
+        unsafe {
+            raw::RedisModule_Free.unwrap()(self.buffer as *mut c_void);
         }
     }
 }
