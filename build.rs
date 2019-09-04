@@ -15,6 +15,7 @@ fn main() {
         .compile("redismodule");
 
     let bindings = bindgen::Builder::default()
+        .clang_arg("-DREDISMODULE_EXPERIMENTAL_API")
         .header("src/include/redismodule.h")
         .whitelist_var("(REDIS|Redis).*")
         .generate()
