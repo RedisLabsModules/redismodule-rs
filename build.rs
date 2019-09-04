@@ -9,13 +9,26 @@ fn main() {
     // src/redismodule.c is a stub that includes it and plays a few other
     // tricks that we need to complete the build.
 
-    cc::Build::new()
+    let mut build = cc::Build::new();
+
+    // if the `experimental-api` is enabled
+    if std::env::var_os("CARGO_FEATURE_EXPERIMENTAL_API").is_some() {
+        build.define("REDISMODULE_EXPERIMENTAL_API", None);
+    }
+
+    build
         .file("src/redismodule.c")
         .include("src/include/")
         .compile("redismodule");
 
-    let bindings = bindgen::Builder::default()
-        .clang_arg("-DREDISMODULE_EXPERIMENTAL_API")
+    let mut build = bindgen::Builder::default();
+
+    // if the `experimental-api` is enabled
+    if std::env::var_os("CARGO_FEATURE_EXPERIMENTAL_API").is_some() {
+        build = build.clang_arg("-DREDISMODULE_EXPERIMENTAL_API");
+    }
+
+    let bindings = build
         .header("src/include/redismodule.h")
         .whitelist_var("(REDIS|Redis).*")
         .generate()
