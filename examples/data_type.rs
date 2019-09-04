@@ -21,6 +21,9 @@ static MY_REDIS_TYPE: RedisType = RedisType::new(
         // Currently unused by Redis
         mem_usage: None,
         digest: None,
+        aux_load: None,
+        aux_save: None,
+        aux_save_triggers: 0,
     },
 );
 
