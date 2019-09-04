@@ -175,6 +175,7 @@ typedef void (*RedisModuleTypeAuxSaveFunc)(RedisModuleIO *rdb, int when);
 typedef void (*RedisModuleTypeRewriteFunc)(RedisModuleIO *aof, RedisModuleString *key, void *value);
 typedef size_t (*RedisModuleTypeMemUsageFunc)(const void *value);
 typedef void (*RedisModuleTypeDigestFunc)(RedisModuleDigest *digest, void *value);
+typedef void (*RedisModuleForkDoneHandler) (int exitcode, int bysignal, void *user_data);
 typedef void (*RedisModuleTypeFreeFunc)(void *value);
 typedef void (*RedisModuleClusterMessageReceiver)(RedisModuleCtx *ctx, const char *sender_id, uint8_t type, const unsigned char *payload, uint32_t len);
 typedef void (*RedisModuleTimerProc)(RedisModuleCtx *ctx, void *data);
@@ -367,6 +368,137 @@ int REDISMODULE_API_FUNC(RedisModule_CommandFilterArgInsert)(RedisModuleCommandF
 int REDISMODULE_API_FUNC(RedisModule_CommandFilterArgReplace)(RedisModuleCommandFilterCtx *fctx, int pos, RedisModuleString *arg);
 int REDISMODULE_API_FUNC(RedisModule_CommandFilterArgDelete)(RedisModuleCommandFilterCtx *fctx, int pos);
 #endif
+
+/* Enterprise Only API */
+
+int REDISMODULE_API_FUNC(RedisModule_AvoidReplicaTraffic)();
+int REDISMODULE_API_FUNC(RedisModule_Fork)(RedisModuleForkDoneHandler cb, void *user_data);
+int REDISMODULE_API_FUNC(RedisModule_ExitFromChild)(int retcode);
+int REDISMODULE_API_FUNC(RedisModule_KillForkChild)(int child_pid);
+
+#define REDISMODULE_XAPI_STABLE(X) \
+  X(GetApi)                        \
+  X(Alloc)                         \
+  X(Calloc)                        \
+  X(Free)                          \
+  X(Realloc)                       \
+  X(Strdup)                        \
+  X(CreateCommand)                 \
+  X(SetModuleAttribs)              \
+  X(IsModuleNameBusy)              \
+  X(WrongArity)                    \
+  X(ReplyWithLongLong)             \
+  X(ReplyWithError)                \
+  X(ReplyWithSimpleString)         \
+  X(ReplyWithArray)                \
+  X(ReplySetArrayLength)           \
+  X(ReplyWithStringBuffer)         \
+  X(ReplyWithString)               \
+  X(ReplyWithNull)                 \
+  X(ReplyWithCallReply)            \
+  X(ReplyWithDouble)               \
+  X(GetSelectedDb)                 \
+  X(SelectDb)                      \
+  X(OpenKey)                       \
+  X(CloseKey)                      \
+  X(KeyType)                       \
+  X(ValueLength)                   \
+  X(ListPush)                      \
+  X(ListPop)                       \
+  X(StringToLongLong)              \
+  X(StringToDouble)                \
+  X(Call)                          \
+  X(CallReplyProto)                \
+  X(FreeCallReply)                 \
+  X(CallReplyInteger)              \
+  X(CallReplyType)                 \
+  X(CallReplyLength)               \
+  X(CallReplyArrayElement)         \
+  X(CallReplyStringPtr)            \
+  X(CreateStringFromCallReply)     \
+  X(CreateString)                  \
+  X(CreateStringFromLongLong)      \
+  X(CreateStringFromString)        \
+  X(CreateStringPrintf)            \
+  X(FreeString)                    \
+  X(StringPtrLen)                  \
+  X(AutoMemory)                    \
+  X(Replicate)                     \
+  X(ReplicateVerbatim)             \
+  X(DeleteKey)                     \
+  X(UnlinkKey)                     \
+  X(StringSet)                     \
+  X(StringDMA)                     \
+  X(StringTruncate)                \
+  X(GetExpire)                     \
+  X(SetExpire)                     \
+  X(ZsetAdd)                       \
+  X(ZsetIncrby)                    \
+  X(ZsetScore)                     \
+  X(ZsetRem)                       \
+  X(ZsetRangeStop)                 \
+  X(ZsetFirstInScoreRange)         \
+  X(ZsetLastInScoreRange)          \
+  X(ZsetFirstInLexRange)           \
+  X(ZsetLastInLexRange)            \
+  X(ZsetRangeCurrentElement)       \
+  X(ZsetRangeNext)                 \
+  X(ZsetRangePrev)                 \
+  X(ZsetRangeEndReached)           \
+  X(HashSet)                       \
+  X(HashGet)                       \
+  X(IsKeysPositionRequest)         \
+  X(KeyAtPos)                      \
+  X(GetClientId)                   \
+  X(GetContextFlags)               \
+  X(PoolAlloc)                     \
+  X(CreateDataType)                \
+  X(ModuleTypeSetValue)            \
+  X(ModuleTypeGetType)             \
+  X(ModuleTypeGetValue)            \
+  X(SaveUnsigned)                  \
+  X(LoadUnsigned)                  \
+  X(SaveSigned)                    \
+  X(LoadSigned)                    \
+  X(SaveString)                    \
+  X(SaveStringBuffer)              \
+  X(LoadString)                    \
+  X(LoadStringBuffer)              \
+  X(SaveDouble)                    \
+  X(LoadDouble)                    \
+  X(SaveFloat)                     \
+  X(LoadFloat)                     \
+  X(EmitAOF)                       \
+  X(Log)                           \
+  X(LogIOError)                    \
+  X(StringAppendBuffer)            \
+  X(RetainString)                  \
+  X(StringCompare)                 \
+  X(GetContextFromIO)              \
+  X(Milliseconds)                  \
+  X(DigestAddStringBuffer)         \
+  X(DigestAddLongLong)             \
+  X(DigestEndSequence)
+
+#define REDISMODULE_XAPI_EXPERIMENTAL(X) \
+  X(GetThreadSafeContext)                \
+  X(FreeThreadSafeContext)               \
+  X(ThreadSafeContextLock)               \
+  X(ThreadSafeContextUnlock)             \
+  X(BlockClient)                         \
+  X(UnblockClient)                       \
+  X(IsBlockedReplyRequest)               \
+  X(IsBlockedTimeoutRequest)             \
+  X(GetBlockedClientPrivateData)         \
+  X(AbortBlock)                          \
+  X(ExportSharedAPI)                     \
+  X(GetSharedAPI)
+
+#define REDISMODULE_XAPI_ENTERPRISE(X) \
+  X(AvoidReplicaTraffic)               \
+  X(Fork)                              \
+  X(ExitFromChild)                     \
+  X(KillForkChild)
 
 /* This is included inline inside each Redis module. */
 static int RedisModule_Init(RedisModuleCtx *ctx, const char *name, int ver, int apiver) __attribute__((unused));
