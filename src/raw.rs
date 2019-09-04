@@ -12,10 +12,9 @@ use libc::size_t;
 use num_traits::FromPrimitive;
 use std::ptr::null_mut;
 use std::slice;
-use std::ffi::CStr;
-
 
 pub use crate::redisraw::bindings::*;
+use crate::RedisBuffer;
 use crate::RedisString;
 
 bitflags! {
@@ -250,10 +249,11 @@ pub fn load_string(rdb: *mut RedisModuleIO) -> String {
         .to_string()
 }
 
-pub fn load_string_buffer(rdb: *mut RedisModuleIO, str_len: &mut usize) -> &str {
-    unsafe { 
-        let c = RedisModule_LoadStringBuffer.unwrap()(rdb, str_len);
-        CStr::from_ptr(c).to_str().unwrap()
+pub fn load_string_buffer(rdb: *mut RedisModuleIO) -> RedisBuffer {
+    unsafe {
+        let mut len = 0;
+        let buffer = RedisModule_LoadStringBuffer.unwrap()(rdb, &mut len);
+        RedisBuffer::new(buffer, len)
     }
 }
 
