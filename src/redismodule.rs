@@ -1,5 +1,4 @@
 use std::ffi::CString;
-use std::ops::Index;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 use std::str;
@@ -98,21 +97,13 @@ impl RedisBuffer {
     }
 
     pub fn to_string(&self) -> Result<String, FromUtf8Error> {
-        unsafe {
-            let slice = slice::from_raw_parts(self.buffer as *const u8, self.len);
-            String::from_utf8(slice.to_vec())
-        }
+        String::from_utf8(self.as_ref().to_vec())
     }
 }
 
-impl Index<usize> for RedisBuffer {
-    type Output = u8;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        unsafe {
-            let slice = slice::from_raw_parts(self.buffer as *const u8, self.len);
-            &slice[index]
-        }
+impl AsRef<[u8]> for RedisBuffer {
+    fn as_ref(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(self.buffer as *const u8, self.len) }
     }
 }
 
