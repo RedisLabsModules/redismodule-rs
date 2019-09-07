@@ -46,7 +46,7 @@ name = "backtrace-sys"
 version = "0.1.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "cc 1.0.41 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cc 1.0.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -84,7 +84,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "cc"
-version = "1.0.41"
+version = "1.0.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -190,7 +190,7 @@ name = "libloading"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "cc 1.0.41 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cc 1.0.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -269,7 +269,7 @@ version = "0.3.0"
 dependencies = [
  "bindgen 0.51.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "cc 1.0.41 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cc 1.0.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "enum-primitive-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -444,7 +444,7 @@ dependencies = [
 "checksum bindgen 0.51.0 (registry+https://github.com/rust-lang/crates.io-index)" = "18270cdd7065ec045a6bb4bdcd5144d14a78b3aedb3bc5111e688773ac8b9ad0"
 "checksum bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3d155346769a6855b86399e9bc3814ab343cd3d62c7e985113d46a0ec3c281fd"
 "checksum byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "a7c3dd8985a7111efc5c80b44e23ecdd8c007de8ade3b96595387e812b957cf5"
-"checksum cc 1.0.41 (registry+https://github.com/rust-lang/crates.io-index)" = "8dae9c4b8fedcae85592ba623c4fd08cfdab3e3b72d6df780c6ead964a69bfff"
+"checksum cc 1.0.42 (registry+https://github.com/rust-lang/crates.io-index)" = "a61c7bce55cd2fae6ec8cb935ebd76256c2959a1f95790f6118a441c2cd5b406"
 "checksum cexpr 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "a7fa24eb00d5ffab90eaeaf1092ac85c04c64aaf358ea6f84505b8116d24c6af"
 "checksum cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)" = "b486ce3ccf7ffd79fdeb678eac06a9e6c09fc88d33836340becb8fffe87c5e33"
 "checksum clang-sys 0.28.1 (registry+https://github.com/rust-lang/crates.io-index)" = "81de550971c976f176130da4b2978d3b524eaa0fd9ac31f3ceb5ae1231fb4853"
