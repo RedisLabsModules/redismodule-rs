@@ -60,7 +60,7 @@ macro_rules! redis_module {
         commands: [
             $([
                 $name:expr,
-                $command:ident,
+                $command:expr,
                 $flags:expr
               ]),* $(,)*
         ] $(,)*
