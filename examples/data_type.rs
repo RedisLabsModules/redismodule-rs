@@ -18,9 +18,12 @@ static MY_REDIS_TYPE: RedisType = RedisType::new(
         rdb_save: None,
         aof_rewrite: None, //
         free: None,
+
         // Currently unused by Redis
         mem_usage: None,
         digest: None,
+
+        // Aux data
         aux_load: None,
         aux_save: None,
         aux_save_triggers: 0,
