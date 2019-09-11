@@ -9,11 +9,17 @@ fn main() {
     // src/redismodule.c is a stub that includes it and plays a few other
     // tricks that we need to complete the build.
 
+    const EXPERIMENTAL_API: &str = "REDISMODULE_EXPERIMENTAL_API";
+
+    // Determine if the `experimental-api` feature is enabled
+    fn experimental_api() -> bool {
+        std::env::var_os("CARGO_FEATURE_EXPERIMENTAL_API").is_some()
+    }
+
     let mut build = cc::Build::new();
 
-    // if the `experimental-api` is enabled
-    if std::env::var_os("CARGO_FEATURE_EXPERIMENTAL_API").is_some() {
-        build.define("REDISMODULE_EXPERIMENTAL_API", None);
+    if experimental_api() {
+        build.define(EXPERIMENTAL_API, None);
     }
 
     build
@@ -23,9 +29,8 @@ fn main() {
 
     let mut build = bindgen::Builder::default();
 
-    // if the `experimental-api` is enabled
-    if std::env::var_os("CARGO_FEATURE_EXPERIMENTAL_API").is_some() {
-        build = build.clang_arg("-DREDISMODULE_EXPERIMENTAL_API");
+    if experimental_api() {
+        build = build.clang_arg(format!("-D{}", EXPERIMENTAL_API).as_str());
     }
 
     let bindings = build
