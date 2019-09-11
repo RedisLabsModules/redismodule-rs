@@ -385,7 +385,7 @@ typedef int (*RedisModule_GetApiFunctionType)(const char *name, void *pp);
 
 #pragma push_macro("X")
 #define X(TYPE, NAME, ARGS) \
-    extern TYPE (*RedisModule_##NAME) ARGS;
+    TYPE (*RedisModule_##NAME) ARGS;
 REDISMODULE_XAPI(X)
 #undef X
 #pragma pop_macro("X")
