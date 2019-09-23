@@ -10,7 +10,6 @@ extern crate num_traits;
 
 use libc::size_t;
 use num_traits::FromPrimitive;
-use std::ptr::null_mut;
 use std::slice;
 
 pub use crate::redisraw::bindings::*;
