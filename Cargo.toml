@@ -17,7 +17,7 @@ name = "data_type"
 crate-type = ["cdylib"]
 
 [dependencies]
-bitflags = "1.1"
+bitflags = "1.2"
 libc = "0.2"
 time = "0.1"
 enum-primitive-derive = "^0.1"
