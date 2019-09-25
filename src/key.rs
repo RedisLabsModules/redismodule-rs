@@ -66,7 +66,7 @@ impl RedisKey {
         self.key_inner == null_key
     }
 
-    pub fn read(&self) -> Result<Option<String>, Error> {
+    pub fn read(&self) -> Result<Option<String>, RedisError> {
         let val = if self.is_null() {
             None
         } else {
@@ -126,7 +126,7 @@ impl RedisKeyWritable {
     }
     */
 
-    pub fn read(&self) -> Result<Option<String>, Error> {
+    pub fn read(&self) -> Result<Option<String>, RedisError> {
         Ok(Some(read_key(self.key_inner)?))
     }
 
