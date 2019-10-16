@@ -69,8 +69,8 @@ macro_rules! redis_module {
         use std::ffi::CString;
         use std::slice;
 
-        use redismodule::raw;
-        use redismodule::RedisString;
+        use redis_module::raw;
+        use redis_module::RedisString;
 
         #[no_mangle]
         #[allow(non_snake_case)]
@@ -94,7 +94,7 @@ macro_rules! redis_module {
             }
 
             if true {
-                redismodule::alloc::use_redis_alloc();
+                redis_module::alloc::use_redis_alloc();
             } else {
                 eprintln!("*** NOT USING Redis allocator ***");
             }

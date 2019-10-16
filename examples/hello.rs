@@ -1,7 +1,7 @@
 #[macro_use]
-extern crate redismodule;
+extern crate redis_module;
 
-use redismodule::{parse_integer, Context, RedisError, RedisResult};
+use redis_module::{parse_integer, Context, RedisError, RedisResult};
 
 fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
     if args.len() < 2 {
@@ -38,7 +38,7 @@ redis_module! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use redismodule::RedisValue;
+    use redis_module::RedisValue;
 
     fn run_hello_mul(args: &[&str]) -> RedisResult {
         hello_mul(
