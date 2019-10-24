@@ -19,7 +19,6 @@ crate-type = ["cdylib"]
 [dependencies]
 bitflags = "1.2"
 libc = "0.2"
-time = "0.1"
 enum-primitive-derive = "^0.1"
 num-traits = "^0.2"
 #failure = "0.1"
