@@ -11,10 +11,13 @@ extern crate num_traits;
 use libc::size_t;
 use num_traits::FromPrimitive;
 use std::slice;
+use std::ffi::CString;
 
 pub use crate::redisraw::bindings::*;
 use crate::RedisBuffer;
 use crate::RedisString;
+
+pub const FMT: *const i8 = b"v\0".as_ptr() as *const i8;
 
 bitflags! {
     pub struct KeyMode: c_int {
@@ -242,6 +245,28 @@ pub fn string_set(key: *mut RedisModuleKey, s: *mut RedisModuleString) -> Status
 
 pub fn replicate_verbatim(ctx: *mut RedisModuleCtx) -> Status {
     unsafe { RedisModule_ReplicateVerbatim.unwrap()(ctx).into() }
+}
+
+pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Status {
+        let terminated_args: Vec<RedisString> = args
+            .iter()
+            .map(|s| RedisString::create(ctx, s))
+            .collect();
+
+        let inner_args: Vec<*mut RedisModuleString> =
+            terminated_args.iter().map(|s| s.inner).collect();
+
+        let cmd = CString::new(command).unwrap();
+
+        unsafe {
+            RedisModule_Replicate.unwrap()(
+                ctx,
+                cmd.as_ptr(),
+                FMT,
+                inner_args.as_ptr() as *mut i8,
+                terminated_args.len(),
+            ).into()
+        }
 }
 
 pub fn load_unsigned(rdb: *mut RedisModuleIO) -> u64 {

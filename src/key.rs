@@ -5,7 +5,6 @@ use std::ptr;
 use std::string;
 use std::time::Duration;
 
-use crate::error::Error;
 use crate::from_byte_string;
 use crate::native_types::RedisType;
 use crate::raw;
@@ -165,7 +164,7 @@ impl RedisKeyWritable {
 
     pub fn is_empty(&self) -> bool {
         use raw::KeyType;
-
+        
         let key_type: KeyType = unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into();
 
         key_type == KeyType::Empty

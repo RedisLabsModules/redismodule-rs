@@ -7,8 +7,6 @@ use crate::raw;
 use crate::LogLevel;
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
-const FMT: *const i8 = b"v\0".as_ptr() as *const i8;
-
 /// Redis is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
@@ -73,7 +71,7 @@ impl Context {
             p_call(
                 self.ctx,
                 cmd.as_ptr(),
-                FMT,
+                raw::FMT,
                 inner_args.as_ptr() as *mut i8,
                 terminated_args.len(),
             )
