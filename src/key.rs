@@ -1,8 +1,9 @@
+use libc::size_t;
+use std::convert::TryFrom;
 use std::os::raw::c_void;
 use std::ptr;
 use std::string;
-
-use libc::size_t;
+use std::time::Duration;
 
 use crate::error::Error;
 use crate::from_byte_string;
@@ -130,8 +131,17 @@ impl RedisKeyWritable {
         Ok(Some(read_key(self.key_inner)?))
     }
 
-    pub fn set_expire(&self, expire: time::Duration) -> RedisResult {
-        match raw::set_expire(self.key_inner, expire.num_milliseconds()) {
+    pub fn set_expire(&self, expire: Duration) -> RedisResult {
+        let exp_millis = expire.as_millis();
+
+        let exp_time = i64::try_from(exp_millis).map_err(|_| {
+            RedisError::String(format!(
+                "Error expire duration {} is not allowed",
+                exp_millis
+            ))
+        })?;
+
+        match raw::set_expire(self.key_inner, exp_time) {
             raw::Status::Ok => REDIS_OK,
 
             // Error may occur if the key wasn't open for writing or is an
