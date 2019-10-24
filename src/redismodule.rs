@@ -16,6 +16,7 @@ pub const TYPE_METHOD_VERSION: u64 = raw::REDISMODULE_TYPE_METHOD_VERSION as u64
 pub trait NextArg: Iterator {
     fn next_string(&mut self) -> Result<String, RedisError>;
     fn next_i64(&mut self) -> Result<i64, RedisError>;
+    fn next_u64(&mut self) -> Result<u64, RedisError>;
     fn next_f64(&mut self) -> Result<f64, RedisError>;
     fn done(&mut self) -> Result<(), RedisError>;
 }
@@ -30,6 +31,11 @@ impl<T: Iterator<Item = String>> NextArg for T {
             .map_or(Err(RedisError::WrongArity), |v| parse_integer(&v))
     }
 
+    fn next_u64(&mut self) -> Result<u64, RedisError> {
+        self.next()
+            .map_or(Err(RedisError::WrongArity), |v| parse_unsigned_integer(&v))
+    }
+
     fn next_f64(&mut self) -> Result<f64, RedisError> {
         self.next()
             .map_or(Err(RedisError::WrongArity), |v| parse_float(&v))
@@ -39,6 +45,11 @@ impl<T: Iterator<Item = String>> NextArg for T {
     fn done(&mut self) -> Result<(), RedisError> {
         self.next().map_or(Ok(()), |_| Err(RedisError::WrongArity))
     }
+}
+
+pub fn parse_unsigned_integer(arg: &String) -> Result<u64, RedisError> {
+    arg.parse()
+        .map_err(|_| RedisError::String(format!("Couldn't parse as unsigned integer: {}", arg)))
 }
 
 pub fn parse_integer(arg: &String) -> Result<i64, RedisError> {
