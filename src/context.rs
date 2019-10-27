@@ -85,8 +85,11 @@ impl Context {
 
     fn parse_call_reply(reply: *mut raw::RedisModuleCallReply) -> RedisResult {
         match raw::call_reply_type(reply) {
-            raw::ReplyType::Unknown | raw::ReplyType::Error => {
+            raw::ReplyType::Error => {
                 Err(RedisError::String(raw::call_reply_string(reply)))
+            }
+            raw::ReplyType::Unknown => {
+                Err(RedisError::Str("Error on method call"))
             }
             raw::ReplyType::Array => {
                 let length = raw::call_reply_length(reply);
@@ -100,7 +103,7 @@ impl Context {
             }
             raw::ReplyType::Integer => Ok(RedisValue::Integer(raw::call_reply_integer(reply))),
             raw::ReplyType::String => Ok(RedisValue::SimpleString(raw::call_reply_string(reply))),
-            _ => Ok(RedisValue::SimpleStringStatic("OK")),
+            raw::ReplyType::Nil => Ok(RedisValue::None),
         }
     }
 

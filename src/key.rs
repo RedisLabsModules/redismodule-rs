@@ -5,7 +5,6 @@ use std::ptr;
 use std::string;
 use std::time::Duration;
 
-use crate::error::Error;
 use crate::from_byte_string;
 use crate::native_types::RedisType;
 use crate::raw;
