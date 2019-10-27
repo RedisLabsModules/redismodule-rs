@@ -79,7 +79,9 @@ impl Context {
             )
         };
         let result = Self::parse_call_reply(reply);
-        raw::free_call_reply(reply);
+        if !reply.is_null() {
+            raw::free_call_reply(reply);
+        }
         result
     }
 
