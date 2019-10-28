@@ -1,7 +1,7 @@
 use core::num::{ParseFloatError, ParseIntError};
+use std::fmt;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
-use std::fmt;
 
 #[derive(Debug)]
 pub enum RedisError {
@@ -55,12 +55,11 @@ impl From<Utf8Error> for RedisError {
 impl fmt::Display for RedisError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let d = match self {
-            RedisError::WrongArity => "Wrong Arity",            
-            RedisError::Str(s) => s,            
-            RedisError::String(s) => s.as_str(),            
+            RedisError::WrongArity => "Wrong Arity",
+            RedisError::Str(s) => s,
+            RedisError::String(s) => s.as_str(),
         };
-        
+
         write!(f, "{}", d)
     }
 }
-
