@@ -49,7 +49,7 @@ jobs:
 #          name: Upload Coverage
 #          command: ./scripts/codecov.sh
       - save_cache:
-          key: v1-dependencies-{{ arch }}-{{ checksum "Cargo.lock" }}
+          key: v1-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
           paths:
             - "~/.cargo"
             - "./target"
