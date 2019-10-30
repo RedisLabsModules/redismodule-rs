@@ -28,7 +28,7 @@ jobs:
 
       - run:
           name: Build all targets
-          command: cargo build --all --all-targets
+          command: cargo build --features experimental-api --all --all-targets
 
 #      - run:
 #          name: Nightly Build
@@ -56,4 +56,4 @@ jobs:
 
       - run:
           name: Run all tests
-          command: cargo test --all
+          command: cargo test --features experimental-api --all
