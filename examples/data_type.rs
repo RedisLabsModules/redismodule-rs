@@ -1,8 +1,8 @@
 #[macro_use]
-extern crate redismodule;
+extern crate redis_module;
 
-use redismodule::native_types::RedisType;
-use redismodule::{Context, NextArg, RedisError, RedisResult};
+use redis_module::native_types::RedisType;
+use redis_module::{Context, NextArg, RedisError, RedisResult};
 use std::os::raw::{c_void};
 
 #[derive(Debug)]

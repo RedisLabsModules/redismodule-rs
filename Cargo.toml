@@ -1,5 +1,5 @@
 [package]
-name = "redismodule"
+name = "redis-module"
 version = "0.3.0"
 authors = ["Gavrie Philipson <gavrie@redislabs.com>"]
 edition = "2018"

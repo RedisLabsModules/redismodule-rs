@@ -4,11 +4,11 @@ extern crate libc;
 
 use libc::c_int;
 
-extern crate redismodule;
+extern crate redis_module;
 
-use redismodule::raw;
-use redismodule::Context;
-use redismodule::{Command, RedisResult, RedisValue, RedisError};
+use redis_module::raw;
+use redis_module::Context;
+use redis_module::{Command, RedisResult, RedisValue, RedisError};
 
 const MODULE_NAME: &str = "hello";
 const MODULE_VERSION: u32 = 1;
