@@ -26,6 +26,22 @@ impl Context {
         }
     }
 
+    #[cfg(feature = "experimental-api")]
+    pub fn get_thread_safe_context() -> Self {
+        let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(ptr::null_mut()) };
+        Context::new(ctx)
+    }
+
+    #[cfg(feature = "experimental-api")]
+    pub fn lock(&self) {
+        unsafe { raw::RedisModule_ThreadSafeContextLock.unwrap()(self.ctx) };
+    }
+
+    #[cfg(feature = "experimental-api")]
+    pub fn unlock(&self) {
+        unsafe { raw::RedisModule_ThreadSafeContextUnlock.unwrap()(self.ctx) };
+    }
+
     pub fn log(&self, level: LogLevel, message: &str) {
         let level = CString::new(format!("{:?}", level).to_lowercase()).unwrap();
         let fmt = CString::new(message).unwrap();
@@ -62,15 +78,35 @@ impl Context {
                 terminated_args.len(),
             )
         };
+        let result = Self::parse_call_reply(reply);
+        if !reply.is_null() {
+            raw::free_call_reply(reply);
+        }
+        result
+    }
 
-        let result = match raw::call_reply_type(reply) {
-            raw::ReplyType::Unknown | raw::ReplyType::Error => {
+    fn parse_call_reply(reply: *mut raw::RedisModuleCallReply) -> RedisResult {
+        match raw::call_reply_type(reply) {
+            raw::ReplyType::Error => {
                 Err(RedisError::String(raw::call_reply_string(reply)))
             }
-            _ => Ok(RedisValue::SimpleStringStatic("OK")),
-        };
-        raw::free_call_reply(reply);
-        result
+            raw::ReplyType::Unknown => {
+                Err(RedisError::Str("Error on method call"))
+            }
+            raw::ReplyType::Array => {
+                let length = raw::call_reply_length(reply);
+                let mut vec = Vec::with_capacity(length);
+                for i in 0..length {
+                    vec.push(Self::parse_call_reply(raw::call_reply_array_element(
+                        reply, i,
+                    ))?)
+                }
+                Ok(RedisValue::Array(vec))
+            }
+            raw::ReplyType::Integer => Ok(RedisValue::Integer(raw::call_reply_integer(reply))),
+            raw::ReplyType::String => Ok(RedisValue::SimpleString(raw::call_reply_string(reply))),
+            raw::ReplyType::Nil => Ok(RedisValue::None),
+        }
     }
 
     pub fn reply(&self, r: RedisResult) -> raw::Status {
