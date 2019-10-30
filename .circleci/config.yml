@@ -17,7 +17,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - v1-dependencies-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - v1-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
 #      - run:
