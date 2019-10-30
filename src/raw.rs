@@ -10,6 +10,8 @@ extern crate num_traits;
 
 use libc::size_t;
 use num_traits::FromPrimitive;
+use std::ffi::CString;
+use std::ptr::null_mut;
 use std::slice;
 
 pub use crate::redisraw::bindings::*;
@@ -140,6 +142,8 @@ extern "C" {
 
 ///////////////////////////////////////////////////////////////
 
+pub const FMT: *const i8 = b"v\0".as_ptr() as *const i8;
+
 // Helper functions for the raw bindings.
 
 pub fn call_reply_type(reply: *mut RedisModuleCallReply) -> ReplyType {
@@ -264,6 +268,26 @@ pub fn load_string_buffer(rdb: *mut RedisModuleIO) -> RedisBuffer {
         let mut len = 0;
         let buffer = RedisModule_LoadStringBuffer.unwrap()(rdb, &mut len);
         RedisBuffer::new(buffer, len)
+    }
+}
+
+pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Status {
+    let terminated_args: Vec<RedisString> =
+        args.iter().map(|s| RedisString::create(ctx, s)).collect();
+
+    let inner_args: Vec<*mut RedisModuleString> = terminated_args.iter().map(|s| s.inner).collect();
+
+    let cmd = CString::new(command).unwrap();
+
+    unsafe {
+        RedisModule_Replicate.unwrap()(
+            ctx,
+            cmd.as_ptr(),
+            FMT,
+            inner_args.as_ptr() as *mut i8,
+            terminated_args.len(),
+        )
+        .into()
     }
 }
 
