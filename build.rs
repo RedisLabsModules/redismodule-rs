@@ -1,6 +1,9 @@
 extern crate bindgen;
 extern crate cc;
 
+use std::env;
+use std::path::PathBuf;
+
 fn main() {
     // Build a Redis pseudo-library so that we have symbols that we can link
     // against while building Rust code.
@@ -39,7 +42,8 @@ fn main() {
         .generate()
         .expect("error generating bindings");
 
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     bindings
-        .write_to_file("src/redisraw/bindings.rs")
+        .write_to_file(out_path.join("bindings.rs"))
         .expect("failed to write bindings to file");
 }
