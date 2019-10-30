@@ -10,7 +10,6 @@ extern crate num_traits;
 
 use libc::size_t;
 use num_traits::FromPrimitive;
-use std::ptr::null_mut;
 use std::slice;
 
 pub use crate::redisraw::bindings::*;
@@ -158,16 +157,27 @@ pub fn call_reply_integer(reply: *mut RedisModuleCallReply) -> c_longlong {
     unsafe { RedisModule_CallReplyInteger.unwrap()(reply) }
 }
 
+pub fn call_reply_array_element(
+    reply: *mut RedisModuleCallReply,
+    idx: usize,
+) -> *mut RedisModuleCallReply {
+    unsafe { RedisModule_CallReplyArrayElement.unwrap()(reply, idx) }
+}
+
+pub fn call_reply_length(reply: *mut RedisModuleCallReply) -> usize {
+    unsafe { RedisModule_CallReplyLength.unwrap()(reply) }
+}
+
 pub fn call_reply_string_ptr(reply: *mut RedisModuleCallReply, len: *mut size_t) -> *const c_char {
     unsafe { RedisModule_CallReplyStringPtr.unwrap()(reply, len) }
 }
 
 pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
     unsafe {
-        let len: *mut size_t = null_mut();
-        let str: *mut u8 = RedisModule_CallReplyStringPtr.unwrap()(reply, len) as *mut u8;
+        let mut len: size_t = 0;
+        let reply_string: *mut u8 = RedisModule_CallReplyStringPtr.unwrap()(reply, &mut len) as *mut u8;
         String::from_utf8(
-            slice::from_raw_parts(str, *len)
+            slice::from_raw_parts(reply_string, len)
                 .into_iter()
                 .map(|v| *v)
                 .collect(),
@@ -267,4 +277,20 @@ pub fn load_float(rdb: *mut RedisModuleIO) -> f32 {
 
 pub fn save_string(rdb: *mut RedisModuleIO, buf: &String) {
     unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr() as *mut i8, buf.len()) };
+}
+
+pub fn save_double(rdb: *mut RedisModuleIO, val: f64) {
+    unsafe { RedisModule_SaveDouble.unwrap()(rdb, val) };
+}
+
+pub fn save_signed(rdb: *mut RedisModuleIO, val: i64) {
+    unsafe { RedisModule_SaveSigned.unwrap()(rdb, val) };
+}
+
+pub fn save_float(rdb: *mut RedisModuleIO, val: f32) {
+    unsafe { RedisModule_SaveFloat.unwrap()(rdb, val) };
+}
+
+pub fn save_unsigned(rdb: *mut RedisModuleIO, val: u64) {
+    unsafe { RedisModule_SaveUnsigned.unwrap()(rdb, val) };
 }
