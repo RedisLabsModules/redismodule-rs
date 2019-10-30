@@ -85,12 +85,8 @@ impl Context {
 
     fn parse_call_reply(reply: *mut raw::RedisModuleCallReply) -> RedisResult {
         match raw::call_reply_type(reply) {
-            raw::ReplyType::Error => {
-                Err(RedisError::String(raw::call_reply_string(reply)))
-            }
-            raw::ReplyType::Unknown => {
-                Err(RedisError::Str("Error on method call"))
-            }
+            raw::ReplyType::Error => Err(RedisError::String(raw::call_reply_string(reply))),
+            raw::ReplyType::Unknown => Err(RedisError::Str("Error on method call")),
             raw::ReplyType::Array => {
                 let length = raw::call_reply_length(reply);
                 let mut vec = Vec::with_capacity(length);
