@@ -13,4 +13,4 @@ The Rust API for Redis Modules API is based on the https://github.com/brandur/re
 4. start a redis server with the hello module 
    * Linux: `redis-server --loadmodule ./target/debug/examples/libhello.so`
    * Mac: `redis-server --loadmodule ./target/debug/examples/libhello.dylib`	
-5. open a redis cli. and run `HELLO.ADD 31 11`. 
+5. open a redis cli. and run `HELLO.MUL 31 11`. 
