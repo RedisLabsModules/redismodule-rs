@@ -75,11 +75,11 @@ impl RedisKey {
         Ok(val)
     }
 
-    pub fn hash_get(&self, field: &str) -> Result<Option<String>, RedisError> {
+    pub fn hash_get(&self, field: &str) -> Result<Option<RedisString>, RedisError> {
         let val = if self.is_null() {
             None
         } else {
-            Some(hash_get_key(self.key_inner, field)?)
+            hash_get_key(self.ctx, self.key_inner, field)
         };
         Ok(val)
     }
@@ -139,12 +139,12 @@ impl RedisKeyWritable {
         Ok(Some(read_key(self.key_inner)?))
     }
 
-    pub fn hash_set(&self, field: &str, value: &str) -> raw::Status {
-        raw::hash_set(self.key_inner, field, value)
+    pub fn hash_set(&self, field: &str, value: RedisString) -> raw::Status {
+        raw::hash_set(self.key_inner, field, value.inner)
     }
 
-    pub fn hash_get(&self, field: &str) -> Result<Option<String>, RedisError> {
-        Ok(Some(hash_get_key(self.key_inner, field)?))
+    pub fn hash_get(&self, field: &str) -> Result<Option<RedisString>, RedisError> {
+        Ok(hash_get_key(self.ctx, self.key_inner, field))
     }
 
     pub fn set_expire(&self, expire: Duration) -> RedisResult {
@@ -240,9 +240,13 @@ fn read_key(key: *mut raw::RedisModuleKey) -> Result<String, Utf8Error> {
     )
 }
 
-fn hash_get_key(key: *mut raw::RedisModuleKey, field: &str) -> Result<String, Utf8Error> {
+fn hash_get_key(ctx: *mut raw::RedisModuleCtx, key: *mut raw::RedisModuleKey, field: &str) -> Option<RedisString> {
     let res = raw::hash_get(key, field);
-    res.into_string().map_err(|e| e.utf8_error())
+    if res.is_null() {
+        None
+    } else {
+        Some(RedisString::new(ctx, res))
+    }
 }
 
 fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
