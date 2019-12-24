@@ -80,8 +80,6 @@ impl RedisKey {
             None
         } else {
             Some(hash_get_key(self.key_inner, field)?)
-            // let res = raw::hash_get(self.key_inner, field);
-            // CString::from_raw(res).into_string()?)
         };
         Ok(val)
     }
