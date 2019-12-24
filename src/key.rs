@@ -2,7 +2,7 @@ use libc::size_t;
 use std::convert::TryFrom;
 use std::os::raw::c_void;
 use std::ptr;
-use std::string;
+use std::str::Utf8Error;
 use std::time::Duration;
 
 use crate::from_byte_string;
@@ -74,6 +74,17 @@ impl RedisKey {
         };
         Ok(val)
     }
+
+    pub fn hash_get(&self, field: &str) -> Result<Option<String>, RedisError> {
+        let val = if self.is_null() {
+            None
+        } else {
+            Some(hash_get_key(self.key_inner, field)?)
+            // let res = raw::hash_get(self.key_inner, field);
+            // CString::from_raw(res).into_string()?)
+        };
+        Ok(val)
+    }
 }
 
 impl Drop for RedisKey {
@@ -128,6 +139,14 @@ impl RedisKeyWritable {
 
     pub fn read(&self) -> Result<Option<String>, RedisError> {
         Ok(Some(read_key(self.key_inner)?))
+    }
+
+    pub fn hash_set(&self, field: &str, value: &str) -> raw::Status {
+        raw::hash_set(self.key_inner, field, value)
+    }
+
+    pub fn hash_get(&self, field: &str) -> Result<Option<String>, RedisError> {
+        Ok(Some(hash_get_key(self.key_inner, field)?))
     }
 
     pub fn set_expire(&self, expire: Duration) -> RedisResult {
@@ -215,12 +234,17 @@ impl Drop for RedisKeyWritable {
     }
 }
 
-fn read_key(key: *mut raw::RedisModuleKey) -> Result<String, string::FromUtf8Error> {
+fn read_key(key: *mut raw::RedisModuleKey) -> Result<String, Utf8Error> {
     let mut length: size_t = 0;
     from_byte_string(
         raw::string_dma(key, &mut length, raw::KeyMode::READ),
         length,
     )
+}
+
+fn hash_get_key(key: *mut raw::RedisModuleKey, field: &str) -> Result<String, Utf8Error> {
+    let res = raw::hash_get(key, field);
+    res.into_string().map_err(|e| e.utf8_error())
 }
 
 fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {

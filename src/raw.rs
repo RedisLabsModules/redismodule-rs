@@ -11,6 +11,7 @@ extern crate num_traits;
 use libc::size_t;
 use num_traits::FromPrimitive;
 use std::ffi::CString;
+use std::ptr;
 use std::slice;
 
 pub use crate::redisraw::bindings::*;
@@ -233,6 +234,20 @@ pub fn set_expire(key: *mut RedisModuleKey, expire: c_longlong) -> Status {
 
 pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> *const c_char {
     unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits) }
+}
+
+pub fn hash_get(key: *mut RedisModuleKey, field: &str) -> CString {
+    let res: *mut c_char = ptr::null_mut();
+    unsafe {
+        RedisModule_HashGet.unwrap()(key, REDISMODULE_HASH_NONE as i32, field.as_ptr(), &res, 0);
+        CString::from_raw(res)
+    }
+}
+
+pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: &str) -> Status {
+    unsafe {
+        RedisModule_HashSet.unwrap()(key, field.as_ptr() as i32, value.as_ptr() as i32, 0).into()
+    }
 }
 
 // Returns pointer to the C string, and sets len to its length

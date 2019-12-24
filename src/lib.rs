@@ -1,7 +1,7 @@
 //#![allow(dead_code)]
 
 use std::os::raw::c_char;
-use std::string;
+use std::str::Utf8Error;
 
 #[macro_use]
 extern crate bitflags;
@@ -40,15 +40,12 @@ pub enum LogLevel {
     Warning,
 }
 
-fn from_byte_string(
-    byte_str: *const c_char,
-    length: size_t,
-) -> Result<String, string::FromUtf8Error> {
+fn from_byte_string(byte_str: *const c_char, length: size_t) -> Result<String, Utf8Error> {
     let mut vec_str: Vec<u8> = Vec::with_capacity(length as usize);
     for j in 0..length {
         let byte = unsafe { *byte_str.offset(j as isize) } as u8;
         vec_str.insert(j, byte);
     }
 
-    String::from_utf8(vec_str)
+    String::from_utf8(vec_str).map_err(|e| e.utf8_error())
 }
