@@ -12,7 +12,8 @@ unsafe impl GlobalAlloc for RedisAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let use_redis = USE_REDIS_ALLOC.load(SeqCst);
         if use_redis {
-            return raw::RedisModule_Alloc.unwrap()(layout.size()) as *mut u8;
+            let size = (layout.size() + layout.align() - 1) & (!(layout.align() - 1));
+            return raw::RedisModule_Alloc.unwrap()(size) as *mut u8;
         }
         System.alloc(layout)
     }
