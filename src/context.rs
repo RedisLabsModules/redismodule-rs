@@ -177,7 +177,7 @@ impl Context {
         raw::replicate_verbatim(self.ctx);
     }
 
-    pub fn create_string(&self, s: &str) -> RedisString{
+    pub fn create_string(&self, s: &str) -> RedisString {
         RedisString::create(self.ctx, s)
     }
 }

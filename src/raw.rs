@@ -239,14 +239,27 @@ pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> 
 pub fn hash_get(key: *mut RedisModuleKey, field: &str) -> *mut RedisModuleString {
     let res: *mut RedisModuleString = ptr::null_mut();
     unsafe {
-        RedisModule_HashGet.unwrap()(key, REDISMODULE_HASH_CFIELDS as i32, CString::new(field).unwrap().as_ptr(), &res, 0);
+        RedisModule_HashGet.unwrap()(
+            key,
+            REDISMODULE_HASH_CFIELDS as i32,
+            CString::new(field).unwrap().as_ptr(),
+            &res,
+            0,
+        );
     }
     res
 }
 
 pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleString) -> Status {
     unsafe {
-        RedisModule_HashSet.unwrap()(key, REDISMODULE_HASH_CFIELDS as i32, CString::new(field).unwrap().as_ptr(), value, 0).into()
+        RedisModule_HashSet.unwrap()(
+            key,
+            REDISMODULE_HASH_CFIELDS as i32,
+            CString::new(field).unwrap().as_ptr(),
+            value,
+            0,
+        )
+        .into()
     }
 }
 
@@ -334,6 +347,12 @@ pub fn save_unsigned(rdb: *mut RedisModuleIO, val: u64) {
     unsafe { RedisModule_SaveUnsigned.unwrap()(rdb, val) };
 }
 
-pub fn string_append_buffer(ctx: *mut RedisModuleCtx, s: *mut RedisModuleString, buff: &str) -> Status {
-    unsafe { RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut i8, buff.len()).into() }
+pub fn string_append_buffer(
+    ctx: *mut RedisModuleCtx,
+    s: *mut RedisModuleString,
+    buff: &str,
+) -> Status {
+    unsafe {
+        RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut i8, buff.len()).into()
+    }
 }
