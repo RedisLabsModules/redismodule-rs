@@ -28,6 +28,7 @@ mod key;
 pub use crate::context::Context;
 pub use crate::redismodule::*;
 
+#[cfg(not(test))]
 #[global_allocator]
 static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc;
 
