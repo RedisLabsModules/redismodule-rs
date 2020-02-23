@@ -1,4 +1,4 @@
-use std::alloc::{GlobalAlloc, Layout, System};
+use std::alloc::{GlobalAlloc, Layout};
 use std::os::raw::c_void;
 use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 
@@ -10,21 +10,12 @@ static USE_REDIS_ALLOC: AtomicBool = AtomicBool::new(false);
 
 unsafe impl GlobalAlloc for RedisAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let use_redis = USE_REDIS_ALLOC.load(SeqCst);
-        if use_redis {
-            // complete the requested size to be aligned with the requested layout.align()
-            let size = (layout.size() + layout.align() - 1) & (!(layout.align() - 1));
-            return raw::RedisModule_Alloc.unwrap()(size) as *mut u8;
-        }
-        System.alloc(layout)
+        let size = (layout.size() + layout.align() - 1) & (!(layout.align() - 1));
+        return raw::RedisModule_Alloc.unwrap()(size) as *mut u8;
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        let use_redis = USE_REDIS_ALLOC.load(SeqCst);
-        if use_redis {
-            return raw::RedisModule_Free.unwrap()(ptr as *mut c_void);
-        }
-        System.dealloc(ptr, layout);
+    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
+        return raw::RedisModule_Free.unwrap()(ptr as *mut c_void);
     }
 }
 
