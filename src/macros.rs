@@ -65,7 +65,7 @@ macro_rules! redis_module {
               ]),* $(,)*
         ] $(,)*
     ) => {
-        use std::os::raw::c_int;
+        use std::os::raw::{c_int, c_char};
         use std::ffi::CString;
         use std::slice;
 
@@ -80,7 +80,7 @@ macro_rules! redis_module {
             _argc: c_int,
         ) -> c_int {
             let mut name_buffer = [0; 64];
-                  let mut dest = name_buffer.as_mut_ptr();
+            let mut dest = name_buffer.as_mut_ptr();
             for byte in $module_name.chars() {
                 unsafe {
                     *dest = byte as i8;
@@ -93,7 +93,7 @@ macro_rules! redis_module {
 
             if unsafe { raw::Export_RedisModule_Init(
                 ctx,
-                name_buffer.as_ptr() as *const std::os::raw::c_char,
+                name_buffer.as_ptr() as *const c_char,
                 module_version,
                 raw::REDISMODULE_APIVER_1 as c_int,
             ) } == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
