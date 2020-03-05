@@ -1,9 +1,11 @@
 #[macro_export]
 macro_rules! redis_command {
-    ($ctx: expr, $command_name:expr, $command_handler:expr, $command_flags:expr) => {{
+    ($ctx:expr, $command_name:expr, $command_handler:expr, $command_flags:expr, $firstkey:expr, $lastkey:expr, $keystep:expr) => {{
         let name = CString::new($command_name).unwrap();
         let flags = CString::new($command_flags).unwrap();
-        let (firstkey, lastkey, keystep) = (1, 1, 1);
+        let firstkey: i32 = $firstkey;
+        let lastkey: i32 = $lastkey;
+        let keystep: i32 = $keystep;
 
         /////////////////////
         extern "C" fn do_command(
@@ -61,7 +63,10 @@ macro_rules! redis_module {
             $([
                 $name:expr,
                 $command:expr,
-                $flags:expr
+                $flags:expr,
+                $firstkey:expr,
+                $lastkey:expr,
+                $keystep:expr
               ]),* $(,)*
         ] $(,)*
     ) => {
@@ -112,7 +117,7 @@ macro_rules! redis_module {
             )*
 
             $(
-                redis_command!(ctx, $name, $command, $flags);
+                redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep);
             )*
 
             raw::Status::Ok as c_int
