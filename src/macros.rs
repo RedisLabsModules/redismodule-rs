@@ -87,16 +87,19 @@ macro_rules! redis_module {
             _argv: *mut *mut raw::RedisModuleString,
             _argc: c_int,
         ) -> c_int {
+
+            // We use a statically sized buffer to avoid allocating.
+            // This is needed since we use a custom allocator that relies on the Redis allocator,
+            // which isn't yet ready at this point.
             let mut name_buffer = [0; 64];
-            let mut dest = name_buffer.as_mut_ptr();
-            for byte in $module_name.chars() {
-                unsafe {
-                    *dest = byte as i8;
-                    dest = dest.add(1);
-                }
+            unsafe {
+                std::ptr::copy(
+                    $module_name.as_ptr(),
+                    name_buffer.as_mut_ptr(),
+                    $module_name.len(),
+                );
             }
-            // We use an explicit block here to make sure all memory allocated before we
-            // switch to the Redis allocator will be out of scope and thus deallocated.
+
             let module_version = $module_version as c_int;
 
             if unsafe { raw::Export_RedisModule_Init(
