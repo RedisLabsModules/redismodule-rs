@@ -1,6 +1,12 @@
 #[macro_export]
 macro_rules! redis_command {
-    ($ctx:expr, $command_name:expr, $command_handler:expr, $command_flags:expr, $firstkey:expr, $lastkey:expr, $keystep:expr) => {{
+    ($ctx:expr,
+     $command_name:expr,
+     $command_handler:expr,
+     $command_flags:expr,
+     $firstkey:expr,
+     $lastkey:expr,
+     $keystep:expr) => {{
         let name = CString::new($command_name).unwrap();
         let flags = CString::new($command_flags).unwrap();
         let firstkey: i32 = $firstkey;
