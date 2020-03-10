@@ -9,9 +9,6 @@ macro_rules! redis_command {
      $keystep:expr) => {{
         let name = CString::new($command_name).unwrap();
         let flags = CString::new($command_flags).unwrap();
-        let firstkey: i32 = $firstkey;
-        let lastkey: i32 = $lastkey;
-        let keystep: i32 = $keystep;
 
         /////////////////////
         extern "C" fn do_command(
@@ -45,9 +42,9 @@ macro_rules! redis_command {
                 name.as_ptr(),
                 Some(do_command),
                 flags.as_ptr(),
-                firstkey,
-                lastkey,
-                keystep,
+                $firstkey,
+                $lastkey,
+                $keystep,
             )
         } == raw::Status::Err as c_int
         {
