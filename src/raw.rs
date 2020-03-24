@@ -59,7 +59,7 @@ pub enum ReplyType {
     Error = REDISMODULE_REPLY_ERROR_ISIZE,
     Integer = REDISMODULE_REPLY_INTEGER_ISIZE,
     Array = REDISMODULE_REPLY_ARRAY_ISIZE,
-    Nil = REDISMODULE_REPLY_NULL_ISIZE,
+    Null = REDISMODULE_REPLY_NULL_ISIZE,
 }
 
 impl From<c_int> for ReplyType {

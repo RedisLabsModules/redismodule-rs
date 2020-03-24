@@ -99,7 +99,7 @@ impl Context {
             }
             raw::ReplyType::Integer => Ok(RedisValue::Integer(raw::call_reply_integer(reply))),
             raw::ReplyType::String => Ok(RedisValue::SimpleString(raw::call_reply_string(reply))),
-            raw::ReplyType::Nil => Ok(RedisValue::None),
+            raw::ReplyType::Null => Ok(RedisValue::Null),
         }
     }
 
@@ -145,7 +145,7 @@ impl Context {
                 raw::Status::Ok
             }
 
-            Ok(RedisValue::None) => unsafe {
+            Ok(RedisValue::Null) => unsafe {
                 raw::RedisModule_ReplyWithNull.unwrap()(self.ctx).into()
             },
 

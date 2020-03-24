@@ -6,12 +6,12 @@ pub enum RedisValue {
     Integer(i64),
     Float(f64),
     Array(Vec<RedisValue>),
-    None,
+    Null,
 }
 
 impl From<()> for RedisValue {
     fn from(_: ()) -> Self {
-        RedisValue::None
+        RedisValue::Null
     }
 }
 
@@ -55,7 +55,7 @@ impl<T: Into<RedisValue>> From<Option<T>> for RedisValue {
     fn from(s: Option<T>) -> Self {
         match s {
             Some(v) => v.into(),
-            None => RedisValue::None,
+            None => RedisValue::Null,
         }
     }
 }
@@ -106,6 +106,6 @@ mod tests {
 
     #[test]
     fn from_option_none() {
-        assert_eq!(RedisValue::from(None::<()>), RedisValue::None,);
+        assert_eq!(RedisValue::from(None::<()>), RedisValue::Null,);
     }
 }
