@@ -7,6 +7,7 @@ pub enum RedisValue {
     Float(f64),
     Array(Vec<RedisValue>),
     Null,
+    NoReply, // No reply at all (as opposed to a Null reply)
 }
 
 impl From<()> for RedisValue {
