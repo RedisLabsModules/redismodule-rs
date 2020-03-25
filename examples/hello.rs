@@ -1,11 +1,20 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{parse_integer, Context, RedisError, RedisResult};
+use redis_module::{parse_integer, Context, RedisError, RedisResult, RedisValue};
 
-fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
+fn hello_mul(ctx: &Context, args: Vec<String>) -> RedisResult {
     if args.len() < 2 {
         return Err(RedisError::WrongArity);
+    }
+
+    if ctx.is_keys_position_request() {
+        for i in 1..args.len() {
+            if i % 2 == 0 {
+                ctx.key_at_pos(i as i32);
+            }
+        }
+        return Ok(RedisValue::NoReply);
     }
 
     let nums = args
@@ -29,7 +38,7 @@ redis_module! {
     version: 1,
     data_types: [],
     commands: [
-        ["hello.mul", hello_mul, "", 0, 0, 0],
+        ["hello.mul", hello_mul, "getkeys-api", 1, 1, 1],
     ],
 }
 
