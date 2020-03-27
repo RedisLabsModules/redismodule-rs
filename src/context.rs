@@ -40,6 +40,30 @@ impl Context {
         unsafe { raw::RedisModule_ThreadSafeContextUnlock.unwrap()(self.ctx) };
     }
 
+    #[cfg(feature = "experimental-api")]
+    pub fn create_timer(
+        &self,
+        period: u64,
+        callback: raw::RedisModuleTimerProc,
+        data: &str,
+    ) -> u64 {
+        raw::create_timer(self.ctx, period, callback, data)
+    }
+
+    #[cfg(feature = "experimental-api")]
+    pub fn stop_timer(&self, id: u64) -> i32 {
+        raw::stop_timer(self.ctx, id)
+    }
+
+    #[cfg(feature = "experimental-api")]
+    pub fn subscribe_to_keyspace_events(
+        &self,
+        types: i32,
+        callback: raw::RedisModuleNotificationFunc,
+    ) -> i32 {
+        raw::subscribe_to_keyspace_events(self.ctx, types, callback)
+    }
+
     pub fn log(&self, level: LogLevel, message: &str) {
         let level = CString::new(format!("{:?}", level).to_lowercase()).unwrap();
         let fmt = CString::new(message).unwrap();

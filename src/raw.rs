@@ -356,3 +356,37 @@ pub fn string_append_buffer(
         RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut i8, buff.len()).into()
     }
 }
+
+#[cfg(feature = "experimental-api")]
+pub fn create_timer(
+    ctx: *mut RedisModuleCtx,
+    period: u64,
+    callback: RedisModuleTimerProc,
+    data: &str,
+) -> u64 {
+    unsafe {
+        RedisModule_CreateTimer.unwrap()(
+            ctx,
+            period as i64,
+            callback,
+            Box::into_raw(Box::new(CString::new(data).unwrap())) as *mut _,
+        )
+    }
+}
+
+// stop_timer kills the timer by id and passes a null ptr as the `data` value.
+// the api supports passing `void **data` which will set **data to the existing
+// timer data before the timer is stopped. this is not supported.
+#[cfg(feature = "experimental-api")]
+pub fn stop_timer(ctx: *mut RedisModuleCtx, id: u64) -> i32 {
+    unsafe { RedisModule_StopTimer.unwrap()(ctx, id, ptr::null_mut()) }
+}
+
+#[cfg(feature = "experimental-api")]
+pub fn subscribe_to_keyspace_events(
+    ctx: *mut RedisModuleCtx,
+    types: i32,
+    callback: RedisModuleNotificationFunc,
+) -> i32 {
+    unsafe { RedisModule_SubscribeToKeyspaceEvents.unwrap()(ctx, types, callback) }
+}
