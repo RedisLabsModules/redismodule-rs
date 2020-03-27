@@ -374,9 +374,9 @@ pub fn create_timer(
     }
 }
 
-// stop_timer kills the timer by id and passes a null ptr as the `data` value.
+// stop_timer kills the timer by id and sets `data` to null ptr.
 // the api supports passing `void **data` which will set **data to the existing
-// timer data before the timer is stopped. this is not supported.
+// timer data before the timer is stopped. this is not currently implemented.
 #[cfg(feature = "experimental-api")]
 pub fn stop_timer(ctx: *mut RedisModuleCtx, id: u64) -> i32 {
     unsafe { RedisModule_StopTimer.unwrap()(ctx, id, ptr::null_mut()) }
