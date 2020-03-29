@@ -1,5 +1,5 @@
 use std::ffi::CString;
-use std::os::raw::c_long;
+use std::os::raw::{c_long, c_int};
 use std::ptr;
 
 use crate::key::{RedisKey, RedisKeyWritable};
@@ -56,6 +56,22 @@ impl Context {
         }
     }
 
+    pub fn is_keys_position_request(&self) -> bool {
+        let result = unsafe {
+            raw::RedisModule_IsKeysPositionRequest.unwrap()(self.ctx)
+        };
+
+        result != 0
+    }
+
+    pub fn key_at_pos(&self, pos: i32) {
+        // TODO: This will crash redis if `pos` is out of range.
+        // Think of a way to make this safe by checking the range.
+        unsafe {
+            raw::RedisModule_KeyAtPos.unwrap()(self.ctx, pos as c_int);
+        }
+    }
+
     pub fn call(&self, command: &str, args: &[&str]) -> RedisResult {
         let terminated_args: Vec<RedisString> = args
             .iter()
@@ -99,7 +115,7 @@ impl Context {
             }
             raw::ReplyType::Integer => Ok(RedisValue::Integer(raw::call_reply_integer(reply))),
             raw::ReplyType::String => Ok(RedisValue::SimpleString(raw::call_reply_string(reply))),
-            raw::ReplyType::Nil => Ok(RedisValue::None),
+            raw::ReplyType::Null => Ok(RedisValue::Null),
         }
     }
 
@@ -145,12 +161,19 @@ impl Context {
                 raw::Status::Ok
             }
 
-            Ok(RedisValue::None) => unsafe {
+            Ok(RedisValue::Null) => unsafe {
                 raw::RedisModule_ReplyWithNull.unwrap()(self.ctx).into()
             },
 
+            Ok(RedisValue::NoReply) => raw::Status::Ok,
+
             Err(RedisError::WrongArity) => unsafe {
-                raw::RedisModule_WrongArity.unwrap()(self.ctx).into()
+                if self.is_keys_position_request() {
+                    // We can't return a result since we don't have a client
+                    raw::Status::Err
+                } else {
+                    raw::RedisModule_WrongArity.unwrap()(self.ctx).into()
+                }
             },
 
             Err(RedisError::String(s)) => unsafe {
