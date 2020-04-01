@@ -375,7 +375,7 @@ pub fn create_timer(
             ctx,
             period as i64,
             callback,
-            Box::into_raw(Box::new(CString::new(data).unwrap())) as *mut _,
+            Box::into_raw(Box::new(CString::new(data).unwrap())) as *mut c_void,
         )
     }
 }
