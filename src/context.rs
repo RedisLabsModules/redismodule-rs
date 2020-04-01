@@ -50,11 +50,35 @@ impl Context {
         raw::create_timer(self.ctx, period, callback, data)
     }
 
+    // stop_timer_data takes an timer_id and
+    // returns ok = 0, err = 1
     #[cfg(feature = "experimental-api")]
     pub fn stop_timer(&self, id: u64) -> i32 {
         raw::stop_timer(self.ctx, id)
     }
 
+    // stop_timer_data takes a timer_id and
+    // returns (ok, data stored with timer)
+    #[cfg(feature = "experimental-api")]
+    pub fn stop_timer_data(&self, id: u64) -> (i32, Option<String>) {
+        raw::stop_timer_data(self.ctx, id)
+    }
+
+    // get_timer_info takes the timer id and returns (ok, milliseconds remaining)
+    #[cfg(feature = "experimental-api")]
+    pub fn get_timer_info(&self, id: u64) -> (i32, u64) {
+        raw::get_timer_info(self.ctx, id)
+    }
+
+    // get_timer_info_data takes the timer id
+    // and returns (ok, milliseconds remaining, data stored with timer)
+    #[cfg(feature = "experimental-api")]
+    pub fn get_timer_info_data(&self, id: u64) -> (i32, u64, Option<String>) {
+        raw::get_timer_info_data(self.ctx, id)
+    }
+
+    // subscribe_to_keyspace_events registers callbacks
+    // for the `types` mask
     #[cfg(feature = "experimental-api")]
     pub fn subscribe_to_keyspace_events(
         &self,

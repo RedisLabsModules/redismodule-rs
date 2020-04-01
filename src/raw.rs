@@ -4,6 +4,9 @@
 
 use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
 
+#[cfg(feature = "experimental-api")]
+use std::os::raw::c_void;
+
 extern crate enum_primitive_derive;
 extern crate libc;
 extern crate num_traits;
@@ -357,6 +360,9 @@ pub fn string_append_buffer(
     }
 }
 
+// create_timer registers a timer for the
+// with the given period, callback, and data and
+// returns a timer_id
 #[cfg(feature = "experimental-api")]
 pub fn create_timer(
     ctx: *mut RedisModuleCtx,
@@ -375,13 +381,58 @@ pub fn create_timer(
 }
 
 // stop_timer kills the timer by id and sets `data` to null ptr.
-// the api supports passing `void **data` which will set **data to the existing
-// timer data before the timer is stopped. this is not currently implemented.
+// and returns ok
 #[cfg(feature = "experimental-api")]
 pub fn stop_timer(ctx: *mut RedisModuleCtx, id: u64) -> i32 {
     unsafe { RedisModule_StopTimer.unwrap()(ctx, id, ptr::null_mut()) }
 }
 
+// stop_timer kills the timer by id and returns (ok, data stored with the timer)
+#[cfg(feature = "experimental-api")]
+pub fn stop_timer_data(ctx: *mut RedisModuleCtx, id: u64) -> (i32, Option<String>) {
+    let ptr = Box::into_raw(Box::new(Box::new("") as Box<&str>));
+    let ok = unsafe { RedisModule_StopTimer.unwrap()(ctx, id, ptr as *mut *mut c_void) };
+    let mut data: Option<String> = None;
+    if ok == 0 {
+        let val = unsafe { **ptr as &str };
+        data = Some(val.trim_matches(char::from(0)).to_string());
+    }
+    (ok, data)
+}
+
+// get_timer_info returns (success, remaining milliseconds)
+#[cfg(feature = "experimental-api")]
+pub fn get_timer_info(ctx: *mut RedisModuleCtx, id: RedisModuleTimerID) -> (i32, u64) {
+    let mut ms = 0 as u64;
+    let ok = unsafe { RedisModule_GetTimerInfo.unwrap()(ctx, id, &mut ms, ptr::null_mut()) };
+    (ok, ms)
+}
+
+// get_timer_info returns (success, remaining milliseconds, option<data>)
+#[cfg(feature = "experimental-api")]
+pub fn get_timer_info_data(
+    ctx: *mut RedisModuleCtx,
+    id: RedisModuleTimerID,
+) -> (i32, u64, Option<String>) {
+    // We need to be careful how we access the data ptr...
+    // Create a thin pointer around a stable pointer
+    // so we can unbox it later. Don't use Box::from_raw otherwise, the ptr
+    // is destroyed and calling this method with the same id twice
+    // segvaults redis...
+    let ptr = Box::into_raw(Box::new(Box::new("") as Box<&str>));
+    let mut ms = 0 as u64;
+    let ok =
+        unsafe { RedisModule_GetTimerInfo.unwrap()(ctx, id, &mut ms, ptr as *mut *mut c_void) };
+    let mut data: Option<String> = None;
+    if ok == 0 {
+        let val = unsafe { **ptr as &str };
+        data = Some(val.trim_matches(char::from(0)).to_string());
+    }
+    (ok, ms, data)
+}
+
+// subscribe_to_keyspace_events registers the keyspace
+// event types with the callback
 #[cfg(feature = "experimental-api")]
 pub fn subscribe_to_keyspace_events(
     ctx: *mut RedisModuleCtx,
