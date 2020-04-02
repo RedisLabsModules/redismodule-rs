@@ -41,16 +41,6 @@ impl Display for Error {
 }
 
 impl error::Error for Error {
-    fn description(&self) -> &str {
-        // Both underlying errors already impl `Error`, so we defer to their
-        // implementations.
-        match *self {
-            Error::Generic(ref err) => err.description(),
-            Error::FromUtf8(ref err) => err.description(),
-            Error::ParseInt(ref err) => err.description(),
-        }
-    }
-
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             // N.B. Both of these implicitly cast `err` from their concrete
