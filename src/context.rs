@@ -7,7 +7,7 @@ use crate::raw;
 use crate::LogLevel;
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
-/// Redis is a structure that's designed to give us a high-level interface to
+/// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
     ctx: *mut raw::RedisModuleCtx,
@@ -57,6 +57,11 @@ impl Context {
     }
 
     pub fn is_keys_position_request(&self) -> bool {
+        // HACK: Used for tests, where the context is null
+        if self.ctx.is_null() {
+            return false;
+        }
+
         let result = unsafe { raw::RedisModule_IsKeysPositionRequest.unwrap()(self.ctx) };
 
         result != 0
