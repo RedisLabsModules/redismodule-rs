@@ -36,3 +36,7 @@ cc = "1.0"
 default = []
 experimental-api = []
 
+# Workaround to allow cfg(feature = "test") in dependencies:
+# https://github.com/rust-lang/rust/issues/59168#issuecomment-472653680
+# This requires running the tests with `--features test`
+test = []

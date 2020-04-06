@@ -57,8 +57,8 @@ impl Context {
     }
 
     pub fn is_keys_position_request(&self) -> bool {
-        // HACK: Used for tests, where the context is null
-        if self.ctx.is_null() {
+        // We want this to be available in tests where we don't have an actual Redis to call
+        if cfg!(feature = "test") {
             return false;
         }
 
