@@ -1,5 +1,5 @@
 use std::ffi::CString;
-use std::os::raw::{c_long, c_int};
+use std::os::raw::{c_int, c_long};
 use std::ptr;
 
 use crate::key::{RedisKey, RedisKeyWritable};
@@ -57,9 +57,7 @@ impl Context {
     }
 
     pub fn is_keys_position_request(&self) -> bool {
-        let result = unsafe {
-            raw::RedisModule_IsKeysPositionRequest.unwrap()(self.ctx)
-        };
+        let result = unsafe { raw::RedisModule_IsKeysPositionRequest.unwrap()(self.ctx) };
 
         result != 0
     }
