@@ -18,6 +18,11 @@ name = "keys_pos"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "timer"
+crate-type = ["cdylib"]
+required-features = ["experimental-api"]
+
+[[example]]
 name = "data_type"
 crate-type = ["cdylib"]
 
