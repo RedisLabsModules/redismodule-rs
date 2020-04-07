@@ -28,6 +28,10 @@ mod key;
 pub use crate::context::Context;
 pub use crate::redismodule::*;
 
+/// Ideally this would be `#[cfg(not(test))]`, but that doesn't work:
+/// https://github.com/rust-lang/rust/issues/59168#issuecomment-472653680
+/// The workaround is to use the `test` feature instead.
+#[cfg(not(feature = "test"))]
 #[global_allocator]
 static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc;
 
