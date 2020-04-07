@@ -110,23 +110,23 @@ fn take_data<T>(data: *mut c_void) -> T {
     let data = data as *mut T;
 
     // Take back ownership of the original boxed data, so we can unbox it safely.
+    // If we don't do this, the data's memory will be leaked.
     let data = unsafe { Box::from_raw(data) };
-    let data = *data;
 
-    data
+    *data
 }
 
 extern "C" fn raw_callback<F, T>(ctx: *mut raw::RedisModuleCtx, data: *mut c_void)
 where
     F: FnOnce(&Context, T),
 {
+    let ctx = &Context::new(ctx);
+
     if data.is_null() {
-        println!("[callback] Data is null; this should not happen!");
+        ctx.log_debug("[callback] Data is null; this should not happen!");
         return;
     }
 
     let cb_data: CallbackData<F, T> = take_data(data);
-    println!("[callback]: {}", std::mem::size_of_val(&cb_data));
-
-    (cb_data.callback)(&Context::new(ctx), cb_data.data);
+    (cb_data.callback)(ctx, cb_data.data);
 }

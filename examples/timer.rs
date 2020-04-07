@@ -4,8 +4,8 @@ extern crate redis_module;
 use redis_module::{Context, NextArg, RedisError, RedisResult};
 use std::time::Duration;
 
-fn callback(_ctx: &Context, data: String) {
-    println!("callback: {}", data);
+fn callback(ctx: &Context, data: String) {
+    ctx.log_debug(format!("[callback]: {}", data).as_str());
 }
 
 type MyData = String;
