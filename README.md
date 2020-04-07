@@ -1,5 +1,6 @@
 [![license](https://img.shields.io/github/license/RedisLabsModules/redismodule-rs.svg)](https://github.com/RedisLabsModules/redismodule-rs.)
 [![GitHub issues](https://img.shields.io/github/release/RedisLabsModules/redismodule-rs.svg)](https://github.com/RedisLabsModules/redismodule-rs/releases/latest)
+![Rust](https://github.com/RedisLabsModules/redismodule-rs/workflows/Rust/badge.svg)
 [![CircleCI](https://circleci.com/gh/RedisLabsModules/redismodule-rs/tree/master.svg?style=svg)](https://circleci.com/gh/RedisLabsModules/redismodule-rs/tree/master)
 
 # redismodule-rs
