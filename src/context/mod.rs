@@ -1,5 +1,5 @@
 use std::ffi::CString;
-use std::os::raw::c_long;
+use std::os::raw::{c_int, c_long};
 use std::ptr;
 
 use crate::key::{RedisKey, RedisKeyWritable};
@@ -7,10 +7,13 @@ use crate::raw;
 use crate::LogLevel;
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
-/// Redis is a structure that's designed to give us a high-level interface to
+#[cfg(feature = "experimental-api")]
+mod timer;
+
+/// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
-    ctx: *mut raw::RedisModuleCtx,
+    pub(crate) ctx: *mut raw::RedisModuleCtx,
 }
 
 impl Context {
@@ -53,6 +56,25 @@ impl Context {
     pub fn auto_memory(&self) {
         unsafe {
             raw::RedisModule_AutoMemory.unwrap()(self.ctx);
+        }
+    }
+
+    pub fn is_keys_position_request(&self) -> bool {
+        // We want this to be available in tests where we don't have an actual Redis to call
+        if cfg!(feature = "test") {
+            return false;
+        }
+
+        let result = unsafe { raw::RedisModule_IsKeysPositionRequest.unwrap()(self.ctx) };
+
+        result != 0
+    }
+
+    pub fn key_at_pos(&self, pos: i32) {
+        // TODO: This will crash redis if `pos` is out of range.
+        // Think of a way to make this safe by checking the range.
+        unsafe {
+            raw::RedisModule_KeyAtPos.unwrap()(self.ctx, pos as c_int);
         }
     }
 
@@ -99,7 +121,7 @@ impl Context {
             }
             raw::ReplyType::Integer => Ok(RedisValue::Integer(raw::call_reply_integer(reply))),
             raw::ReplyType::String => Ok(RedisValue::SimpleString(raw::call_reply_string(reply))),
-            raw::ReplyType::Nil => Ok(RedisValue::None),
+            raw::ReplyType::Null => Ok(RedisValue::Null),
         }
     }
 
@@ -145,12 +167,19 @@ impl Context {
                 raw::Status::Ok
             }
 
-            Ok(RedisValue::None) => unsafe {
+            Ok(RedisValue::Null) => unsafe {
                 raw::RedisModule_ReplyWithNull.unwrap()(self.ctx).into()
             },
 
+            Ok(RedisValue::NoReply) => raw::Status::Ok,
+
             Err(RedisError::WrongArity) => unsafe {
-                raw::RedisModule_WrongArity.unwrap()(self.ctx).into()
+                if self.is_keys_position_request() {
+                    // We can't return a result since we don't have a client
+                    raw::Status::Err
+                } else {
+                    raw::RedisModule_WrongArity.unwrap()(self.ctx).into()
+                }
             },
 
             Err(RedisError::String(s)) => unsafe {
@@ -177,7 +206,7 @@ impl Context {
         raw::replicate_verbatim(self.ctx);
     }
 
-    pub fn create_string(&self, s: &str) -> RedisString{
+    pub fn create_string(&self, s: &str) -> RedisString {
         RedisString::create(self.ctx, s)
     }
 }

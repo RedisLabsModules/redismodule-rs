@@ -240,7 +240,11 @@ fn read_key(key: *mut raw::RedisModuleKey) -> Result<String, Utf8Error> {
     )
 }
 
-fn hash_get_key(ctx: *mut raw::RedisModuleCtx, key: *mut raw::RedisModuleKey, field: &str) -> Option<RedisString> {
+fn hash_get_key(
+    ctx: *mut raw::RedisModuleCtx,
+    key: *mut raw::RedisModuleKey,
+    field: &str,
+) -> Option<RedisString> {
     let res = raw::hash_get(key, field);
     if res.is_null() {
         None

@@ -1,9 +1,14 @@
 #[macro_export]
 macro_rules! redis_command {
-    ($ctx: expr, $command_name:expr, $command_handler:expr, $command_flags:expr) => {{
+    ($ctx:expr,
+     $command_name:expr,
+     $command_handler:expr,
+     $command_flags:expr,
+     $firstkey:expr,
+     $lastkey:expr,
+     $keystep:expr) => {{
         let name = CString::new($command_name).unwrap();
         let flags = CString::new($command_flags).unwrap();
-        let (firstkey, lastkey, keystep) = (1, 1, 1);
 
         /////////////////////
         extern "C" fn do_command(
@@ -37,9 +42,9 @@ macro_rules! redis_command {
                 name.as_ptr(),
                 Some(do_command),
                 flags.as_ptr(),
-                firstkey,
-                lastkey,
-                keystep,
+                $firstkey,
+                $lastkey,
+                $keystep,
             )
         } == raw::Status::Err as c_int
         {
@@ -61,11 +66,14 @@ macro_rules! redis_module {
             $([
                 $name:expr,
                 $command:expr,
-                $flags:expr
+                $flags:expr,
+                $firstkey:expr,
+                $lastkey:expr,
+                $keystep:expr
               ]),* $(,)*
         ] $(,)*
     ) => {
-        use std::os::raw::c_int;
+        use std::os::raw::{c_int, c_char};
         use std::ffi::CString;
         use std::slice;
 
@@ -79,25 +87,27 @@ macro_rules! redis_module {
             _argv: *mut *mut raw::RedisModuleString,
             _argc: c_int,
         ) -> c_int {
-            {
-                // We use an explicit block here to make sure all memory allocated before we
-                // switch to the Redis allocator will be out of scope and thus deallocated.
-                let module_name = CString::new($module_name).unwrap();
-                let module_version = $module_version as c_int;
 
-                if unsafe { raw::Export_RedisModule_Init(
-                    ctx,
-                    module_name.as_ptr(),
-                    module_version,
-                    raw::REDISMODULE_APIVER_1 as c_int,
-                ) } == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
+            // We use a statically sized buffer to avoid allocating.
+            // This is needed since we use a custom allocator that relies on the Redis allocator,
+            // which isn't yet ready at this point.
+            let mut name_buffer = [0; 64];
+            unsafe {
+                std::ptr::copy(
+                    $module_name.as_ptr(),
+                    name_buffer.as_mut_ptr(),
+                    $module_name.len(),
+                );
             }
 
-            if true {
-                redis_module::alloc::use_redis_alloc();
-            } else {
-                eprintln!("*** NOT USING Redis allocator ***");
-            }
+            let module_version = $module_version as c_int;
+
+            if unsafe { raw::Export_RedisModule_Init(
+                ctx,
+                name_buffer.as_ptr() as *const c_char,
+                module_version,
+                raw::REDISMODULE_APIVER_1 as c_int,
+            ) } == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
 
             $(
                 if $init_func(ctx) == raw::Status::Err as c_int {
@@ -112,7 +122,7 @@ macro_rules! redis_module {
             )*
 
             $(
-                redis_command!(ctx, $name, $command, $flags);
+                redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep);
             )*
 
             raw::Status::Ok as c_int

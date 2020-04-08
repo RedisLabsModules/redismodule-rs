@@ -29,7 +29,7 @@ redis_module! {
     version: 1,
     data_types: [],
     commands: [
-        ["hello.mul", hello_mul, ""],
+        ["hello.mul", hello_mul, "", 0, 0, 0],
     ],
 }
 

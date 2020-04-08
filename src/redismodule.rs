@@ -72,10 +72,7 @@ pub struct RedisString {
 
 impl RedisString {
     pub fn new(ctx: *mut raw::RedisModuleCtx, inner: *mut raw::RedisModuleString) -> RedisString {
-        RedisString{
-            ctx,
-            inner
-        }
+        RedisString { ctx, inner }
     }
 
     pub fn create(ctx: *mut raw::RedisModuleCtx, s: &str) -> RedisString {
@@ -93,7 +90,7 @@ impl RedisString {
     }
 
     pub fn append(&mut self, s: &str) -> raw::Status {
-        raw::string_append_buffer(self.ctx, self.inner, s) 
+        raw::string_append_buffer(self.ctx, self.inner, s)
     }
 
     pub fn len(&self) -> usize {

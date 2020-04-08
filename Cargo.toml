@@ -1,6 +1,6 @@
 [package]
 name = "redis-module"
-version = "0.6.0"
+version = "0.8.0"
 authors = ["Gavrie Philipson <gavrie@redislabs.com>", "Guy Korland <guy.korland@redislabs.com>"]
 edition = "2018"
 build = "build.rs"
@@ -12,6 +12,15 @@ readme = "README.md"
 [[example]]
 name = "hello"
 crate-type = ["cdylib"]
+
+[[example]]
+name = "keys_pos"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "timer"
+crate-type = ["cdylib"]
+required-features = ["experimental-api"]
 
 [[example]]
 name = "data_type"
@@ -32,3 +41,7 @@ cc = "1.0"
 default = []
 experimental-api = []
 
+# Workaround to allow cfg(feature = "test") in dependencies:
+# https://github.com/rust-lang/rust/issues/59168#issuecomment-472653680
+# This requires running the tests with `--features test`
+test = []
