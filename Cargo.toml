@@ -34,7 +34,7 @@ num-traits = "^0.2"
 #failure = "0.1"
 
 [build-dependencies]
-bindgen = "0.52"
+bindgen = "0.53"
 cc = "1.0"
 
 [features]

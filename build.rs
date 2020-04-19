@@ -39,6 +39,7 @@ fn main() {
     let bindings = build
         .header("src/include/redismodule.h")
         .whitelist_var("(REDIS|Redis).*")
+        .size_t_is_usize(true)
         .generate()
         .expect("error generating bindings");
 
