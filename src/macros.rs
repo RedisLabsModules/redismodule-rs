@@ -73,20 +73,19 @@ macro_rules! redis_module {
               ]),* $(,)*
         ] $(,)*
     ) => {
-        use std::os::raw::{c_int, c_char};
-        use std::ffi::CString;
-        use std::slice;
-
-        use redis_module::raw;
-        use redis_module::RedisString;
-
         #[no_mangle]
         #[allow(non_snake_case)]
         pub extern "C" fn RedisModule_OnLoad(
-            ctx: *mut raw::RedisModuleCtx,
-            _argv: *mut *mut raw::RedisModuleString,
-            _argc: c_int,
-        ) -> c_int {
+            ctx: *mut $crate::raw::RedisModuleCtx,
+            _argv: *mut *mut $crate::raw::RedisModuleString,
+            _argc: std::os::raw::c_int,
+        ) -> std::os::raw::c_int {
+            use std::os::raw::{c_int, c_char};
+            use std::ffi::CString;
+            use std::slice;
+
+            use $crate::raw;
+            use $crate::RedisString;
 
             // We use a statically sized buffer to avoid allocating.
             // This is needed since we use a custom allocator that relies on the Redis allocator,
