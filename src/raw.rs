@@ -327,8 +327,8 @@ pub fn load_float(rdb: *mut RedisModuleIO) -> f32 {
     unsafe { RedisModule_LoadFloat.unwrap()(rdb) }
 }
 
-pub fn save_string(rdb: *mut RedisModuleIO, buf: &String) {
-    unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr() as *mut i8, buf.len()) };
+pub fn save_string(rdb: *mut RedisModuleIO, buf: &str) {
+    unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr() as *const c_char, buf.len()) };
 }
 
 pub fn save_double(rdb: *mut RedisModuleIO, val: f64) {
