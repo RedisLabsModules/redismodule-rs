@@ -356,3 +356,20 @@ pub fn string_append_buffer(
         RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut i8, buff.len()).into()
     }
 }
+
+#[cfg(feature = "experimental-api")]
+pub fn emit_aof(ctx: *mut RedisModuleCtx, io: *mut RedisModuleIO, command: &str, args: &[&str]) {
+    let terminated_args: Vec<RedisString> =
+        args.iter().map(|s| RedisString::create(ctx, s)).collect();
+    let inner_args: Vec<*mut RedisModuleString> = terminated_args.iter().map(|s| s.inner).collect();
+    let cmd = CString::new(command).unwrap();
+    unsafe {
+        RedisModule_EmitAOF.unwrap()(
+            io,
+            cmd.as_ptr(),
+            FMT,
+            inner_args.as_ptr() as *const c_char,
+            terminated_args.len(),
+        )
+    }
+}

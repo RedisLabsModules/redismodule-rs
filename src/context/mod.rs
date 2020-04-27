@@ -209,4 +209,9 @@ impl Context {
     pub fn create_string(&self, s: &str) -> RedisString {
         RedisString::create(self.ctx, s)
     }
+
+    #[cfg(feature = "experimental-api")]
+    pub fn emit_aof(&self, io: *mut raw::RedisModuleIO, command: &str, args: &[&str]) {
+        raw::emit_aof(self.ctx, io, command, args)
+    }
 }
