@@ -42,6 +42,68 @@ impl From<c_int> for KeyType {
     }
 }
 
+#[derive(Primitive, Debug, PartialEq)]
+pub enum NotifyType {
+    None = 0 as isize,
+    Generic = REDISMODULE_NOTIFY_GENERIC as isize, // `g` = 4
+    String = REDISMODULE_NOTIFY_STRING as isize,   // `$` = 8
+    List = REDISMODULE_NOTIFY_LIST as isize,       // `l` = 16
+    Set = REDISMODULE_NOTIFY_SET as isize,         // `s` = 32
+    Hash = REDISMODULE_NOTIFY_HASH as isize,       // `h` = 64
+    ZSet = REDISMODULE_NOTIFY_ZSET as isize,       // `z` = 128
+    Expired = REDISMODULE_NOTIFY_EXPIRED as isize, // `e` = 256
+    Evicted = REDISMODULE_NOTIFY_EVICTED as isize, // `x` = 512
+    Stream = REDISMODULE_NOTIFY_STREAM as isize,   // `t` = 1024
+    KeyMiss = REDISMODULE_NOTIFY_KEY_MISS as isize, // `m` = 2048
+    All = REDISMODULE_NOTIFY_ALL as isize,         // `*` = 4092
+}
+
+impl NotifyType {
+    // takes a String of types and combines them
+    // into a single int value we can use to subscribe
+    // callbacks
+    // For example, the value `g$` would return `12`
+    pub fn parse(val: String) -> isize {
+        let mut out = 0 as isize;
+        for c in val.chars() {
+            out |= Self::from(c.to_string()) as isize;
+        }
+        out
+    }
+}
+
+impl From<String> for NotifyType {
+    fn from(v: String) -> Self {
+        match v.as_str() {
+            "g" => NotifyType::Generic,
+            "$" => NotifyType::String,
+            "l" => NotifyType::List,
+            "s" => NotifyType::Set,
+            "h" => NotifyType::Hash,
+            "z" => NotifyType::ZSet,
+            "x" => NotifyType::Expired,
+            "e" => NotifyType::Evicted,
+            "t" => NotifyType::Stream,
+            "m" => NotifyType::KeyMiss,
+            "*" => NotifyType::All,
+            _ => NotifyType::None,
+        }
+    }
+}
+
+impl From<c_int> for NotifyType {
+    fn from(v: c_int) -> Self {
+        println!("{:?}; {:?}", v, NotifyType::from_i32(v));
+        NotifyType::from_i32(v).unwrap()
+    }
+}
+
+impl Into<isize> for NotifyType {
+    fn into(self) -> isize {
+        self as isize
+    }
+}
+
 // This hack is required since derive(Primitive) requires all values to have the same type,
 // and REDISMODULE_REPLY_UNKNOWN is i32 while the rest are u32.
 // Casting to isize inside the enum definition breaks the derive(Primitive) macro.
@@ -354,5 +416,37 @@ pub fn string_append_buffer(
 ) -> Status {
     unsafe {
         RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut i8, buff.len()).into()
+    }
+}
+
+//////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use std::os::raw::{c_int};
+    use super::NotifyType;
+
+    /// Test all the NotifyType conversion methods
+    #[test]
+    fn notify_type() {
+
+        let notify_type = NotifyType::Generic as isize |  NotifyType::String as isize;
+        assert_eq!(notify_type, 12 as isize);
+
+        let notify_type = NotifyType::from(4 as c_int);
+        assert_eq!(notify_type, NotifyType::Generic);
+
+        let notify_type = NotifyType::from("*".to_string());
+        assert_eq!(notify_type, NotifyType::All);
+
+        let notify_type = NotifyType::from("&".to_string());
+        assert_eq!(notify_type, NotifyType::None);
+
+        let notify_type = NotifyType::parse("g$".to_string());
+        assert_eq!(notify_type, 12 as isize);
+
+        let i: isize = NotifyType::All.into();
+        assert_eq!(i, 4092);
+
     }
 }

@@ -18,13 +18,18 @@ name = "keys_pos"
 crate-type = ["cdylib"]
 
 [[example]]
-name = "timer"
+name = "data_type"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "keyspace"
 crate-type = ["cdylib"]
 required-features = ["experimental-api"]
 
 [[example]]
-name = "data_type"
+name = "timer"
 crate-type = ["cdylib"]
+required-features = ["experimental-api"]
 
 [dependencies]
 bitflags = "1.2"

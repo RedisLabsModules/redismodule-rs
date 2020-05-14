@@ -16,6 +16,12 @@ impl From<()> for RedisValue {
     }
 }
 
+impl From<i32> for RedisValue {
+    fn from(i: i32) -> Self {
+        RedisValue::Integer(i as i64)
+    }
+}
+
 impl From<i64> for RedisValue {
     fn from(i: i64) -> Self {
         RedisValue::Integer(i)
