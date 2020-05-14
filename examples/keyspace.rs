@@ -29,8 +29,9 @@ fn expire(ctx: &Context, key: &str) {
 fn subscribe(ctx: &Context, args: Vec<String>) -> RedisResult {
     let mut args = args.into_iter().skip(1);
 
-    let notify_type = NotifyType::parse(args.next_string()?);
-    ctx.log_debug(format!("notify_type: {:?}", &notify_type).as_str());
+    let val = args.next_string()?;
+    let notify_type = NotifyType::parse(val.clone());
+    ctx.log_debug(format!("subscribe notify_type: {:?}={:?}", &val, &notify_type).as_str());
 
     let reply = ctx.subscribe_keyspace_events(notify_type, router);
     return Ok(reply.into());
