@@ -2,8 +2,6 @@
 // point.
 #![allow(dead_code)]
 
-use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
-
 extern crate enum_primitive_derive;
 extern crate libc;
 extern crate num_traits;
@@ -13,6 +11,7 @@ use enum_primitive_derive::Primitive;
 use libc::size_t;
 use num_traits::FromPrimitive;
 use std::ffi::CString;
+use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
 use std::ptr;
 use std::slice;
 
@@ -84,6 +83,22 @@ impl From<Status> for Result<(), &str> {
             Status::Ok => Ok(()),
             Status::Err => Err("Generic error"),
         }
+    }
+}
+
+#[cfg(feature = "experimental-api")]
+bitflags! {
+    pub struct NotifyEvent : i32 {
+        const GENERIC = REDISMODULE_NOTIFY_GENERIC as i32;
+        const STRING = REDISMODULE_NOTIFY_STRING as i32;
+        const LIST = REDISMODULE_NOTIFY_LIST as i32;
+        const SET = REDISMODULE_NOTIFY_SET as i32;
+        const HASH = REDISMODULE_NOTIFY_HASH as i32;
+        const ZSET = REDISMODULE_NOTIFY_ZSET as i32;
+        const EXPIRED = REDISMODULE_NOTIFY_EXPIRED as i32;
+        const EVICTED = REDISMODULE_NOTIFY_EVICTED as i32;
+        const STREAM = REDISMODULE_NOTIFY_STREAM as i32;
+        const ALL = REDISMODULE_NOTIFY_ALL as i32;
     }
 }
 

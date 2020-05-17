@@ -36,10 +36,14 @@ required-features = ["experimental-api"]
 name = "data_type"
 crate-type = ["cdylib"]
 
-
 [[example]]
 name = "load_unload"
 crate-type = ["cdylib"]
+
+[[example]]
+name = "events"
+crate-type = ["cdylib"]
+required-features = ["experimental-api"]
 
 [dependencies]
 bitflags = "1.2"
