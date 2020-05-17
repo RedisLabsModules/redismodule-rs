@@ -55,6 +55,44 @@ macro_rules! redis_command {
     }};
 }
 
+#[cfg(feature = "experimental-api")]
+#[macro_export]
+macro_rules! redis_event_handler {
+    (
+        $ctx: expr,
+        $event_type: expr,
+        $event_handler: expr
+    ) => {{
+        extern "C" fn handle_event(
+            ctx: *mut $crate::raw::RedisModuleCtx,
+            event_type: c_int,
+            event: *const c_char,
+            key: *mut $crate::raw::RedisModuleString
+        ) -> c_int {
+            let context = $crate::Context::new(ctx);
+
+            let redis_key = $crate::RedisString::from_ptr(key).unwrap();
+            let event_str = unsafe { CStr::from_ptr(event) };
+            $event_handler(&context,
+                $crate::NotifyEvent::from_bits_truncate(event_type),
+                event_str.to_str().unwrap(),
+                redis_key);
+
+            $crate::raw::Status::Ok as c_int
+        }
+
+        if unsafe {
+            $crate::raw::RedisModule_SubscribeToKeyspaceEvents.unwrap()(
+                $ctx,
+                $event_type.bits(),
+                Some(handle_event)
+            )
+        } == $crate::raw::Status::Err as c_int {
+            return $crate::raw::Status::Err as c_int;
+        }
+    }};
+}
+
 #[macro_export]
 macro_rules! redis_module {
     (
@@ -75,6 +113,12 @@ macro_rules! redis_module {
                 $keystep:expr
               ]),* $(,)*
         ] $(,)*
+        $(event_handlers: [
+            $([
+                $(@$event_type:ident) +:
+                $event_handler:expr
+            ]),* $(,)*
+        ])?
     ) => {
         #[no_mangle]
         #[allow(non_snake_case)]
@@ -84,7 +128,7 @@ macro_rules! redis_module {
             _argc: std::os::raw::c_int,
         ) -> std::os::raw::c_int {
             use std::os::raw::{c_int, c_char};
-            use std::ffi::CString;
+            use std::ffi::{CString, CStr};
             use std::slice;
 
             use $crate::raw;
@@ -126,6 +170,12 @@ macro_rules! redis_module {
             $(
                 redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep);
             )*
+
+            $(
+                $(
+                    redis_event_handler!(ctx, $(raw::NotifyEvent::$event_type |)+ raw::NotifyEvent::empty(), $event_handler);
+                )*
+            )?
 
             raw::Status::Ok as c_int
         }

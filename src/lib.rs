@@ -26,6 +26,8 @@ mod macros;
 pub use crate::context::blocked::BlockedClient;
 #[cfg(feature = "experimental-api")]
 pub use crate::context::thread_safe::{DetachedFromClient, ThreadSafeContext};
+#[cfg(feature = "experimental-api")]
+pub use crate::raw::NotifyEvent;
 
 pub use crate::context::Context;
 pub use crate::redismodule::*;
