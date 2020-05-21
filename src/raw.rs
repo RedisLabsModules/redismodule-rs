@@ -69,6 +69,12 @@ impl From<c_int> for ReplyType {
 }
 
 #[derive(Primitive, Debug, PartialEq)]
+pub enum Aux {
+    Before = REDISMODULE_AUX_BEFORE_RDB as isize,
+    After = REDISMODULE_AUX_AFTER_RDB as isize,
+}
+
+#[derive(Primitive, Debug, PartialEq)]
 pub enum Status {
     Ok = REDISMODULE_OK as isize,
     Err = REDISMODULE_ERR as isize,
