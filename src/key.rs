@@ -270,9 +270,7 @@ fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> R
         let raw_type = unsafe { raw::RedisModule_ModuleTypeGetType.unwrap()(key_inner) };
 
         if raw_type != *redis_type.raw_type.borrow() {
-            return Err(RedisError::String(format!(
-                "Existing key has wrong Redis type"
-            )));
+            return Err(RedisError::Str("Existing key has wrong Redis type"));
         }
     }
 

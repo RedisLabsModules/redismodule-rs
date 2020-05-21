@@ -47,17 +47,17 @@ impl<T: Iterator<Item = String>> NextArg for T {
     }
 }
 
-pub fn parse_unsigned_integer(arg: &String) -> Result<u64, RedisError> {
+pub fn parse_unsigned_integer(arg: &str) -> Result<u64, RedisError> {
     arg.parse()
         .map_err(|_| RedisError::String(format!("Couldn't parse as unsigned integer: {}", arg)))
 }
 
-pub fn parse_integer(arg: &String) -> Result<i64, RedisError> {
+pub fn parse_integer(arg: &str) -> Result<i64, RedisError> {
     arg.parse()
         .map_err(|_| RedisError::String(format!("Couldn't parse as integer: {}", arg)))
 }
 
-pub fn parse_float(arg: &String) -> Result<f64, RedisError> {
+pub fn parse_float(arg: &str) -> Result<f64, RedisError> {
     arg.parse()
         .map_err(|_| RedisError::String(format!("Couldn't parse as float: {}", arg)))
 }
@@ -97,6 +97,12 @@ impl RedisString {
         let mut len: usize = 0;
         raw::string_ptr_len(self.inner, &mut len);
         len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        let mut len: usize = 0;
+        raw::string_ptr_len(self.inner, &mut len);
+        len == 0
     }
 }
 

@@ -189,7 +189,7 @@ pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
             RedisModule_CallReplyStringPtr.unwrap()(reply, &mut len) as *mut u8;
         String::from_utf8(
             slice::from_raw_parts(reply_string, len)
-                .into_iter()
+                .iter()
                 .map(|v| *v)
                 .collect(),
         )
