@@ -148,7 +148,7 @@ extern "C" {
 
 ///////////////////////////////////////////////////////////////
 
-pub const FMT: *const i8 = b"v\0".as_ptr() as *const i8;
+pub const FMT: *const c_char = b"v\0".as_ptr() as *const c_char;
 
 // Helper functions for the raw bindings.
 
@@ -318,7 +318,7 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
             ctx,
             cmd.as_ptr(),
             FMT,
-            inner_args.as_ptr() as *mut i8,
+            inner_args.as_ptr() as *mut c_char,
             terminated_args.len(),
         )
         .into()
@@ -359,6 +359,6 @@ pub fn string_append_buffer(
     buff: &str,
 ) -> Status {
     unsafe {
-        RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut i8, buff.len()).into()
+        RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut c_char, buff.len()).into()
     }
 }
