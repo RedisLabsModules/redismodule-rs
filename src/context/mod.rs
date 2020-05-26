@@ -1,5 +1,5 @@
 use std::ffi::CString;
-use std::os::raw::{c_int, c_long};
+use std::os::raw::{c_char, c_int, c_long};
 use std::ptr;
 
 use crate::key::{RedisKey, RedisKeyWritable};
@@ -94,7 +94,7 @@ impl Context {
                 self.ctx,
                 cmd.as_ptr(),
                 raw::FMT,
-                inner_args.as_ptr() as *mut i8,
+                inner_args.as_ptr() as *mut c_char,
                 terminated_args.len(),
             )
         };
