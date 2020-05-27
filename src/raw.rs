@@ -359,6 +359,7 @@ pub fn string_append_buffer(
     buff: &str,
 ) -> Status {
     unsafe {
-        RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut c_char, buff.len()).into()
+        RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut c_char, buff.len())
+            .into()
     }
 }
