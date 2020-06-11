@@ -179,6 +179,10 @@ impl RedisKeyWritable {
         REDIS_OK
     }
 
+    pub fn key_type(&self) -> raw::KeyType {
+        unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
+    }
+
     pub fn is_empty(&self) -> bool {
         use raw::KeyType;
 
