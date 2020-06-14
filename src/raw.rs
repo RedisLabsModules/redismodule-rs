@@ -363,3 +363,11 @@ pub fn string_append_buffer(
             .into()
     }
 }
+
+pub fn subscribe_to_server_event(
+    ctx: *mut RedisModuleCtx,
+    event: RedisModuleEvent,
+    callback: RedisModuleEventCallback,
+) -> Status {
+    unsafe { RedisModule_SubscribeToServerEvent.unwrap()(ctx, event, callback).into() }
+}
