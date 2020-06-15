@@ -6,7 +6,7 @@ use std::env;
 use std::path::PathBuf;
 
 #[derive(Debug)]
-struct RedisModuleCallback();
+struct RedisModuleCallback;
 
 impl ParseCallbacks for RedisModuleCallback {
     fn int_macro(&self, name: &str, _value: i64) -> Option<IntKind> {
@@ -55,7 +55,7 @@ fn main() {
         .whitelist_var("(REDIS|Redis).*")
         .blacklist_type("__darwin_.*")
         .whitelist_type("RedisModule.*")
-        .parse_callbacks(Box::new(RedisModuleCallback()))
+        .parse_callbacks(Box::new(RedisModuleCallback))
         .size_t_is_usize(true)
         .generate()
         .expect("error generating bindings");
