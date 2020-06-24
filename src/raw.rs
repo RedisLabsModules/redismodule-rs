@@ -138,226 +138,226 @@ extern "C" {
 
 ///////////////////////////////////////////////////////////////
 
-    pub const FMT: *const c_char = b"v\0".as_ptr() as *const c_char;
+pub const FMT: *const c_char = b"v\0".as_ptr() as *const c_char;
 
-    // Helper functions for the raw bindings.
+// Helper functions for the raw bindings.
 
-    pub fn call_reply_type(reply: *mut RedisModuleCallReply) -> ReplyType {
-        unsafe {
-            // TODO: Cache the unwrapped functions and use them instead of unwrapping every time?
-            RedisModule_CallReplyType.unwrap()(reply).into()
-        }
+pub fn call_reply_type(reply: *mut RedisModuleCallReply) -> ReplyType {
+    unsafe {
+        // TODO: Cache the unwrapped functions and use them instead of unwrapping every time?
+        RedisModule_CallReplyType.unwrap()(reply).into()
     }
+}
 
-    pub fn free_call_reply(reply: *mut RedisModuleCallReply) {
-        unsafe { RedisModule_FreeCallReply.unwrap()(reply) }
+pub fn free_call_reply(reply: *mut RedisModuleCallReply) {
+    unsafe { RedisModule_FreeCallReply.unwrap()(reply) }
+}
+
+pub fn call_reply_integer(reply: *mut RedisModuleCallReply) -> c_longlong {
+    unsafe { RedisModule_CallReplyInteger.unwrap()(reply) }
+}
+
+pub fn call_reply_array_element(
+    reply: *mut RedisModuleCallReply,
+    idx: usize,
+) -> *mut RedisModuleCallReply {
+    unsafe { RedisModule_CallReplyArrayElement.unwrap()(reply, idx) }
+}
+
+pub fn call_reply_length(reply: *mut RedisModuleCallReply) -> usize {
+    unsafe { RedisModule_CallReplyLength.unwrap()(reply) }
+}
+
+pub fn call_reply_string_ptr(reply: *mut RedisModuleCallReply, len: *mut size_t) -> *const c_char {
+    unsafe { RedisModule_CallReplyStringPtr.unwrap()(reply, len) }
+}
+
+pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
+    unsafe {
+        let mut len: size_t = 0;
+        let reply_string: *mut u8 =
+            RedisModule_CallReplyStringPtr.unwrap()(reply, &mut len) as *mut u8;
+        String::from_utf8(
+            slice::from_raw_parts(reply_string, len)
+                .iter()
+                .copied()
+                .collect(),
+        )
+        .unwrap()
     }
+}
 
-    pub fn call_reply_integer(reply: *mut RedisModuleCallReply) -> c_longlong {
-        unsafe { RedisModule_CallReplyInteger.unwrap()(reply) }
+pub fn close_key(kp: *mut RedisModuleKey) {
+    unsafe { RedisModule_CloseKey.unwrap()(kp) }
+}
+
+pub fn open_key(
+    ctx: *mut RedisModuleCtx,
+    keyname: *mut RedisModuleString,
+    mode: KeyMode,
+) -> *mut RedisModuleKey {
+    unsafe { RedisModule_OpenKey.unwrap()(ctx, keyname, mode.bits) as *mut RedisModuleKey }
+}
+
+pub fn reply_with_array(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
+    unsafe { RedisModule_ReplyWithArray.unwrap()(ctx, len).into() }
+}
+
+pub fn reply_with_error(ctx: *mut RedisModuleCtx, err: *const c_char) {
+    unsafe {
+        RedisModule_ReplyWithError.unwrap()(ctx, err);
     }
+}
 
-    pub fn call_reply_array_element(
-        reply: *mut RedisModuleCallReply,
-        idx: usize,
-    ) -> *mut RedisModuleCallReply {
-        unsafe { RedisModule_CallReplyArrayElement.unwrap()(reply, idx) }
+pub fn reply_with_long_long(ctx: *mut RedisModuleCtx, ll: c_longlong) -> Status {
+    unsafe { RedisModule_ReplyWithLongLong.unwrap()(ctx, ll).into() }
+}
+
+pub fn reply_with_double(ctx: *mut RedisModuleCtx, f: c_double) -> Status {
+    unsafe { RedisModule_ReplyWithDouble.unwrap()(ctx, f).into() }
+}
+
+pub fn reply_with_string(ctx: *mut RedisModuleCtx, s: *mut RedisModuleString) -> Status {
+    unsafe { RedisModule_ReplyWithString.unwrap()(ctx, s).into() }
+}
+
+// Sets the expiry on a key.
+//
+// Expire is in milliseconds.
+pub fn set_expire(key: *mut RedisModuleKey, expire: c_longlong) -> Status {
+    unsafe { RedisModule_SetExpire.unwrap()(key, expire).into() }
+}
+
+pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> *const c_char {
+    unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits) }
+}
+
+pub fn hash_get(key: *mut RedisModuleKey, field: &str) -> *mut RedisModuleString {
+    let res: *mut RedisModuleString = ptr::null_mut();
+    unsafe {
+        RedisModule_HashGet.unwrap()(
+            key,
+            REDISMODULE_HASH_CFIELDS as i32,
+            CString::new(field).unwrap().as_ptr(),
+            &res,
+            0,
+        );
     }
+    res
+}
 
-    pub fn call_reply_length(reply: *mut RedisModuleCallReply) -> usize {
-        unsafe { RedisModule_CallReplyLength.unwrap()(reply) }
+pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleString) -> Status {
+    unsafe {
+        RedisModule_HashSet.unwrap()(
+            key,
+            REDISMODULE_HASH_CFIELDS as i32,
+            CString::new(field).unwrap().as_ptr(),
+            value,
+            0,
+        )
+        .into()
     }
+}
 
-    pub fn call_reply_string_ptr(reply: *mut RedisModuleCallReply, len: *mut size_t) -> *const c_char {
-        unsafe { RedisModule_CallReplyStringPtr.unwrap()(reply, len) }
+// Returns pointer to the C string, and sets len to its length
+pub fn string_ptr_len(s: *mut RedisModuleString, len: *mut size_t) -> *const c_char {
+    unsafe { RedisModule_StringPtrLen.unwrap()(s, len) }
+}
+
+pub fn string_set(key: *mut RedisModuleKey, s: *mut RedisModuleString) -> Status {
+    unsafe { RedisModule_StringSet.unwrap()(key, s).into() }
+}
+
+pub fn replicate_verbatim(ctx: *mut RedisModuleCtx) -> Status {
+    unsafe { RedisModule_ReplicateVerbatim.unwrap()(ctx).into() }
+}
+
+pub fn load_unsigned(rdb: *mut RedisModuleIO) -> u64 {
+    unsafe { RedisModule_LoadUnsigned.unwrap()(rdb) }
+}
+
+pub fn load_signed(rdb: *mut RedisModuleIO) -> i64 {
+    unsafe { RedisModule_LoadSigned.unwrap()(rdb) }
+}
+
+pub fn load_string(rdb: *mut RedisModuleIO) -> String {
+    let p = unsafe { RedisModule_LoadString.unwrap()(rdb) };
+    RedisString::from_ptr(p)
+        .expect("UTF8 encoding error in load string")
+        .to_string()
+}
+
+pub fn load_string_buffer(rdb: *mut RedisModuleIO) -> RedisBuffer {
+    unsafe {
+        let mut len = 0;
+        let buffer = RedisModule_LoadStringBuffer.unwrap()(rdb, &mut len);
+        RedisBuffer::new(buffer, len)
     }
+}
 
-    pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
-        unsafe {
-            let mut len: size_t = 0;
-            let reply_string: *mut u8 =
-                RedisModule_CallReplyStringPtr.unwrap()(reply, &mut len) as *mut u8;
-            String::from_utf8(
-                slice::from_raw_parts(reply_string, len)
-                    .iter()
-                    .copied()
-                    .collect(),
-            )
-            .unwrap()
-        }
+pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Status {
+    let terminated_args: Vec<RedisString> =
+        args.iter().map(|s| RedisString::create(ctx, s)).collect();
+
+    let inner_args: Vec<*mut RedisModuleString> = terminated_args.iter().map(|s| s.inner).collect();
+
+    let cmd = CString::new(command).unwrap();
+
+    unsafe {
+        RedisModule_Replicate.unwrap()(
+            ctx,
+            cmd.as_ptr(),
+            FMT,
+            inner_args.as_ptr() as *mut c_char,
+            terminated_args.len(),
+        )
+        .into()
     }
+}
 
-    pub fn close_key(kp: *mut RedisModuleKey) {
-        unsafe { RedisModule_CloseKey.unwrap()(kp) }
-    }
+pub fn load_double(rdb: *mut RedisModuleIO) -> f64 {
+    unsafe { RedisModule_LoadDouble.unwrap()(rdb) }
+}
 
-    pub fn open_key(
-        ctx: *mut RedisModuleCtx,
-        keyname: *mut RedisModuleString,
-        mode: KeyMode,
-    ) -> *mut RedisModuleKey {
-        unsafe { RedisModule_OpenKey.unwrap()(ctx, keyname, mode.bits) as *mut RedisModuleKey }
-    }
+pub fn load_float(rdb: *mut RedisModuleIO) -> f32 {
+    unsafe { RedisModule_LoadFloat.unwrap()(rdb) }
+}
 
-    pub fn reply_with_array(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
-        unsafe { RedisModule_ReplyWithArray.unwrap()(ctx, len).into() }
-    }
+pub fn save_string(rdb: *mut RedisModuleIO, buf: &str) {
+    unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr() as *const c_char, buf.len()) };
+}
 
-    pub fn reply_with_error(ctx: *mut RedisModuleCtx, err: *const c_char) {
-        unsafe {
-            RedisModule_ReplyWithError.unwrap()(ctx, err);
-        }
-    }
+pub fn save_double(rdb: *mut RedisModuleIO, val: f64) {
+    unsafe { RedisModule_SaveDouble.unwrap()(rdb, val) };
+}
 
-    pub fn reply_with_long_long(ctx: *mut RedisModuleCtx, ll: c_longlong) -> Status {
-        unsafe { RedisModule_ReplyWithLongLong.unwrap()(ctx, ll).into() }
-    }
+pub fn save_signed(rdb: *mut RedisModuleIO, val: i64) {
+    unsafe { RedisModule_SaveSigned.unwrap()(rdb, val) };
+}
 
-    pub fn reply_with_double(ctx: *mut RedisModuleCtx, f: c_double) -> Status {
-        unsafe { RedisModule_ReplyWithDouble.unwrap()(ctx, f).into() }
-    }
+pub fn save_float(rdb: *mut RedisModuleIO, val: f32) {
+    unsafe { RedisModule_SaveFloat.unwrap()(rdb, val) };
+}
 
-    pub fn reply_with_string(ctx: *mut RedisModuleCtx, s: *mut RedisModuleString) -> Status {
-        unsafe { RedisModule_ReplyWithString.unwrap()(ctx, s).into() }
-    }
+pub fn save_unsigned(rdb: *mut RedisModuleIO, val: u64) {
+    unsafe { RedisModule_SaveUnsigned.unwrap()(rdb, val) };
+}
 
-    // Sets the expiry on a key.
-    //
-    // Expire is in milliseconds.
-    pub fn set_expire(key: *mut RedisModuleKey, expire: c_longlong) -> Status {
-        unsafe { RedisModule_SetExpire.unwrap()(key, expire).into() }
-    }
-
-    pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> *const c_char {
-        unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits) }
-    }
-
-    pub fn hash_get(key: *mut RedisModuleKey, field: &str) -> *mut RedisModuleString {
-        let res: *mut RedisModuleString = ptr::null_mut();
-        unsafe {
-            RedisModule_HashGet.unwrap()(
-                key,
-                REDISMODULE_HASH_CFIELDS as i32,
-                CString::new(field).unwrap().as_ptr(),
-                &res,
-                0,
-            );
-        }
-        res
-    }
-
-    pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleString) -> Status {
-        unsafe {
-            RedisModule_HashSet.unwrap()(
-                key,
-                REDISMODULE_HASH_CFIELDS as i32,
-                CString::new(field).unwrap().as_ptr(),
-                value,
-                0,
-            )
+pub fn string_append_buffer(
+    ctx: *mut RedisModuleCtx,
+    s: *mut RedisModuleString,
+    buff: &str,
+) -> Status {
+    unsafe {
+        RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut c_char, buff.len())
             .into()
-        }
     }
+}
 
-    // Returns pointer to the C string, and sets len to its length
-    pub fn string_ptr_len(s: *mut RedisModuleString, len: *mut size_t) -> *const c_char {
-        unsafe { RedisModule_StringPtrLen.unwrap()(s, len) }
-    }
-
-    pub fn string_set(key: *mut RedisModuleKey, s: *mut RedisModuleString) -> Status {
-        unsafe { RedisModule_StringSet.unwrap()(key, s).into() }
-    }
-
-    pub fn replicate_verbatim(ctx: *mut RedisModuleCtx) -> Status {
-        unsafe { RedisModule_ReplicateVerbatim.unwrap()(ctx).into() }
-    }
-
-    pub fn load_unsigned(rdb: *mut RedisModuleIO) -> u64 {
-        unsafe { RedisModule_LoadUnsigned.unwrap()(rdb) }
-    }
-
-    pub fn load_signed(rdb: *mut RedisModuleIO) -> i64 {
-        unsafe { RedisModule_LoadSigned.unwrap()(rdb) }
-    }
-
-    pub fn load_string(rdb: *mut RedisModuleIO) -> String {
-        let p = unsafe { RedisModule_LoadString.unwrap()(rdb) };
-        RedisString::from_ptr(p)
-            .expect("UTF8 encoding error in load string")
-            .to_string()
-    }
-
-    pub fn load_string_buffer(rdb: *mut RedisModuleIO) -> RedisBuffer {
-        unsafe {
-            let mut len = 0;
-            let buffer = RedisModule_LoadStringBuffer.unwrap()(rdb, &mut len);
-            RedisBuffer::new(buffer, len)
-        }
-    }
-
-    pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Status {
-        let terminated_args: Vec<RedisString> =
-            args.iter().map(|s| RedisString::create(ctx, s)).collect();
-
-        let inner_args: Vec<*mut RedisModuleString> = terminated_args.iter().map(|s| s.inner).collect();
-
-        let cmd = CString::new(command).unwrap();
-
-        unsafe {
-            RedisModule_Replicate.unwrap()(
-                ctx,
-                cmd.as_ptr(),
-                FMT,
-                inner_args.as_ptr() as *mut c_char,
-                terminated_args.len(),
-            )
-            .into()
-        }
-    }
-
-    pub fn load_double(rdb: *mut RedisModuleIO) -> f64 {
-        unsafe { RedisModule_LoadDouble.unwrap()(rdb) }
-    }
-
-    pub fn load_float(rdb: *mut RedisModuleIO) -> f32 {
-        unsafe { RedisModule_LoadFloat.unwrap()(rdb) }
-    }
-
-    pub fn save_string(rdb: *mut RedisModuleIO, buf: &str) {
-        unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr() as *const c_char, buf.len()) };
-    }
-
-    pub fn save_double(rdb: *mut RedisModuleIO, val: f64) {
-        unsafe { RedisModule_SaveDouble.unwrap()(rdb, val) };
-    }
-
-    pub fn save_signed(rdb: *mut RedisModuleIO, val: i64) {
-        unsafe { RedisModule_SaveSigned.unwrap()(rdb, val) };
-    }
-
-    pub fn save_float(rdb: *mut RedisModuleIO, val: f32) {
-        unsafe { RedisModule_SaveFloat.unwrap()(rdb, val) };
-    }
-
-    pub fn save_unsigned(rdb: *mut RedisModuleIO, val: u64) {
-        unsafe { RedisModule_SaveUnsigned.unwrap()(rdb, val) };
-    }
-
-    pub fn string_append_buffer(
-        ctx: *mut RedisModuleCtx,
-        s: *mut RedisModuleString,
-        buff: &str,
-    ) -> Status {
-        unsafe {
-            RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut c_char, buff.len())
-                .into()
-        }
-    }
-
-    pub fn subscribe_to_server_event(
-        ctx: *mut RedisModuleCtx,
-        event: RedisModuleEvent,
-        callback: RedisModuleEventCallback,
-    ) -> Status {
-        unsafe { RedisModule_SubscribeToServerEvent.unwrap()(ctx, event, callback).into() }
-    }
+pub fn subscribe_to_server_event(
+    ctx: *mut RedisModuleCtx,
+    event: RedisModuleEvent,
+    callback: RedisModuleEventCallback,
+) -> Status {
+    unsafe { RedisModule_SubscribeToServerEvent.unwrap()(ctx, event, callback).into() }
+}
