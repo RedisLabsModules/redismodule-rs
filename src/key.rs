@@ -5,6 +5,8 @@ use std::ptr;
 use std::str::Utf8Error;
 use std::time::Duration;
 
+use raw::KeyType;
+
 use crate::from_byte_string;
 use crate::native_types::RedisType;
 use crate::raw;
@@ -58,6 +60,10 @@ impl RedisKey {
         let value = unsafe { &*value };
 
         Ok(Some(value))
+    }
+
+    pub fn key_type(&self) -> raw::KeyType {
+        unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
     }
 
     /// Detects whether the key pointer given to us by Redis is null.
@@ -179,12 +185,12 @@ impl RedisKeyWritable {
         REDIS_OK
     }
 
+    pub fn key_type(&self) -> raw::KeyType {
+        unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
+    }
+
     pub fn is_empty(&self) -> bool {
-        use raw::KeyType;
-
-        let key_type: KeyType = unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into();
-
-        key_type == KeyType::Empty
+        self.key_type() == KeyType::Empty
     }
 
     pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&mut T>, RedisError> {
@@ -261,8 +267,6 @@ fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
 }
 
 fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> RedisResult {
-    use raw::KeyType;
-
     let key_type: KeyType = unsafe { raw::RedisModule_KeyType.unwrap()(key_inner) }.into();
 
     if key_type != KeyType::Empty {
