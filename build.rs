@@ -1,8 +1,33 @@
 extern crate bindgen;
 extern crate cc;
 
+use bindgen::callbacks::{IntKind, ParseCallbacks};
 use std::env;
 use std::path::PathBuf;
+
+#[derive(Debug)]
+struct RedisModuleCallback;
+
+impl ParseCallbacks for RedisModuleCallback {
+    fn int_macro(&self, name: &str, _value: i64) -> Option<IntKind> {
+        if name.starts_with("REDISMODULE_SUBEVENT_") || name.starts_with("REDISMODULE_EVENT_") {
+            Some(IntKind::U64)
+        } else if name.starts_with("REDISMODULE_REPLY_")
+            || name.starts_with("REDISMODULE_KEYTYPE_")
+            || name.starts_with("REDISMODULE_AUX_")
+            || name == "REDISMODULE_OK"
+            || name == "REDISMODULE_ERR"
+        {
+            // These values are used as `enum` discriminants, and thus must be `isize`.
+            Some(IntKind::Custom {
+                name: "isize",
+                is_signed: true,
+            })
+        } else {
+            None
+        }
+    }
+}
 
 fn main() {
     // Build a Redis pseudo-library so that we have symbols that we can link
@@ -40,6 +65,8 @@ fn main() {
         .header("src/include/redismodule.h")
         .whitelist_var("(REDIS|Redis).*")
         .blacklist_type("__darwin_.*")
+        .whitelist_type("RedisModule.*")
+        .parse_callbacks(Box::new(RedisModuleCallback))
         .size_t_is_usize(true)
         .generate()
         .expect("error generating bindings");
