@@ -27,13 +27,13 @@ bitflags! {
 
 #[derive(Primitive, Debug, PartialEq)]
 pub enum KeyType {
-    Empty = REDISMODULE_KEYTYPE_EMPTY as isize,
-    String = REDISMODULE_KEYTYPE_STRING as isize,
-    List = REDISMODULE_KEYTYPE_LIST as isize,
-    Hash = REDISMODULE_KEYTYPE_HASH as isize,
-    Set = REDISMODULE_KEYTYPE_SET as isize,
-    ZSet = REDISMODULE_KEYTYPE_ZSET as isize,
-    Module = REDISMODULE_KEYTYPE_MODULE as isize,
+    Empty = REDISMODULE_KEYTYPE_EMPTY,
+    String = REDISMODULE_KEYTYPE_STRING,
+    List = REDISMODULE_KEYTYPE_LIST,
+    Hash = REDISMODULE_KEYTYPE_HASH,
+    Set = REDISMODULE_KEYTYPE_SET,
+    ZSet = REDISMODULE_KEYTYPE_ZSET,
+    Module = REDISMODULE_KEYTYPE_MODULE,
 }
 
 impl From<c_int> for KeyType {
@@ -42,24 +42,14 @@ impl From<c_int> for KeyType {
     }
 }
 
-// This hack is required since derive(Primitive) requires all values to have the same type,
-// and REDISMODULE_REPLY_UNKNOWN is i32 while the rest are u32.
-// Casting to isize inside the enum definition breaks the derive(Primitive) macro.
-const REDISMODULE_REPLY_UNKNOWN_ISIZE: isize = REDISMODULE_REPLY_UNKNOWN as isize;
-const REDISMODULE_REPLY_STRING_ISIZE: isize = REDISMODULE_REPLY_STRING as isize;
-const REDISMODULE_REPLY_ERROR_ISIZE: isize = REDISMODULE_REPLY_ERROR as isize;
-const REDISMODULE_REPLY_INTEGER_ISIZE: isize = REDISMODULE_REPLY_INTEGER as isize;
-const REDISMODULE_REPLY_ARRAY_ISIZE: isize = REDISMODULE_REPLY_ARRAY as isize;
-const REDISMODULE_REPLY_NULL_ISIZE: isize = REDISMODULE_REPLY_NULL as isize;
-
 #[derive(Primitive, Debug, PartialEq)]
 pub enum ReplyType {
-    Unknown = REDISMODULE_REPLY_UNKNOWN_ISIZE,
-    String = REDISMODULE_REPLY_STRING_ISIZE,
-    Error = REDISMODULE_REPLY_ERROR_ISIZE,
-    Integer = REDISMODULE_REPLY_INTEGER_ISIZE,
-    Array = REDISMODULE_REPLY_ARRAY_ISIZE,
-    Null = REDISMODULE_REPLY_NULL_ISIZE,
+    Unknown = REDISMODULE_REPLY_UNKNOWN,
+    String = REDISMODULE_REPLY_STRING,
+    Error = REDISMODULE_REPLY_ERROR,
+    Integer = REDISMODULE_REPLY_INTEGER,
+    Array = REDISMODULE_REPLY_ARRAY,
+    Null = REDISMODULE_REPLY_NULL,
 }
 
 impl From<c_int> for ReplyType {
@@ -70,14 +60,14 @@ impl From<c_int> for ReplyType {
 
 #[derive(Primitive, Debug, PartialEq)]
 pub enum Aux {
-    Before = REDISMODULE_AUX_BEFORE_RDB as isize,
-    After = REDISMODULE_AUX_AFTER_RDB as isize,
+    Before = REDISMODULE_AUX_BEFORE_RDB,
+    After = REDISMODULE_AUX_AFTER_RDB,
 }
 
 #[derive(Primitive, Debug, PartialEq)]
 pub enum Status {
-    Ok = REDISMODULE_OK as isize,
-    Err = REDISMODULE_ERR as isize,
+    Ok = REDISMODULE_OK,
+    Err = REDISMODULE_ERR,
 }
 
 impl From<c_int> for Status {
@@ -148,7 +138,7 @@ extern "C" {
 
 ///////////////////////////////////////////////////////////////
 
-    pub const FMT: *const i8 = b"v\0".as_ptr() as *const i8;
+    pub const FMT: *const c_char = b"v\0".as_ptr() as *const c_char;
 
     // Helper functions for the raw bindings.
 
@@ -318,7 +308,7 @@ extern "C" {
                 ctx,
                 cmd.as_ptr(),
                 FMT,
-                inner_args.as_ptr() as *mut i8,
+                inner_args.as_ptr() as *mut c_char,
                 terminated_args.len(),
             )
             .into()
@@ -361,5 +351,13 @@ extern "C" {
         unsafe {
             RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut c_char, buff.len())
                 .into()
+        }
     }
-}
+
+    pub fn subscribe_to_server_event(
+        ctx: *mut RedisModuleCtx,
+        event: RedisModuleEvent,
+        callback: RedisModuleEventCallback,
+    ) -> Status {
+        unsafe { RedisModule_SubscribeToServerEvent.unwrap()(ctx, event, callback).into() }
+    }
