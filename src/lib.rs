@@ -47,7 +47,7 @@ pub enum LogLevel {
 fn from_byte_string(byte_str: *const c_char, length: size_t) -> Result<String, Utf8Error> {
     let mut vec_str: Vec<u8> = Vec::with_capacity(length as usize);
     for j in 0..length {
-        let byte = unsafe { *byte_str.offset(j as isize) } as u8;
+        let byte = unsafe { *byte_str.add(j) } as u8;
         vec_str.insert(j, byte);
     }
 
