@@ -120,7 +120,7 @@ impl Context {
                 Ok(RedisValue::Array(vec))
             }
             raw::ReplyType::Integer => Ok(RedisValue::Integer(raw::call_reply_integer(reply))),
-            raw::ReplyType::String => Ok(RedisValue::SimpleString(raw::call_reply_string(reply))),
+            raw::ReplyType::String => Ok(RedisValue::BulkString(raw::call_reply_string(reply))),
             raw::ReplyType::Null => Ok(RedisValue::Null),
         }
     }
