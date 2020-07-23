@@ -34,6 +34,11 @@ impl Context {
     }
 
     #[cfg(feature = "experimental-api")]
+    pub fn free_thread_safe_context(&self) {
+        unsafe { raw::RedisModule_FreeThreadSafeContext.unwrap()(self.ctx) };
+    }
+
+    #[cfg(feature = "experimental-api")]
     pub fn lock(&self) {
         unsafe { raw::RedisModule_ThreadSafeContextLock.unwrap()(self.ctx) };
     }
