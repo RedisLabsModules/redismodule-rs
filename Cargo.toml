@@ -23,6 +23,11 @@ crate-type = ["cdylib"]
 required-features = ["experimental-api"]
 
 [[example]]
+name = "threads"
+crate-type = ["cdylib"]
+required-features = ["experimental-api"]
+
+[[example]]
 name = "data_type"
 crate-type = ["cdylib"]
 
