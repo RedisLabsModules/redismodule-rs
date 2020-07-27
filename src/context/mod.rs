@@ -13,6 +13,9 @@ mod timer;
 #[cfg(feature = "experimental-api")]
 pub(crate) mod thread_safe;
 
+#[cfg(feature = "experimental-api")]
+mod blocked;
+
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {

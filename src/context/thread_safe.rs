@@ -1,6 +1,7 @@
 use std::ops::Deref;
 use std::ptr;
 
+use crate::context::blocked::BlockedClient;
 use crate::{raw, Context, RedisResult};
 
 pub struct ContextGuard {
@@ -21,14 +22,31 @@ impl Deref for ContextGuard {
     }
 }
 
-pub struct ThreadSafeContext {
+/// A ThreadSafeContext can either be bound to a blocked client, or detached from any client.
+pub struct DetachedFromClient;
+
+pub struct ThreadSafeContext<B> {
     pub(crate) ctx: *mut raw::RedisModuleCtx,
+    blocked_client: B,
 }
 
-impl ThreadSafeContext {
-    pub fn new() -> ThreadSafeContext {
+impl ThreadSafeContext<DetachedFromClient> {
+    pub fn new() -> Self {
         let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(ptr::null_mut()) };
-        ThreadSafeContext { ctx }
+        ThreadSafeContext {
+            ctx,
+            blocked_client: DetachedFromClient,
+        }
+    }
+}
+
+impl ThreadSafeContext<BlockedClient> {
+    pub fn with_blocked_client(blocked_client: BlockedClient) -> Self {
+        let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(blocked_client.inner) };
+        ThreadSafeContext {
+            ctx,
+            blocked_client,
+        }
     }
 
     /// The Redis modules API does not require locking for `Reply` functions,
@@ -37,7 +55,9 @@ impl ThreadSafeContext {
         let ctx = Context::new(self.ctx);
         ctx.reply(r)
     }
+}
 
+impl<B> ThreadSafeContext<B> {
     /// All other APIs require locking the context, so we wrap it in a way
     /// similar to `std::sync::Mutex`.
     pub fn lock(&self) -> ContextGuard {
@@ -47,7 +67,7 @@ impl ThreadSafeContext {
     }
 }
 
-impl Drop for ThreadSafeContext {
+impl<B> Drop for ThreadSafeContext<B> {
     fn drop(&mut self) {
         unsafe { raw::RedisModule_FreeThreadSafeContext.unwrap()(self.ctx) };
     }
