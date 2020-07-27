@@ -10,6 +10,9 @@ use crate::{RedisError, RedisResult, RedisString, RedisValue};
 #[cfg(feature = "experimental-api")]
 mod timer;
 
+#[cfg(feature = "experimental-api")]
+pub(crate) mod thread_safe;
+
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
@@ -25,22 +28,6 @@ impl Context {
         Self {
             ctx: ptr::null_mut(),
         }
-    }
-
-    #[cfg(feature = "experimental-api")]
-    pub fn get_thread_safe_context() -> Self {
-        let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(ptr::null_mut()) };
-        Context::new(ctx)
-    }
-
-    #[cfg(feature = "experimental-api")]
-    pub fn lock(&self) {
-        unsafe { raw::RedisModule_ThreadSafeContextLock.unwrap()(self.ctx) };
-    }
-
-    #[cfg(feature = "experimental-api")]
-    pub fn unlock(&self) {
-        unsafe { raw::RedisModule_ThreadSafeContextUnlock.unwrap()(self.ctx) };
     }
 
     pub fn log(&self, level: LogLevel, message: &str) {
