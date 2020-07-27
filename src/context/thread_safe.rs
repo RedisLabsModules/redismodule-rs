@@ -1,7 +1,7 @@
 use std::ops::Deref;
 use std::ptr;
 
-use crate::{raw, Context};
+use crate::{raw, Context, RedisResult};
 
 pub struct ContextGuard {
     ctx: Context,
@@ -31,6 +31,15 @@ impl ThreadSafeContext {
         ThreadSafeContext { ctx }
     }
 
+    /// The Redis modules API does not require locking for `Reply` functions,
+    /// so we pass through its functionality directly.
+    pub fn reply(&self, r: RedisResult) -> raw::Status {
+        let ctx = Context::new(self.ctx);
+        ctx.reply(r)
+    }
+
+    /// All other APIs require locking the context, so we wrap it in a way
+    /// similar to `std::sync::Mutex`.
     pub fn lock(&self) -> ContextGuard {
         unsafe { raw::RedisModule_ThreadSafeContextLock.unwrap()(self.ctx) };
         let ctx = Context::new(self.ctx);
