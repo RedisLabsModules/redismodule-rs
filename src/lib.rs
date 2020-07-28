@@ -25,6 +25,7 @@ mod macros;
 mod context;
 mod key;
 
+pub use crate::context::thread_safe::ThreadSafeContext;
 pub use crate::context::Context;
 pub use crate::redismodule::*;
 
