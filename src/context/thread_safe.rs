@@ -30,6 +30,8 @@ pub struct ThreadSafeContext<B> {
     blocked_client: B,
 }
 
+unsafe impl<B> Send for ThreadSafeContext<B> {}
+
 impl ThreadSafeContext<DetachedFromClient> {
     pub fn new() -> Self {
         let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(ptr::null_mut()) };
