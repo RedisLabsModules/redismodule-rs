@@ -89,6 +89,28 @@ impl RedisKey {
         };
         Ok(val)
     }
+
+    /// Returns the internal `*mut raw::RedisModuleCtx` for this key
+    ///
+    /// # Safety
+    ///
+    /// This is intended for use by macros only. It returns a raw pointer to internal
+    /// state. Modification or incorrect usage of this value may cause undefined
+    /// behaviour.
+    pub unsafe fn get_ctx(&self) -> *mut raw::RedisModuleCtx {
+        self.ctx
+    }
+
+    /// Returns the internal `*mut raw::RedisModuleKey` for this key
+    ///
+    /// # Safety
+    ///
+    /// This is intended for use by macros only. It returns a raw pointer to internal
+    /// state. Modification or incorrect usage of this value may cause undefined
+    /// behaviour.
+    pub unsafe fn get_inner(&self) -> *mut raw::RedisModuleKey {
+        self.key_inner
+    }
 }
 
 impl Drop for RedisKey {
@@ -219,6 +241,28 @@ impl RedisKeyWritable {
         .into();
 
         status.into()
+    }
+
+    /// Returns the internal `*mut raw::RedisModuleCtx` for this key
+    ///
+    /// # Safety
+    ///
+    /// This is intended for use by macros only. It returns a raw pointer to internal
+    /// state. Modification or incorrect usage of this value may cause undefined
+    /// behaviour.
+    pub unsafe fn get_ctx(&self) -> *mut raw::RedisModuleCtx {
+        self.ctx
+    }
+
+    /// Returns the internal `*mut raw::RedisModuleKey` for this key
+    ///
+    /// # Safety
+    ///
+    /// This is intended for use by macros only. It returns a raw pointer to internal
+    /// state. Modification or incorrect usage of this value may cause undefined
+    /// behaviour.
+    pub unsafe fn get_inner(&self) -> *mut raw::RedisModuleKey {
+        self.key_inner
     }
 }
 
