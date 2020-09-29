@@ -240,7 +240,7 @@ pub fn hash_get(key: *mut RedisModuleKey, field: &str) -> *mut RedisModuleString
             REDISMODULE_HASH_CFIELDS as i32,
             CString::new(field).unwrap().as_ptr(),
             &res,
-            0,
+            ptr::null::<c_char>(),
         );
     }
     res
@@ -253,7 +253,7 @@ pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleSt
             REDISMODULE_HASH_CFIELDS as i32,
             CString::new(field).unwrap().as_ptr(),
             value,
-            0,
+            ptr::null::<c_char>(),
         )
         .into()
     }
