@@ -17,6 +17,7 @@ use std::slice;
 pub use crate::redisraw::bindings::*;
 use crate::RedisBuffer;
 use crate::RedisString;
+use std::collections::HashMap;
 
 bitflags! {
     pub struct KeyMode: c_int {
@@ -244,6 +245,47 @@ pub fn hash_get(key: *mut RedisModuleKey, field: &str) -> *mut RedisModuleString
         );
     }
     res
+}
+
+pub fn hash_get_multi(
+    ctx: *mut RedisModuleCtx,
+    key: *mut RedisModuleKey,
+    fields: &[&str],
+) -> HashMap<String, RedisString> {
+    // let res: *mut RedisModuleString = ptr::null_mut();
+    let values = vec![ptr::null_mut::<RedisModuleString>(); fields.len()];
+
+    match fields {
+        &[f0] => unsafe {
+            RedisModule_HashGet.unwrap()(
+                key,
+                REDISMODULE_HASH_CFIELDS as i32,
+                CString::new(f0).unwrap().as_ptr(),
+                &values[0],
+                ptr::null::<RedisModuleString>(),
+            );
+        },
+        &[f0, f1] => unsafe {
+            RedisModule_HashGet.unwrap()(
+                key,
+                REDISMODULE_HASH_CFIELDS as i32,
+                CString::new(f0).unwrap().as_ptr(),
+                &values[0],
+                CString::new(f1).unwrap().as_ptr(),
+                &values[1],
+                ptr::null::<RedisModuleString>(),
+            );
+        },
+        // Repeat for more fields using a macro
+        &[] => { /* TODO: Return empty result? */ }
+        &[_, ..] => { /* TODO: Panic? */ }
+    }
+
+    fields
+        .iter()
+        .zip(values.iter())
+        .map(|(&k, &v)| (k.to_string(), RedisString::new(ctx, v)))
+        .collect()
 }
 
 pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleString) -> Status {

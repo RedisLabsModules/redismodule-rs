@@ -14,6 +14,7 @@ use crate::redismodule::REDIS_OK;
 use crate::RedisError;
 use crate::RedisResult;
 use crate::RedisString;
+use std::collections::HashMap;
 
 /// `RedisKey` is an abstraction over a Redis key that allows readonly
 /// operations.
@@ -81,13 +82,12 @@ impl RedisKey {
         Ok(val)
     }
 
-    pub fn hash_get(&self, field: &str) -> Result<Option<RedisString>, RedisError> {
-        let val = if self.is_null() {
-            None
-        } else {
-            hash_get_key(self.ctx, self.key_inner, field)
-        };
-        Ok(val)
+    pub fn hash_get(&self, fields: &[&str]) -> Result<HashMap<String, RedisString>, RedisError> {
+        if self.is_null() {
+            return Ok(HashMap::new());
+        }
+        let res = raw::hash_get_multi(self.ctx, self.key_inner, fields);
+        Ok(res)
     }
 }
 
