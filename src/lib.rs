@@ -25,7 +25,9 @@ mod macros;
 mod context;
 mod key;
 
+#[cfg(feature = "experimental-api")]
 pub use crate::context::thread_safe::ThreadSafeContext;
+
 pub use crate::context::Context;
 pub use crate::redismodule::*;
 
