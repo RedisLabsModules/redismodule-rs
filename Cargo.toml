@@ -28,6 +28,11 @@ crate-type = ["cdylib"]
 required-features = ["experimental-api"]
 
 [[example]]
+name = "hash"
+crate-type = ["cdylib"]
+required-features = ["experimental-api"]
+
+[[example]]
 name = "block"
 crate-type = ["cdylib"]
 required-features = ["experimental-api"]
@@ -42,6 +47,10 @@ libc = "0.2"
 enum-primitive-derive = "^0.1"
 num-traits = "^0.2"
 #failure = "0.1"
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
 
 [build-dependencies]
 bindgen = "0.54"

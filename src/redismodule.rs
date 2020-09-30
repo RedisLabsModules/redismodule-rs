@@ -2,8 +2,8 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 use std::str;
-use std::string::FromUtf8Error;
 use std::str::Utf8Error;
+use std::string::FromUtf8Error;
 
 pub use crate::raw;
 pub use crate::rediserror::RedisError;
@@ -65,7 +65,7 @@ pub fn parse_float(arg: &str) -> Result<f64, RedisError> {
 
 ///////////////////////////////////////////////////
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RedisString {
     ctx: *mut raw::RedisModuleCtx,
     pub inner: *mut raw::RedisModuleString,

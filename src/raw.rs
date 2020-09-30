@@ -246,6 +246,45 @@ pub fn hash_get(key: *mut RedisModuleKey, field: &str) -> *mut RedisModuleString
     res
 }
 
+pub fn hash_get_multi(
+    ctx: *mut RedisModuleCtx,
+    key: *mut RedisModuleKey,
+    fields: &[&str],
+) -> Vec<RedisString> {
+    let values: Vec<*mut RedisModuleString> = vec![ptr::null_mut(); fields.len()];
+
+    match fields {
+        &[f0] => unsafe {
+            RedisModule_HashGet.unwrap()(
+                key,
+                REDISMODULE_HASH_CFIELDS as i32,
+                CString::new(f0).unwrap().as_ptr(),
+                &values[0],
+                ptr::null::<RedisModuleString>(),
+            );
+        },
+        &[f0, f1] => unsafe {
+            RedisModule_HashGet.unwrap()(
+                key,
+                REDISMODULE_HASH_CFIELDS as i32,
+                CString::new(f0).unwrap().as_ptr(),
+                &values[0],
+                CString::new(f1).unwrap().as_ptr(),
+                &values[1],
+                ptr::null::<RedisModuleString>(),
+            );
+        },
+        // Repeat for more fields using a macro
+        &[] => { /* TODO: Return empty result? */ }
+        &[_, ..] => { /* TODO: Panic? */ }
+    }
+
+    values
+        .into_iter()
+        .map(|v| RedisString::new(ctx, v))
+        .collect()
+}
+
 pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleString) -> Status {
     unsafe {
         RedisModule_HashSet.unwrap()(

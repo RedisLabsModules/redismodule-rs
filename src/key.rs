@@ -82,12 +82,24 @@ impl RedisKey {
     }
 
     pub fn hash_get(&self, field: &str) -> Result<Option<RedisString>, RedisError> {
-        let val = if self.is_null() {
-            None
-        } else {
-            hash_get_key(self.ctx, self.key_inner, field)
-        };
-        Ok(val)
+        if self.is_null() {
+            return Ok(None);
+        }
+
+        let res = raw::hash_get(self.key_inner, field);
+        if res.is_null() {
+            return Ok(None);
+        }
+
+        Ok(Some(RedisString::new(self.ctx, res)))
+    }
+
+    pub fn hash_get_multi(&self, fields: &[&str]) -> Result<Vec<RedisString>, RedisError> {
+        if self.is_null() {
+            return Ok(Vec::new());
+        }
+        let res = raw::hash_get_multi(self.ctx, self.key_inner, fields);
+        Ok(res)
     }
 }
 

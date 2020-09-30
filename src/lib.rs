@@ -19,6 +19,7 @@ pub mod rediserror;
 mod redismodule;
 pub mod redisraw;
 pub mod redisvalue;
+pub mod de;
 
 #[macro_use]
 mod macros;

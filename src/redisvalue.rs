@@ -1,8 +1,11 @@
+use crate::RedisString;
+
 #[derive(Debug, PartialEq)]
 pub enum RedisValue {
     SimpleStringStatic(&'static str),
     SimpleString(String),
     BulkString(String),
+    RedisString(RedisString),
     Integer(i64),
     Float(f64),
     Array(Vec<RedisValue>),

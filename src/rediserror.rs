@@ -16,6 +16,8 @@ impl RedisError {
     }
 }
 
+impl std::error::Error for RedisError {}
+
 impl From<&'static str> for RedisError {
     fn from(s: &'static str) -> Self {
         RedisError::Str(s)
