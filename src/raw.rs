@@ -15,7 +15,7 @@ use std::ptr;
 use std::slice;
 
 pub use crate::redisraw::bindings::*;
-use crate::RedisBuffer;
+use crate::{RedisBuffer, RedisError};
 use crate::RedisString;
 
 bitflags! {
@@ -232,18 +232,59 @@ pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> 
     unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits) }
 }
 
-pub fn hash_get(key: *mut RedisModuleKey, field: &str) -> *mut RedisModuleString {
-    let res: *mut RedisModuleString = ptr::null_mut();
-    unsafe {
-        RedisModule_HashGet.unwrap()(
-            key,
-            REDISMODULE_HASH_CFIELDS as i32,
-            CString::new(field).unwrap().as_ptr(),
-            &res,
-            ptr::null::<c_char>(),
-        );
+pub fn hash_get_multi<T>(key: *mut RedisModuleKey, fields: &[T],
+                         values: &mut [*mut RedisModuleString])
+    -> Result<(), RedisError>
+    where T: Into<Vec<u8>> + Clone
+{
+    assert_eq!(fields.len(), values.len());
+
+    let mut fi = fields.iter();
+    let mut vi = values.iter_mut();
+
+    macro_rules! RM {
+        () => { unsafe {
+            RedisModule_HashGet.unwrap()(key, REDISMODULE_HASH_CFIELDS as i32,
+                                         ptr::null::<c_char>())
+        }};
+        ($($args:expr),*) => { unsafe {
+            RedisModule_HashGet.unwrap()(
+                key, REDISMODULE_HASH_CFIELDS as i32,
+                $($args),*,
+                ptr::null::<c_char>()
+            )
+        }};
     }
-    res
+    macro_rules! f { () => { CString::new( (*fi.next().unwrap()).clone() ).unwrap().as_ptr() }; }
+    macro_rules! v { () => { vi.next().unwrap() }; }
+
+    let res = Status::from(match fields.len() {
+        0  => RM!(),
+        1  => RM!(f!(), v!()),
+        2  => RM!(f!(), v!(), f!(), v!()),
+        3  => RM!(f!(), v!(), f!(), v!(), f!(), v!()),
+        4  => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!()),
+        5  => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!()),
+        6  => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!()),
+        7  => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(),
+                  f!(), v!()),
+        8  => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(),
+                  f!(), v!(), f!(), v!()),
+        9  => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(),
+                  f!(), v!(), f!(), v!(), f!(), v!()),
+        10 => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(),
+                  f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!()),
+        11 => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(),
+                  f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!()),
+        12 => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(),
+                  f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!()),
+        _ => panic!("Unsupported length"),
+    });
+
+    match res {
+        Status::Ok => Ok(()),
+        _ => Err(RedisError::Str("ERR key is not a hash value")),
+    }
 }
 
 pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleString) -> Status {
