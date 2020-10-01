@@ -15,7 +15,7 @@ impl RedisError {
 
 impl<T: std::error::Error> From<T> for RedisError {
     fn from(e: T) -> Self {
-        RedisError::String(e.to_string())
+        RedisError::String(format!("ERR {}", e))
     }
 }
 
