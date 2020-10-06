@@ -36,6 +36,11 @@ required-features = ["experimental-api"]
 name = "data_type"
 crate-type = ["cdylib"]
 
+
+[[example]]
+name = "load_unload"
+crate-type = ["cdylib"]
+
 [dependencies]
 bitflags = "1.2"
 libc = "0.2"

@@ -12,19 +12,20 @@ macro_rules! redis_command {
 
         /////////////////////
         extern "C" fn do_command(
-            ctx: *mut raw::RedisModuleCtx,
-            argv: *mut *mut raw::RedisModuleString,
+            ctx: *mut $crate::raw::RedisModuleCtx,
+            argv: *mut *mut $crate::raw::RedisModuleString,
             argc: c_int,
         ) -> c_int {
             let context = Context::new(ctx);
 
-            let args_decoded: Result<Vec<_>, RedisError> =
+            let args_decoded: Result<Vec<_>, $crate::RedisError> =
                 unsafe { slice::from_raw_parts(argv, argc as usize) }
                     .into_iter()
                     .map(|&arg| {
-                        RedisString::from_ptr(arg)
+                        $crate::RedisString::from_ptr(arg)
                             .map(|v| v.to_owned())
-                            .map_err(|_| RedisError::Str("UTF8 encoding error in handler args"))
+                            .map_err(|_|$crate::RedisError::Str(
+                                "UTF8 encoding error in handler args"))
                     })
                     .collect();
 
@@ -37,7 +38,7 @@ macro_rules! redis_command {
         /////////////////////
 
         if unsafe {
-            raw::RedisModule_CreateCommand.unwrap()(
+            $crate::raw::RedisModule_CreateCommand.unwrap()(
                 $ctx,
                 name.as_ptr(),
                 Some(do_command),
@@ -46,9 +47,9 @@ macro_rules! redis_command {
                 $lastkey,
                 $keystep,
             )
-        } == raw::Status::Err as c_int
+        } == $crate::raw::Status::Err as c_int
         {
-            return raw::Status::Err as c_int;
+            return $crate::raw::Status::Err as c_int;
         }
     }};
 }
@@ -62,6 +63,7 @@ macro_rules! redis_module {
             $($data_type:ident),* $(,)*
         ],
         $(init: $init_func:ident,)* $(,)*
+        $(deinit: $deinit_func:ident,)* $(,)*
         commands: [
             $([
                 $name:expr,
@@ -125,6 +127,20 @@ macro_rules! redis_module {
             )*
 
             raw::Status::Ok as c_int
+        }
+
+        #[no_mangle]
+        #[allow(non_snake_case)]
+        pub extern "C" fn RedisModule_OnUnload(
+            ctx: *mut $crate::raw::RedisModuleCtx
+        ) -> std::os::raw::c_int {
+            $(
+                if $deinit_func(ctx) == raw::Status::Err as c_int {
+                    return $crate::raw::Status::Err as c_int;
+                }
+            )*
+
+            $crate::raw::Status::Ok as std::os::raw::c_int
         }
     }
 }
