@@ -85,7 +85,9 @@ impl RedisKey {
         let val = if self.is_null() {
             None
         } else {
-            hash_mget_key(self.ctx, self.key_inner, &[field])?.pop().unwrap()
+            hash_mget_key(self.ctx, self.key_inner, &[field])?
+                .pop()
+                .expect("hash_mget_key should return vector of same length as input")
         };
         Ok(val)
     }
@@ -150,7 +152,9 @@ impl RedisKeyWritable {
     }
 
     pub fn hash_get(&self, field: &str) -> Result<Option<RedisString>, RedisError> {
-        Ok(hash_mget_key(self.ctx, self.key_inner, &[field])?.pop().unwrap())
+        Ok(hash_mget_key(self.ctx, self.key_inner, &[field])?
+            .pop()
+            .expect("hash_mget_key should return vector of same length as input"))
     }
 
     pub fn set_expire(&self, expire: Duration) -> RedisResult {
@@ -248,29 +252,29 @@ fn read_key(key: *mut raw::RedisModuleKey) -> Result<String, Utf8Error> {
 
 /// Get an arbitrary number of hash fields from a key by batching calls
 /// to `raw::hash_get_multi`.
-pub fn hash_mget_key<T>(ctx: *mut raw::RedisModuleCtx,
-                        key: *mut raw::RedisModuleKey,
-                        fields: &[T])
-    -> Result<Vec<Option<RedisString>>, RedisError>
-    where T: Into<Vec<u8>> + Clone
+pub fn hash_mget_key<T>(
+    ctx: *mut raw::RedisModuleCtx,
+    key: *mut raw::RedisModuleKey,
+    fields: &[T],
+) -> Result<Vec<Option<RedisString>>, RedisError>
+where
+    T: Into<Vec<u8>> + Clone,
 {
-    use crate::redisraw::bindings::RedisModuleString;
     const BATCH_SIZE: usize = 12;
 
-    let mut values: Vec<Option<RedisString>> = Vec::with_capacity(fields.len());
-    let mut values_raw: [*mut RedisModuleString; BATCH_SIZE] =
-        [std::ptr::null_mut(); BATCH_SIZE];
+    let mut values = Vec::with_capacity(fields.len());
+    let mut values_raw = [std::ptr::null_mut(); BATCH_SIZE];
 
     for chunk_fields in fields.chunks(BATCH_SIZE) {
         let mut chunk_values = &mut values_raw[..chunk_fields.len()];
         raw::hash_get_multi(key, chunk_fields, &mut chunk_values)?;
-        values.extend(chunk_values.iter().map(|ptr|
+        values.extend(chunk_values.iter().map(|ptr| {
             if ptr.is_null() {
                 None
             } else {
                 Some(RedisString::new(ctx, *ptr))
             }
-        ));
+        }));
     }
 
     Ok(values)

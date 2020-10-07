@@ -15,8 +15,8 @@ use std::ptr;
 use std::slice;
 
 pub use crate::redisraw::bindings::*;
-use crate::{RedisBuffer, RedisError};
 use crate::RedisString;
+use crate::{RedisBuffer, RedisError};
 
 bitflags! {
     pub struct KeyMode: c_int {
@@ -232,22 +232,25 @@ pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> 
     unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits) }
 }
 
-pub fn hash_get_multi<T>(key: *mut RedisModuleKey, fields: &[T],
-                         values: &mut [*mut RedisModuleString])
-    -> Result<(), RedisError>
-    where T: Into<Vec<u8>> + Clone
+pub fn hash_get_multi<T>(
+    key: *mut RedisModuleKey,
+    fields: &[T],
+    values: &mut [*mut RedisModuleString],
+) -> Result<(), RedisError>
+where
+    T: Into<Vec<u8>> + Clone,
 {
     assert_eq!(fields.len(), values.len());
 
     let mut fi = fields.iter();
     let mut vi = values.iter_mut();
 
-    macro_rules! RM {
+    macro_rules! rm {
         () => { unsafe {
             RedisModule_HashGet.unwrap()(key, REDISMODULE_HASH_CFIELDS as i32,
                                          ptr::null::<c_char>())
         }};
-        ($($args:expr),*) => { unsafe {
+        ($($args:expr)*) => { unsafe {
             RedisModule_HashGet.unwrap()(
                 key, REDISMODULE_HASH_CFIELDS as i32,
                 $($args),*,
@@ -255,29 +258,51 @@ pub fn hash_get_multi<T>(key: *mut RedisModuleKey, fields: &[T],
             )
         }};
     }
-    macro_rules! f { () => { CString::new( (*fi.next().unwrap()).clone() ).unwrap().as_ptr() }; }
-    macro_rules! v { () => { vi.next().unwrap() }; }
+    macro_rules! f {
+        () => {
+            CString::new((*fi.next().unwrap()).clone())
+                .unwrap()
+                .as_ptr()
+        };
+    }
+    macro_rules! v {
+        () => {
+            vi.next().unwrap()
+        };
+    }
 
     let res = Status::from(match fields.len() {
-        0  => RM!(),
-        1  => RM!(f!(), v!()),
-        2  => RM!(f!(), v!(), f!(), v!()),
-        3  => RM!(f!(), v!(), f!(), v!(), f!(), v!()),
-        4  => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!()),
-        5  => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!()),
-        6  => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!()),
-        7  => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(),
-                  f!(), v!()),
-        8  => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(),
-                  f!(), v!(), f!(), v!()),
-        9  => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(),
-                  f!(), v!(), f!(), v!(), f!(), v!()),
-        10 => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(),
-                  f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!()),
-        11 => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(),
-                  f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!()),
-        12 => RM!(f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(),
-                  f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!(), f!(), v!()),
+        0 => rm! {},
+        1 => rm! {f!() v!()},
+        2 => rm! {f!() v!() f!() v!()},
+        3 => rm! {f!() v!() f!() v!() f!() v!()},
+        4 => rm! {f!() v!() f!() v!() f!() v!() f!() v!()},
+        5 => rm! {f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()},
+        6 => rm! {f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()},
+        7 => rm! {
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+            f!() v!()
+        },
+        8 => rm! {
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+            f!() v!() f!() v!()
+        },
+        9 => rm! {
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+            f!() v!() f!() v!() f!() v!()
+        },
+        10 => rm! {
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+            f!() v!() f!() v!() f!() v!() f!() v!()
+        },
+        11 => rm! {
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+        },
+        12 => rm! {
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+        },
         _ => panic!("Unsupported length"),
     });
 
