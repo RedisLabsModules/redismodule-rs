@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate redis_module;
+use redis_module::logging::*;
 
 use redis_module::{parse_integer, Context, RedisError, RedisResult};
 
@@ -7,6 +8,8 @@ fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
     if args.len() < 2 {
         return Err(RedisError::WrongArity);
     }
+
+    log_warning("Oh hi there!");
 
     let nums = args
         .into_iter()

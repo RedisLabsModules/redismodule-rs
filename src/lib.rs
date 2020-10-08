@@ -37,14 +37,11 @@ static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc;
 
 /// `LogLevel` is a level of logging to be specified with a Redis log directive.
 #[derive(Clone, Copy, Debug, AsRefStr)]
+#[strum(serialize_all = "snake_case")]
 pub enum LogLevel {
-    #[strum(to_string = "debug")]
     Debug,
-    #[strum(to_string = "notice")]
     Notice,
-    #[strum(to_string = "verbose")]
     Verbose,
-    #[strum(to_string = "warning")]
     Warning,
 }
 
