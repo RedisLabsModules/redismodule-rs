@@ -2,6 +2,7 @@
 
 use std::os::raw::c_char;
 use std::str::Utf8Error;
+use strum_macros::AsRefStr;
 
 extern crate num_traits;
 
@@ -11,7 +12,6 @@ pub mod alloc;
 pub mod error;
 pub mod native_types;
 pub mod raw;
-use strum_macros::AsRefStr;
 pub mod rediserror;
 mod redismodule;
 pub mod redisraw;
