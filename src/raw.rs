@@ -271,6 +271,10 @@ where
         };
     }
 
+    // This convoluted code is necessary since Redis only exposes a varargs API for HashGet
+    // to modules. Unfortunately there's no straightforward or portable way of calling a
+    // a varargs function with a variable number of arguments that is determined at runtime.
+    // See also the following Redis ticket: https://github.com/redis/redis/issues/7860
     let res = Status::from(match fields.len() {
         0 => rm! {},
         1 => rm! {f!() v!()},
