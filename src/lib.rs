@@ -3,12 +3,6 @@
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
-#[macro_use]
-extern crate bitflags;
-#[macro_use]
-extern crate enum_primitive_derive;
-#[macro_use(AsRefStr)]
-extern crate strum_macros;
 extern crate num_traits;
 
 use libc::size_t;
@@ -17,16 +11,16 @@ pub mod alloc;
 pub mod error;
 pub mod native_types;
 pub mod raw;
+use strum_macros::AsRefStr;
 pub mod rediserror;
 mod redismodule;
 pub mod redisraw;
 pub mod redisvalue;
 
-#[macro_use]
-mod macros;
 mod context;
 mod key;
 pub mod logging;
+mod macros;
 
 #[cfg(feature = "experimental-api")]
 pub use crate::context::thread_safe::ThreadSafeContext;
