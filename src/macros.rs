@@ -16,7 +16,7 @@ macro_rules! redis_command {
             argv: *mut *mut $crate::raw::RedisModuleString,
             argc: c_int,
         ) -> c_int {
-            let context = Context::new(ctx);
+            let context = $crate::Context::new(ctx);
 
             let args_decoded: Result<Vec<_>, $crate::RedisError> =
                 unsafe { slice::from_raw_parts(argv, argc as usize) }
@@ -24,8 +24,9 @@ macro_rules! redis_command {
                     .map(|&arg| {
                         $crate::RedisString::from_ptr(arg)
                             .map(|v| v.to_owned())
-                            .map_err(|_|$crate::RedisError::Str(
-                                "UTF8 encoding error in handler args"))
+                            .map_err(|_| {
+                                $crate::RedisError::Str("UTF8 encoding error in handler args")
+                            })
                     })
                     .collect();
 
