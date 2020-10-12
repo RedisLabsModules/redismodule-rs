@@ -31,6 +31,7 @@ pub struct ThreadSafeContext<B> {
 }
 
 unsafe impl<B> Send for ThreadSafeContext<B> {}
+unsafe impl<B> Sync for ThreadSafeContext<B> {}
 
 impl ThreadSafeContext<DetachedFromClient> {
     pub fn new() -> Self {
