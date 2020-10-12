@@ -14,7 +14,7 @@ mod timer;
 pub(crate) mod thread_safe;
 
 #[cfg(feature = "experimental-api")]
-mod blocked;
+pub(crate) mod blocked;
 
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
@@ -34,13 +34,23 @@ impl Context {
     }
 
     pub fn log(&self, level: LogLevel, message: &str) {
-        let level = CString::new(format!("{:?}", level).to_lowercase()).unwrap();
-        let fmt = CString::new(message).unwrap();
-        unsafe { raw::RedisModule_Log.unwrap()(self.ctx, level.as_ptr(), fmt.as_ptr()) }
+        crate::logging::log_internal(self.ctx, level, message);
     }
 
     pub fn log_debug(&self, message: &str) {
+        self.log(LogLevel::Debug, message);
+    }
+
+    pub fn log_notice(&self, message: &str) {
         self.log(LogLevel::Notice, message);
+    }
+
+    pub fn log_verbose(&self, message: &str) {
+        self.log(LogLevel::Verbose, message);
+    }
+
+    pub fn log_warning(&self, message: &str) {
+        self.log(LogLevel::Warning, message);
     }
 
     pub fn auto_memory(&self) {

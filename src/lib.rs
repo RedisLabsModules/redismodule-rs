@@ -2,11 +2,8 @@
 
 use std::os::raw::c_char;
 use std::str::Utf8Error;
+use strum_macros::AsRefStr;
 
-#[macro_use]
-extern crate bitflags;
-#[macro_use]
-extern crate enum_primitive_derive;
 extern crate num_traits;
 
 use libc::size_t;
@@ -20,13 +17,15 @@ mod redismodule;
 pub mod redisraw;
 pub mod redisvalue;
 
-#[macro_use]
-mod macros;
 mod context;
 mod key;
+pub mod logging;
+mod macros;
 
 #[cfg(feature = "experimental-api")]
-pub use crate::context::thread_safe::ThreadSafeContext;
+pub use crate::context::blocked::BlockedClient;
+#[cfg(feature = "experimental-api")]
+pub use crate::context::thread_safe::{DetachedFromClient, ThreadSafeContext};
 
 pub use crate::context::Context;
 pub use crate::redismodule::*;
@@ -39,7 +38,8 @@ pub use crate::redismodule::*;
 static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc;
 
 /// `LogLevel` is a level of logging to be specified with a Redis log directive.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, AsRefStr)]
+#[strum(serialize_all = "snake_case")]
 pub enum LogLevel {
     Debug,
     Notice,
