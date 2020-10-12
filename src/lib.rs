@@ -23,7 +23,9 @@ pub mod logging;
 mod macros;
 
 #[cfg(feature = "experimental-api")]
-pub use crate::context::thread_safe::ThreadSafeContext;
+pub use crate::context::blocked::BlockedClient;
+#[cfg(feature = "experimental-api")]
+pub use crate::context::thread_safe::{DetachedFromClient, ThreadSafeContext};
 
 pub use crate::context::Context;
 pub use crate::redismodule::*;
