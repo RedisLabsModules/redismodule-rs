@@ -8,6 +8,8 @@ extern crate enum_primitive_derive;
 extern crate libc;
 extern crate num_traits;
 
+use bitflags::bitflags;
+use enum_primitive_derive::Primitive;
 use libc::size_t;
 use num_traits::FromPrimitive;
 use std::ffi::CString;
