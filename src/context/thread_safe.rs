@@ -27,6 +27,9 @@ pub struct DetachedFromClient;
 
 pub struct ThreadSafeContext<B> {
     pub(crate) ctx: *mut raw::RedisModuleCtx,
+
+    /// This field is only used implicitly by `Drop`, so avoid a compiler warning
+    #[allow(dead_code)]
     blocked_client: B,
 }
 
