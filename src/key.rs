@@ -325,7 +325,7 @@ fn read_key(key: *mut raw::RedisModuleKey) -> Result<String, Utf8Error> {
 
 /// Get an arbitrary number of hash fields from a key by batching calls
 /// to `raw::hash_get_multi`.
-pub fn hash_mget_key<T>(
+fn hash_mget_key<T>(
     ctx: *mut raw::RedisModuleCtx,
     key: *mut raw::RedisModuleKey,
     fields: &[T],
