@@ -2,7 +2,7 @@
 extern crate redis_module;
 
 use redis_module::native_types::RedisType;
-use redis_module::{raw, Context, NextArg, RedisError, RedisResult};
+use redis_module::{raw, Context, NextArg, RedisResult};
 use std::os::raw::c_void;
 
 #[derive(Debug)]

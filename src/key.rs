@@ -14,6 +14,7 @@ use crate::redismodule::REDIS_OK;
 use crate::RedisError;
 use crate::RedisResult;
 use crate::RedisString;
+use std::iter::FromIterator;
 
 /// `RedisKey` is an abstraction over a Redis key that allows readonly
 /// operations.
@@ -91,6 +92,26 @@ impl RedisKey {
         };
         Ok(val)
     }
+
+    /// Returns the values associated with the specified fields in the hash stored at this key.
+    /// The result will be `None` if the key does not exist.
+    pub fn hash_get_multi<'a, T>(
+        &self,
+        fields: &'a [T],
+    ) -> Result<Option<HMGetResult<'a, T>>, RedisError>
+    where
+        T: Into<Vec<u8>> + Clone,
+    {
+        let val = if self.is_null() {
+            None
+        } else {
+            Some(HMGetResult {
+                fields,
+                values: hash_mget_key(self.ctx, self.key_inner, fields)?,
+            })
+        };
+        Ok(val)
+    }
 }
 
 impl Drop for RedisKey {
@@ -155,6 +176,17 @@ impl RedisKeyWritable {
         Ok(hash_mget_key(self.ctx, self.key_inner, &[field])?
             .pop()
             .expect("hash_mget_key should return vector of same length as input"))
+    }
+
+    /// Returns the values associated with the specified fields in the hash stored at this key.
+    pub fn hash_get_multi<'a, T>(&self, fields: &'a [T]) -> Result<HMGetResult<'a, T>, RedisError>
+    where
+        T: Into<Vec<u8>> + Clone,
+    {
+        Ok(HMGetResult {
+            fields,
+            values: hash_mget_key(self.ctx, self.key_inner, fields)?,
+        })
     }
 
     pub fn set_expire(&self, expire: Duration) -> RedisResult {
@@ -223,6 +255,47 @@ impl RedisKeyWritable {
         .into();
 
         status.into()
+    }
+}
+
+/// Opaque type used to hold multi-get results. Use the provided methods to convert
+/// the results into the desired type of Rust collection.
+pub struct HMGetResult<'a, T>
+where
+    T: Into<Vec<u8>> + Clone,
+{
+    fields: &'a [T],
+    values: Vec<Option<RedisString>>,
+}
+
+impl<'a, T> HMGetResult<'a, T>
+where
+    T: Into<Vec<u8>> + Clone,
+{
+    /// Convert the results into any list-like collection. The field values in the collection
+    /// appear in the same order as that in which the field names were provided to the multi-get
+    /// call. Fields which do not exist are set to `None`.
+    pub fn into_list<B>(self) -> B
+    where
+        B: FromIterator<Option<String>>,
+    {
+        self.values
+            .into_iter()
+            .map(|opt| opt.map(RedisString::into_string_lossy))
+            .collect()
+    }
+
+    /// Convert the results into any map-like collection. Only existing fields will
+    /// be included in the collection.
+    pub fn into_map<B>(self) -> B
+    where
+        B: FromIterator<(T, String)>,
+    {
+        self.fields
+            .into_iter()
+            .zip(self.values)
+            .filter_map(|(k, v)| v.map(|v| (k.clone(), v.into_string_lossy())))
+            .collect()
     }
 }
 

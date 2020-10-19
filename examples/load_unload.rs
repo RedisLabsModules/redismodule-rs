@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{Context, LogLevel, RedisResult, raw};
+use redis_module::{raw, Context, LogLevel};
 use std::os::raw::c_int;
 
 static mut GLOBAL_STATE: Option<String> = None;
@@ -14,9 +14,13 @@ pub extern "C" fn init(ctx: *mut raw::RedisModuleCtx) -> c_int {
         let after = GLOBAL_STATE.clone();
         (before, after)
     };
-    ctx.log(LogLevel::Warning,
-            &format!("Update global state on LOAD. BEFORE: {:?}, AFTER: {:?}",
-                            before, after));
+    ctx.log(
+        LogLevel::Warning,
+        &format!(
+            "Update global state on LOAD. BEFORE: {:?}, AFTER: {:?}",
+            before, after
+        ),
+    );
 
     return raw::Status::Ok as c_int;
 }
@@ -28,9 +32,13 @@ pub extern "C" fn deinit(ctx: *mut raw::RedisModuleCtx) -> c_int {
         let after = GLOBAL_STATE.clone();
         (before, after)
     };
-    ctx.log(LogLevel::Warning,
-            &format!("Update global state on UNLOAD. BEFORE: {:?}, AFTER: {:?}",
-                     before, after));
+    ctx.log(
+        LogLevel::Warning,
+        &format!(
+            "Update global state on UNLOAD. BEFORE: {:?}, AFTER: {:?}",
+            before, after
+        ),
+    );
 
     raw::Status::Ok as c_int
 }
@@ -45,4 +53,3 @@ redis_module! {
     deinit: deinit,
     commands: [],
 }
-
