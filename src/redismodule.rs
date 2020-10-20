@@ -2,8 +2,8 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
 use std::slice;
 use std::str;
-use std::string::FromUtf8Error;
 use std::str::Utf8Error;
+use std::string::FromUtf8Error;
 
 pub use crate::raw;
 pub use crate::rediserror::RedisError;
@@ -108,6 +108,16 @@ impl RedisString {
 
     pub fn try_as_str(&self) -> Result<&str, Utf8Error> {
         Self::from_ptr(self.inner)
+    }
+
+    /// Performs lossy conversion of a `RedisString` into an owned `String. This conversion
+    /// will replace any invalid UTF-8 sequences with U+FFFD REPLACEMENT CHARACTER, which
+    /// looks like this: �.
+    pub fn into_string_lossy(self) -> String {
+        let mut len: libc::size_t = 0;
+        let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(self.inner, &mut len) };
+        let bytes = unsafe { slice::from_raw_parts(bytes as *const u8, len) };
+        String::from_utf8_lossy(bytes).into_owned()
     }
 }
 
