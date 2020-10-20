@@ -275,6 +275,15 @@ where
     /// Convert the results into any list-like collection. The field values in the collection
     /// appear in the same order as that in which the field names were provided to the multi-get
     /// call. Fields which do not exist are set to `None`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let key = ctx.open_key(keyname);
+    /// let v: Vec<Option<String>> = key
+    ///     .hash_get_multi(&["some_field_1", "some_field_2"])?
+    ///     .into_list();
+    /// ```
     pub fn into_list<B>(self) -> B
     where
         B: FromIterator<Option<String>>,
@@ -287,6 +296,17 @@ where
 
     /// Convert the results into any map-like collection. Only existing fields will
     /// be included in the collection.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    ///
+    /// let key = ctx.open_key(keyname);
+    /// let v: HashMap<&str, String> = key
+    ///     .hash_get_multi(&["some_field_1", "some_field_2"])?
+    ///     .into_map();
+    /// ```
     pub fn into_map<B>(self) -> B
     where
         B: FromIterator<(T, String)>,
