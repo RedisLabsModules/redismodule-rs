@@ -14,7 +14,6 @@ use crate::redismodule::REDIS_OK;
 use crate::RedisError;
 use crate::RedisResult;
 use crate::RedisString;
-use std::iter::FromIterator;
 
 /// `RedisKey` is an abstraction over a Redis key that allows readonly
 /// operations.
@@ -268,54 +267,87 @@ where
     values: Vec<Option<RedisString>>,
 }
 
-impl<'a, T> HMGetResult<'a, T>
+pub struct HMGetIter<'a, T>
+where
+    T: Into<Vec<u8>>,
+{
+    ai: std::slice::Iter<'a, T>,
+    bi: std::vec::IntoIter<Option<RedisString>>,
+}
+
+impl<'a, T> Iterator for HMGetIter<'a, T>
 where
     T: Into<Vec<u8>> + Clone,
 {
-    /// Convert the results into any list-like collection. The field values in the collection
-    /// appear in the same order as that in which the field names were provided to the multi-get
-    /// call. Fields which do not exist are set to `None`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let key = ctx.open_key(keyname);
-    /// let v: Vec<Option<String>> = key
-    ///     .hash_get_multi(&["some_field_1", "some_field_2"])?
-    ///     .into_list();
-    /// ```
-    pub fn into_list<B>(self) -> B
-    where
-        B: FromIterator<Option<String>>,
-    {
-        self.values
-            .into_iter()
-            .map(|opt| opt.map(RedisString::into_string_lossy))
-            .collect()
-    }
+    type Item = (T, String);
 
-    /// Convert the results into any map-like collection. Only existing fields will
-    /// be included in the collection.
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            let a = self.ai.next();
+            let b = self.bi.next();
+            match b {
+                None => return None,
+                Some(None) => continue,
+                Some(Some(rs)) => {
+                    return Some((
+                        a.expect("field and value slices not of same length")
+                            .clone(),
+                        rs.into_string_lossy(),
+                    ))
+                }
+            }
+        }
+    }
+}
+
+impl<'a, T> IntoIterator for HMGetResult<'a, T>
+where
+    T: Into<Vec<u8>> + Clone,
+{
+    type Item = (T, String);
+    type IntoIter = HMGetIter<'a, T>;
+
+    /// Provides an iterator over the multi-get results in the form of (field-name, field-value)
+    /// pairs. The field-values are converted into `String` objects using
+    /// [`RedisString::into_string_lossy`].
     ///
     /// # Examples
+    ///
+    /// Get a [`HashMap`] from the results:
     ///
     /// ```
     /// use std::collections::HashMap;
+    /// use redis_module::RedisError;
     ///
-    /// let key = ctx.open_key(keyname);
-    /// let v: HashMap<&str, String> = key
-    ///     .hash_get_multi(&["some_field_1", "some_field_2"])?
-    ///     .into_map();
+    /// let keyname = "config";
+    /// let fields = &["username", "password", "email"];
+    /// let hm = ctx
+    ///      .open_key(keyname)
+    ///      .hash_get_multi(fields)?
+    ///      .ok_or(RedisError::Str("ERR key not found"))?;
+    /// let response: HashMap<&str, String> = hm.into_iter().collect();
     /// ```
-    pub fn into_map<B>(self) -> B
-    where
-        B: FromIterator<(T, String)>,
-    {
-        self.fields
-            .into_iter()
-            .zip(self.values)
-            .filter_map(|(k, v)| v.map(|v| (k.clone(), v.into_string_lossy())))
-            .collect()
+    ///
+    /// Get a [`Vec`] of only the field values from the results:
+    ///
+    /// ```
+    /// use redis_module::RedisError;
+    ///
+    /// let hm = ctx
+    ///      .open_key(keyname)
+    ///      .hash_get_multi(fields)?
+    ///      .ok_or(RedisError::Str("ERR key not found"))?;
+    /// let response: Vec<String> = hm.into_iter().map(|(_, v)| v).collect();
+    /// ```
+    ///
+    /// [`HashMap`]: std::collections::HashMap
+    /// [`Vec`]: Vec
+    /// [`RedisString::into_string_lossy`]: crate::RedisString::into_string_lossy
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter {
+            ai: self.fields.into_iter(),
+            bi: self.values.into_iter(),
+        }
     }
 }
 
