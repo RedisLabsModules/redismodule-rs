@@ -94,12 +94,13 @@ impl RedisKey {
 
     /// Returns the values associated with the specified fields in the hash stored at this key.
     /// The result will be `None` if the key does not exist.
-    pub fn hash_get_multi<'a, T>(
+    pub fn hash_get_multi<'a, A, B>(
         &self,
-        fields: &'a [T],
-    ) -> Result<Option<HMGetResult<'a, T>>, RedisError>
+        fields: &'a [A],
+    ) -> Result<Option<HMGetResult<'a, A, B>>, RedisError>
     where
-        T: Into<Vec<u8>> + Clone,
+        A: Into<Vec<u8>> + Clone,
+        RedisString: Into<B>,
     {
         let val = if self.is_null() {
             None
@@ -107,6 +108,7 @@ impl RedisKey {
             Some(HMGetResult {
                 fields,
                 values: hash_mget_key(self.ctx, self.key_inner, fields)?,
+                phantom: std::marker::PhantomData,
             })
         };
         Ok(val)
@@ -178,13 +180,18 @@ impl RedisKeyWritable {
     }
 
     /// Returns the values associated with the specified fields in the hash stored at this key.
-    pub fn hash_get_multi<'a, T>(&self, fields: &'a [T]) -> Result<HMGetResult<'a, T>, RedisError>
+    pub fn hash_get_multi<'a, A, B>(
+        &self,
+        fields: &'a [A],
+    ) -> Result<HMGetResult<'a, A, B>, RedisError>
     where
-        T: Into<Vec<u8>> + Clone,
+        A: Into<Vec<u8>> + Clone,
+        RedisString: Into<B>,
     {
         Ok(HMGetResult {
             fields,
             values: hash_mget_key(self.ctx, self.key_inner, fields)?,
+            phantom: std::marker::PhantomData,
         })
     }
 
@@ -259,32 +266,37 @@ impl RedisKeyWritable {
 
 /// Opaque type used to hold multi-get results. Use the provided methods to convert
 /// the results into the desired type of Rust collection.
-pub struct HMGetResult<'a, T>
+pub struct HMGetResult<'a, A, B>
 where
-    T: Into<Vec<u8>> + Clone,
+    A: Into<Vec<u8>> + Clone,
+    RedisString: Into<B>,
 {
-    fields: &'a [T],
+    fields: &'a [A],
     values: Vec<Option<RedisString>>,
+    phantom: std::marker::PhantomData<B>,
 }
 
-pub struct HMGetIter<'a, T>
+pub struct HMGetIter<'a, A, B>
 where
-    T: Into<Vec<u8>>,
+    A: Into<Vec<u8>>,
+    RedisString: Into<B>,
 {
-    ai: std::slice::Iter<'a, T>,
-    bi: std::vec::IntoIter<Option<RedisString>>,
+    fields_iter: std::slice::Iter<'a, A>,
+    values_iter: std::vec::IntoIter<Option<RedisString>>,
+    phantom: std::marker::PhantomData<B>,
 }
 
-impl<'a, T> Iterator for HMGetIter<'a, T>
+impl<'a, A, B> Iterator for HMGetIter<'a, A, B>
 where
-    T: Into<Vec<u8>> + Clone,
+    A: Into<Vec<u8>> + Clone,
+    RedisString: Into<B>,
 {
-    type Item = (T, String);
+    type Item = (A, B);
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let a = self.ai.next();
-            let b = self.bi.next();
+            let a = self.fields_iter.next();
+            let b = self.values_iter.next();
             match b {
                 None => return None,
                 Some(None) => continue,
@@ -292,7 +304,7 @@ where
                     return Some((
                         a.expect("field and value slices not of same length")
                             .clone(),
-                        rs.into_string_lossy(),
+                        rs.into(),
                     ))
                 }
             }
@@ -300,16 +312,18 @@ where
     }
 }
 
-impl<'a, T> IntoIterator for HMGetResult<'a, T>
+impl<'a, A, B> IntoIterator for HMGetResult<'a, A, B>
 where
-    T: Into<Vec<u8>> + Clone,
+    A: Into<Vec<u8>> + Clone,
+    RedisString: Into<B>,
 {
-    type Item = (T, String);
-    type IntoIter = HMGetIter<'a, T>;
+    type Item = (A, B);
+    type IntoIter = HMGetIter<'a, A, B>;
 
     /// Provides an iterator over the multi-get results in the form of (field-name, field-value)
-    /// pairs. The field-values are converted into `String` objects using
-    /// [`RedisString::into_string_lossy`].
+    /// pairs. The type of field-name elements is the same as that passed to the original multi-
+    /// get call, while the field-value elements may be of any type for which a RedisString `Into`
+    /// conversion is implemented.  
     ///
     /// # Examples
     ///
@@ -342,11 +356,11 @@ where
     ///
     /// [`HashMap`]: std::collections::HashMap
     /// [`Vec`]: Vec
-    /// [`RedisString::into_string_lossy`]: crate::RedisString::into_string_lossy
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter {
-            ai: self.fields.into_iter(),
-            bi: self.values.into_iter(),
+            fields_iter: self.fields.into_iter(),
+            values_iter: self.values.into_iter(),
+            phantom: std::marker::PhantomData,
         }
     }
 }

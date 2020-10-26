@@ -129,6 +129,12 @@ impl Drop for RedisString {
     }
 }
 
+impl From<RedisString> for String {
+    fn from(rs: RedisString) -> Self {
+        rs.into_string_lossy()
+    }
+}
+
 ///////////////////////////////////////////////////
 
 #[derive(Debug)]
