@@ -67,16 +67,18 @@ macro_rules! redis_event_handler {
             ctx: *mut $crate::raw::RedisModuleCtx,
             event_type: c_int,
             event: *const c_char,
-            key: *mut $crate::raw::RedisModuleString
+            key: *mut $crate::raw::RedisModuleString,
         ) -> c_int {
             let context = $crate::Context::new(ctx);
 
             let redis_key = $crate::RedisString::from_ptr(key).unwrap();
             let event_str = unsafe { CStr::from_ptr(event) };
-            $event_handler(&context,
+            $event_handler(
+                &context,
                 $crate::NotifyEvent::from_bits_truncate(event_type),
                 event_str.to_str().unwrap(),
-                redis_key);
+                redis_key,
+            );
 
             $crate::raw::Status::Ok as c_int
         }
@@ -85,9 +87,10 @@ macro_rules! redis_event_handler {
             $crate::raw::RedisModule_SubscribeToKeyspaceEvents.unwrap()(
                 $ctx,
                 $event_type.bits(),
-                Some(handle_event)
+                Some(handle_event),
             )
-        } == $crate::raw::Status::Err as c_int {
+        } == $crate::raw::Status::Err as c_int
+        {
             return $crate::raw::Status::Err as c_int;
         }
     }};
