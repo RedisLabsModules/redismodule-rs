@@ -23,6 +23,8 @@ impl ParseCallbacks for RedisModuleCallback {
                 name: "isize",
                 is_signed: true,
             })
+        } else if name.starts_with("REDISMODULE_NOTIFY_") {
+            Some(IntKind::Int)
         } else {
             None
         }
