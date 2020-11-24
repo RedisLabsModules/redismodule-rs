@@ -54,7 +54,7 @@ strum_macros = "0.19"
 #failure = "0.1"
 
 [build-dependencies]
-bindgen = "0.54"
+bindgen = "0.55"
 cc = "1.0"
 
 [features]
