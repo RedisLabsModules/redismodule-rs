@@ -26,15 +26,15 @@ pub fn log_debug(message: &str) {
 
 /// Log a message to the Redis log with NOTICE log level.
 pub fn log_notice(message: &str) {
-    log(LogLevel::Debug, message);
+    log(LogLevel::Notice, message);
 }
 
 /// Log a message to the Redis log with VERBOSE log level.
 pub fn log_verbose(message: &str) {
-    log(LogLevel::Debug, message);
+    log(LogLevel::Verbose, message);
 }
 
 /// Log a message to the Redis log with WARNING log level.
 pub fn log_warning(message: &str) {
-    log(LogLevel::Debug, message);
+    log(LogLevel::Warning, message);
 }
