@@ -209,4 +209,8 @@ impl Context {
     pub fn create_string(&self, s: &str) -> RedisString {
         RedisString::create(self.ctx, s)
     }
+
+    pub fn get_raw(&self) -> *mut raw::RedisModuleCtx {
+        return self.ctx;
+    }
 }
