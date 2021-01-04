@@ -18,7 +18,7 @@ pub mod redisraw;
 pub mod redisvalue;
 
 mod context;
-mod key;
+pub mod key;
 pub mod logging;
 mod macros;
 
