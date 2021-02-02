@@ -334,11 +334,13 @@ where
 }
 
 pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleString) -> Status {
+    let field = CString::new(field).unwrap();
+
     unsafe {
         RedisModule_HashSet.unwrap()(
             key,
             REDISMODULE_HASH_CFIELDS as i32,
-            CString::new(field).unwrap().as_ptr(),
+            field.as_ptr(),
             value,
             ptr::null::<c_char>(),
         )
