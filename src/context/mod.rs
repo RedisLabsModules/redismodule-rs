@@ -213,4 +213,9 @@ impl Context {
     pub fn get_raw(&self) -> *mut raw::RedisModuleCtx {
         return self.ctx;
     }
+
+    pub unsafe extern "C" fn export_shared_api(&self, func :*mut ::std::os::raw::c_void, name: *mut ::std::os::raw::c_char,) {
+        self.log(LogLevel::Notice, "export_shared_api");
+        raw::RedisModule_ExportSharedAPI.unwrap()(self.ctx, name, func);
+    }
 }
