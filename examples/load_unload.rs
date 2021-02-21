@@ -1,13 +1,11 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{raw, Context, LogLevel};
-use std::os::raw::c_int;
+use redis_module::{Context, LogLevel, Status};
 
 static mut GLOBAL_STATE: Option<String> = None;
 
-pub extern "C" fn init(ctx: *mut raw::RedisModuleCtx) -> c_int {
-    let ctx = Context::new(ctx);
+fn init(ctx: &Context) -> Status {
     let (before, after) = unsafe {
         let before = GLOBAL_STATE.clone();
         GLOBAL_STATE.replace("GLOBAL DATA".to_string());
@@ -22,11 +20,10 @@ pub extern "C" fn init(ctx: *mut raw::RedisModuleCtx) -> c_int {
         ),
     );
 
-    return raw::Status::Ok as c_int;
+    Status::Ok
 }
 
-pub extern "C" fn deinit(ctx: *mut raw::RedisModuleCtx) -> c_int {
-    let ctx = Context::new(ctx);
+fn deinit(ctx: &Context) -> Status {
     let (before, after) = unsafe {
         let before = GLOBAL_STATE.take();
         let after = GLOBAL_STATE.clone();
@@ -40,7 +37,7 @@ pub extern "C" fn deinit(ctx: *mut raw::RedisModuleCtx) -> c_int {
         ),
     );
 
-    raw::Status::Ok as c_int
+    Status::Ok
 }
 
 //////////////////////////////////////////////////////

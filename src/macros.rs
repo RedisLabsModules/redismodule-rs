@@ -158,9 +158,10 @@ macro_rules! redis_module {
                 raw::REDISMODULE_APIVER_1 as c_int,
             ) } == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
 
+            let context = $crate::Context::new(ctx);
             $(
-                if $init_func(ctx) == raw::Status::Err as c_int {
-                    return raw::Status::Err as c_int;
+                if $init_func(&context) == $crate::Status::Err {
+                    return $crate::Status::Err as c_int;
                 }
             )*
 
@@ -188,13 +189,16 @@ macro_rules! redis_module {
         pub extern "C" fn RedisModule_OnUnload(
             ctx: *mut $crate::raw::RedisModuleCtx
         ) -> std::os::raw::c_int {
+            use std::os::raw::c_int;
+
+            let context = $crate::Context::new(ctx);
             $(
-                if $deinit_func(ctx) == raw::Status::Err as c_int {
-                    return $crate::raw::Status::Err as c_int;
+                if $deinit_func(&context) == $crate::Status::Err {
+                    return $crate::Status::Err as c_int;
                 }
             )*
 
-            $crate::raw::Status::Ok as std::os::raw::c_int
+            $crate::raw::Status::Ok as c_int
         }
     }
 }
