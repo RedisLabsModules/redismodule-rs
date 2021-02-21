@@ -1,5 +1,5 @@
 use std::ffi::CString;
-use std::os::raw::{c_char, c_void};
+use std::os::raw::{c_char, c_int, c_void};
 use std::slice;
 use std::str;
 use std::str::Utf8Error;
@@ -47,6 +47,21 @@ impl<T: Iterator<Item = String>> NextArg for T {
         self.next().map_or(Ok(()), |_| Err(RedisError::WrongArity))
     }
 }
+
+pub fn decode_args(
+    argv: *mut *mut raw::RedisModuleString,
+    argc: c_int,
+) -> Result<Vec<String>, RedisError> {
+    unsafe { slice::from_raw_parts(argv, argc as usize) }
+        .into_iter()
+        .map(|&arg| {
+            RedisString::from_ptr(arg)
+                .map(|v| v.to_owned())
+                .map_err(|_| RedisError::Str("UTF8 encoding error in handler args"))
+        })
+        .collect()
+}
+
 
 pub fn parse_unsigned_integer(arg: &str) -> Result<u64, RedisError> {
     arg.parse()
