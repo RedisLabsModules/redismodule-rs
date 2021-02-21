@@ -5,10 +5,10 @@ use redis_module::{Context, LogLevel, Status};
 
 static mut GLOBAL_STATE: Option<String> = None;
 
-fn init(ctx: &Context) -> Status {
+fn init(ctx: &Context, args: &Vec<String>) -> Status {
     let (before, after) = unsafe {
         let before = GLOBAL_STATE.clone();
-        GLOBAL_STATE.replace("GLOBAL DATA".to_string());
+        GLOBAL_STATE.replace(format!("Args passed: {}", args.join(", ")));
         let after = GLOBAL_STATE.clone();
         (before, after)
     };
