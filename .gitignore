@@ -12,3 +12,6 @@ Cargo.lock
 # IntelliJ
 .idea
 src/redisraw/bindings.rs
+
+# VS Code
+.vscode
