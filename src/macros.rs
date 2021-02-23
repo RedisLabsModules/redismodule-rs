@@ -11,7 +11,7 @@ macro_rules! redis_command {
         let flags = CString::new($command_flags).unwrap();
 
         /////////////////////
-        extern "C" fn do_command(
+        extern "C" fn __do_command(
             ctx: *mut $crate::raw::RedisModuleCtx,
             argv: *mut *mut $crate::raw::RedisModuleString,
             argc: c_int,
@@ -30,7 +30,7 @@ macro_rules! redis_command {
             $crate::raw::RedisModule_CreateCommand.unwrap()(
                 $ctx,
                 name.as_ptr(),
-                Some(do_command),
+                Some(__do_command),
                 flags.as_ptr(),
                 $firstkey,
                 $lastkey,
@@ -51,7 +51,7 @@ macro_rules! redis_event_handler {
         $event_type: expr,
         $event_handler: expr
     ) => {{
-        extern "C" fn handle_event(
+        extern "C" fn __handle_event(
             ctx: *mut $crate::raw::RedisModuleCtx,
             event_type: c_int,
             event: *const c_char,
@@ -75,7 +75,7 @@ macro_rules! redis_event_handler {
             $crate::raw::RedisModule_SubscribeToKeyspaceEvents.unwrap()(
                 $ctx,
                 $event_type.bits(),
-                Some(handle_event),
+                Some(__handle_event),
             )
         } == $crate::raw::Status::Err as c_int
         {
