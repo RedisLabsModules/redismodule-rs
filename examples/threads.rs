@@ -1,18 +1,21 @@
 #[macro_use]
 extern crate redis_module;
 
-use bitflags::_core::time::Duration;
-use redis_module::{Context, RedisError, RedisResult, ThreadSafeContext};
+use redis_module::{Context, RedisResult, ThreadSafeContext};
+use std::mem::drop;
 use std::thread;
+use std::time::Duration;
 
 fn threads(_: &Context, _args: Vec<String>) -> RedisResult {
     thread::spawn(move || {
         let thread_ctx = ThreadSafeContext::new();
 
-        for _ in 0..2 {
+        loop {
             let ctx = thread_ctx.lock();
             ctx.call("INCR", &["threads"]).unwrap();
-            thread::sleep(Duration::from_millis(100));
+            // release the lock as soon as we're done accessing redis memory
+            drop(ctx);
+            thread::sleep(Duration::from_millis(1000));
         }
     });
 
