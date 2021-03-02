@@ -157,6 +157,11 @@ extern "C" {
 
 pub const FMT: *const c_char = b"v\0".as_ptr() as *const c_char;
 
+// REDISMODULE_HASH_DELETE is defined explicitly here because bindgen cannot
+// parse typecasts in C macro constants yet.
+// See https://github.com/rust-lang/rust-bindgen/issues/316
+pub const REDISMODULE_HASH_DELETE: *const RedisModuleString = 1 as *const RedisModuleString;
+
 // Helper functions for the raw bindings.
 
 pub fn call_reply_type(reply: *mut RedisModuleCallReply) -> ReplyType {
@@ -342,6 +347,25 @@ pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleSt
             REDISMODULE_HASH_CFIELDS as i32,
             field.as_ptr(),
             value,
+            ptr::null::<c_char>(),
+        )
+        .into()
+    }
+}
+
+pub fn hash_del(key: *mut RedisModuleKey, field: &str) -> Status {
+    let field = CString::new(field).unwrap();
+
+    // TODO: Add hash_del_multi()
+    // Support to pass multiple fields is desired but is complicated.
+    // See hash_get_multi() and https://github.com/redis/redis/issues/7860
+
+    unsafe {
+        RedisModule_HashSet.unwrap()(
+            key,
+            REDISMODULE_HASH_CFIELDS as i32,
+            field.as_ptr(),
+            REDISMODULE_HASH_DELETE,
             ptr::null::<c_char>(),
         )
         .into()
