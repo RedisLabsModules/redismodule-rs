@@ -47,6 +47,10 @@ impl RedisKey {
         }
     }
 
+    pub fn get_inner(&self) -> *mut raw::RedisModuleKey {
+        self.key_inner
+    }
+
     pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
 
@@ -164,6 +168,10 @@ impl RedisKeyWritable {
         }
     }
     */
+
+    pub fn get_inner(&self) -> *mut raw::RedisModuleKey {
+        self.key_inner
+    }
 
     pub fn read(&self) -> Result<Option<String>, RedisError> {
         Ok(Some(read_key(self.key_inner)?))

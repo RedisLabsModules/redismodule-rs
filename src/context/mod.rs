@@ -214,8 +214,7 @@ impl Context {
         return self.ctx;
     }
 
-    pub unsafe extern "C" fn export_shared_api(&self, func :*mut ::std::os::raw::c_void, name: *mut ::std::os::raw::c_char,) {
-        self.log(LogLevel::Notice, "export_shared_api");
-        raw::RedisModule_ExportSharedAPI.unwrap()(self.ctx, name, func);
+    pub fn export_shared_api(&self, func: *const ::std::os::raw::c_void, name: *const ::std::os::raw::c_char,) {
+        unsafe { raw::RedisModule_ExportSharedAPI.unwrap()(self.ctx, name, func as *mut ::std::os::raw::c_void) };
     }
 }
