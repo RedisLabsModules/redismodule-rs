@@ -44,6 +44,12 @@ impl From<c_int> for KeyType {
 }
 
 #[derive(Primitive, Debug, PartialEq)]
+pub enum Where {
+    ListHead = REDISMODULE_LIST_HEAD,
+    ListTail = REDISMODULE_LIST_TAIL,
+}
+
+#[derive(Primitive, Debug, PartialEq)]
 pub enum ReplyType {
     Unknown = REDISMODULE_REPLY_UNKNOWN,
     String = REDISMODULE_REPLY_STRING,
@@ -370,6 +376,18 @@ pub fn hash_del(key: *mut RedisModuleKey, field: &str) -> Status {
         )
         .into()
     }
+}
+
+pub fn list_push(
+    key: *mut RedisModuleKey,
+    list_where: Where,
+    element: *mut RedisModuleString,
+) -> Status {
+    unsafe { RedisModule_ListPush.unwrap()(key, list_where as i32, element).into() }
+}
+
+pub fn list_pop(key: *mut RedisModuleKey, list_where: Where) -> *mut RedisModuleString {
+    unsafe { RedisModule_ListPop.unwrap()(key, list_where as i32) }
 }
 
 // Returns pointer to the C string, and sets len to its length

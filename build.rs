@@ -17,6 +17,8 @@ impl ParseCallbacks for RedisModuleCallback {
             || name.starts_with("REDISMODULE_AUX_")
             || name == "REDISMODULE_OK"
             || name == "REDISMODULE_ERR"
+            || name == "REDISMODULE_LIST_HEAD"
+            || name == "REDISMODULE_LIST_TAIL"
         {
             // These values are used as `enum` discriminants, and thus must be `isize`.
             Some(IntKind::Custom {
