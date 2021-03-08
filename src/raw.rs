@@ -476,8 +476,21 @@ pub fn subscribe_to_server_event(
 }
 
 #[cfg(feature = "experimental-api")]
-pub fn notify_keyspace_event(ctx: *mut RedisModuleCtx, event_type: NotifyEvent, event: &str, keyname: *mut RedisModuleString) {
+pub fn notify_keyspace_event(
+    ctx: *mut RedisModuleCtx,
+    event_type: NotifyEvent,
+    event: &str,
+    keyname: &str,
+) -> Status {
     let event = CString::new(event).unwrap();
-    unsafe { RedisModule_NotifyKeyspaceEvent.unwrap()(ctx, event_type, event.as_ptr(), keyname) };
+    let keyname = RedisString::create(ctx, keyname);
+    unsafe {
+        RedisModule_NotifyKeyspaceEvent.unwrap()(
+            ctx,
+            event_type.bits,
+            event.as_ptr(),
+            keyname.inner,
+        )
+        .into()
+    }
 }
-

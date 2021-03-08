@@ -213,4 +213,14 @@ impl Context {
     pub fn get_raw(&self) -> *mut raw::RedisModuleCtx {
         return self.ctx;
     }
+
+    #[cfg(feature = "experimental-api")]
+    pub fn notify_keyspace_event(
+        &self,
+        event_type: raw::NotifyEvent,
+        event: &str,
+        keyname: &str,
+    ) -> raw::Status {
+        raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
+    }
 }
