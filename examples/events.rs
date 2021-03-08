@@ -20,9 +20,7 @@ fn event_send(ctx: &Context, args: Vec<String>) -> RedisResult {
         return Err(RedisError::WrongArity);
     }
 
-    let status = ctx
-        .notify_keyspace_event(NotifyEvent::GENERIC, "events.send", "mykey")
-        .into();
+    let status = ctx.notify_keyspace_event(NotifyEvent::GENERIC, "events.send", "mykey");
     match status {
         Status::Ok => Ok("Event sent".into()),
         Status::Err => Err(RedisError::Str("Generic error")),
