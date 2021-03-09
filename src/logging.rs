@@ -1,5 +1,5 @@
-use crate::LogLevel;
 use crate::raw;
+use crate::LogLevel;
 use std::ffi::CString;
 use std::ptr;
 
