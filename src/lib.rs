@@ -30,6 +30,7 @@ pub use crate::context::thread_safe::{DetachedFromClient, ThreadSafeContext};
 pub use crate::raw::NotifyEvent;
 
 pub use crate::context::Context;
+pub use crate::raw::Status;
 pub use crate::redismodule::*;
 
 /// Ideally this would be `#[cfg(not(test))]`, but that doesn't work:

@@ -1,5 +1,5 @@
 use std::ffi::CString;
-use std::os::raw::{c_char, c_void};
+use std::os::raw::{c_char, c_int, c_void};
 use std::slice;
 use std::str;
 use std::str::Utf8Error;
@@ -14,7 +14,7 @@ pub type RedisResult = Result<RedisValue, RedisError>;
 pub const REDIS_OK: RedisResult = Ok(RedisValue::SimpleStringStatic("OK"));
 pub const TYPE_METHOD_VERSION: u64 = raw::REDISMODULE_TYPE_METHOD_VERSION as u64;
 
-pub trait NextArg: Iterator {
+pub trait NextArg {
     fn next_string(&mut self) -> Result<String, RedisError>;
     fn next_i64(&mut self) -> Result<i64, RedisError>;
     fn next_u64(&mut self) -> Result<u64, RedisError>;
@@ -22,30 +22,50 @@ pub trait NextArg: Iterator {
     fn done(&mut self) -> Result<(), RedisError>;
 }
 
-impl<T: Iterator<Item = String>> NextArg for T {
+impl<S, T> NextArg for T
+where
+    T: Iterator<Item = S>,
+    S: AsRef<str>,
+{
     fn next_string(&mut self) -> Result<String, RedisError> {
-        self.next().map_or(Err(RedisError::WrongArity), Result::Ok)
+        self.next()
+            .map_or(Err(RedisError::WrongArity), |v| Ok(v.as_ref().to_string()))
     }
 
     fn next_i64(&mut self) -> Result<i64, RedisError> {
         self.next()
-            .map_or(Err(RedisError::WrongArity), |v| parse_integer(&v))
+            .map_or(Err(RedisError::WrongArity), |v| parse_integer(v.as_ref()))
     }
 
     fn next_u64(&mut self) -> Result<u64, RedisError> {
-        self.next()
-            .map_or(Err(RedisError::WrongArity), |v| parse_unsigned_integer(&v))
+        self.next().map_or(Err(RedisError::WrongArity), |v| {
+            parse_unsigned_integer(v.as_ref())
+        })
     }
 
     fn next_f64(&mut self) -> Result<f64, RedisError> {
         self.next()
-            .map_or(Err(RedisError::WrongArity), |v| parse_float(&v))
+            .map_or(Err(RedisError::WrongArity), |v| parse_float(v.as_ref()))
     }
 
     /// Return an error if there are any more arguments
     fn done(&mut self) -> Result<(), RedisError> {
         self.next().map_or(Ok(()), |_| Err(RedisError::WrongArity))
     }
+}
+
+pub fn decode_args(
+    argv: *mut *mut raw::RedisModuleString,
+    argc: c_int,
+) -> Result<Vec<String>, RedisError> {
+    unsafe { slice::from_raw_parts(argv, argc as usize) }
+        .into_iter()
+        .map(|&arg| {
+            RedisString::from_ptr(arg)
+                .map(|v| v.to_owned())
+                .map_err(|_| RedisError::Str("UTF8 encoding error in handler args"))
+        })
+        .collect()
 }
 
 pub fn parse_unsigned_integer(arg: &str) -> Result<u64, RedisError> {

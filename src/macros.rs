@@ -11,26 +11,14 @@ macro_rules! redis_command {
         let flags = CString::new($command_flags).unwrap();
 
         /////////////////////
-        extern "C" fn do_command(
+        extern "C" fn __do_command(
             ctx: *mut $crate::raw::RedisModuleCtx,
             argv: *mut *mut $crate::raw::RedisModuleString,
             argc: c_int,
         ) -> c_int {
             let context = $crate::Context::new(ctx);
 
-            let args_decoded: Result<Vec<_>, $crate::RedisError> =
-                unsafe { slice::from_raw_parts(argv, argc as usize) }
-                    .into_iter()
-                    .map(|&arg| {
-                        $crate::RedisString::from_ptr(arg)
-                            .map(|v| v.to_owned())
-                            .map_err(|_| {
-                                $crate::RedisError::Str("UTF8 encoding error in handler args")
-                            })
-                    })
-                    .collect();
-
-            let response = args_decoded
+            let response = $crate::decode_args(argv, argc)
                 .map(|args| $command_handler(&context, args))
                 .unwrap_or_else(|e| Err(e));
 
@@ -42,7 +30,7 @@ macro_rules! redis_command {
             $crate::raw::RedisModule_CreateCommand.unwrap()(
                 $ctx,
                 name.as_ptr(),
-                Some(do_command),
+                Some(__do_command),
                 flags.as_ptr(),
                 $firstkey,
                 $lastkey,
@@ -63,7 +51,7 @@ macro_rules! redis_event_handler {
         $event_type: expr,
         $event_handler: expr
     ) => {{
-        extern "C" fn handle_event(
+        extern "C" fn __handle_event(
             ctx: *mut $crate::raw::RedisModuleCtx,
             event_type: c_int,
             event: *const c_char,
@@ -87,7 +75,7 @@ macro_rules! redis_event_handler {
             $crate::raw::RedisModule_SubscribeToKeyspaceEvents.unwrap()(
                 $ctx,
                 $event_type.bits(),
-                Some(handle_event),
+                Some(__handle_event),
             )
         } == $crate::raw::Status::Err as c_int
         {
@@ -127,12 +115,11 @@ macro_rules! redis_module {
         #[allow(non_snake_case)]
         pub extern "C" fn RedisModule_OnLoad(
             ctx: *mut $crate::raw::RedisModuleCtx,
-            _argv: *mut *mut $crate::raw::RedisModuleString,
-            _argc: std::os::raw::c_int,
+            argv: *mut *mut $crate::raw::RedisModuleString,
+            argc: std::os::raw::c_int,
         ) -> std::os::raw::c_int {
             use std::os::raw::{c_int, c_char};
             use std::ffi::{CString, CStr};
-            use std::slice;
 
             use $crate::raw;
             use $crate::RedisString;
@@ -158,9 +145,14 @@ macro_rules! redis_module {
                 raw::REDISMODULE_APIVER_1 as c_int,
             ) } == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
 
+            let context = $crate::Context::new(ctx);
+            let args = $crate::decode_args(argv, argc);
+
+            if args.is_err() { return raw::Status::Err as c_int }
+
             $(
-                if $init_func(ctx) == raw::Status::Err as c_int {
-                    return raw::Status::Err as c_int;
+                if $init_func(&context, &args.unwrap()) == $crate::Status::Err {
+                    return $crate::Status::Err as c_int;
                 }
             )*
 
@@ -188,13 +180,16 @@ macro_rules! redis_module {
         pub extern "C" fn RedisModule_OnUnload(
             ctx: *mut $crate::raw::RedisModuleCtx
         ) -> std::os::raw::c_int {
+            use std::os::raw::c_int;
+
+            let context = $crate::Context::new(ctx);
             $(
-                if $deinit_func(ctx) == raw::Status::Err as c_int {
-                    return $crate::raw::Status::Err as c_int;
+                if $deinit_func(&context) == $crate::Status::Err {
+                    return $crate::Status::Err as c_int;
                 }
             )*
 
-            $crate::raw::Status::Ok as std::os::raw::c_int
+            $crate::raw::Status::Ok as c_int
         }
     }
 }

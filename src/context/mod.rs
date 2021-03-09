@@ -222,4 +222,14 @@ impl Context {
     pub fn export_shared_api(&self, func: *const ::std::os::raw::c_void, name: *const ::std::os::raw::c_char,) {
         unsafe { raw::RedisModule_ExportSharedAPI.unwrap()(self.ctx, name, func as *mut ::std::os::raw::c_void) };
     }
+    
+    #[cfg(feature = "experimental-api")]
+    pub fn notify_keyspace_event(
+        &self,
+        event_type: raw::NotifyEvent,
+        event: &str,
+        keyname: &str,
+    ) -> raw::Status {
+        raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
+    }
 }

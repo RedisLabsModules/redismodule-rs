@@ -181,6 +181,10 @@ impl RedisKeyWritable {
         raw::hash_set(self.key_inner, field, value.inner)
     }
 
+    pub fn hash_del(&self, field: &str) -> raw::Status {
+        raw::hash_del(self.key_inner, field)
+    }
+
     pub fn hash_get(&self, field: &str) -> Result<Option<RedisString>, RedisError> {
         Ok(hash_mget_key(self.ctx, self.key_inner, &[field])?
             .pop()
