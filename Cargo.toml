@@ -50,7 +50,7 @@ bitflags = "1.2"
 libc = "0.2"
 enum-primitive-derive = "^0.1"
 num-traits = "^0.2"
-strum_macros = "0.19"
+strum_macros = "0.20"
 #failure = "0.1"
 
 [build-dependencies]
