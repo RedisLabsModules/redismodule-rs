@@ -47,10 +47,6 @@ impl RedisKey {
         }
     }
 
-    pub fn get_inner(&self) -> *mut raw::RedisModuleKey {
-        self.key_inner
-    }
-
     pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
 
@@ -181,10 +177,6 @@ impl RedisKeyWritable {
         raw::hash_set(self.key_inner, field, value.inner)
     }
 
-    pub fn hash_del(&self, field: &str) -> raw::Status {
-        raw::hash_del(self.key_inner, field)
-    }
-
     pub fn hash_get(&self, field: &str) -> Result<Option<RedisString>, RedisError> {
         Ok(hash_mget_key(self.ctx, self.key_inner, &[field])?
             .pop()
@@ -245,6 +237,16 @@ impl RedisKeyWritable {
 
     pub fn is_empty(&self) -> bool {
         self.key_type() == KeyType::Empty
+    }
+
+    pub fn open_with_redis_string(ctx: *mut raw::RedisModuleCtx, string: *mut raw::RedisModuleString) -> RedisKeyWritable {
+        let key_str = RedisString::create_from_redis_string(ctx, string);
+        let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::ReadWrite));
+        RedisKeyWritable {
+            ctx,
+            key_inner,
+            key_str,
+        }
     }
 
     pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&mut T>, RedisError> {
