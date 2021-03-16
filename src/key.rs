@@ -239,7 +239,10 @@ impl RedisKeyWritable {
         self.key_type() == KeyType::Empty
     }
 
-    pub fn open_with_redis_string(ctx: *mut raw::RedisModuleCtx, string: *mut raw::RedisModuleString) -> RedisKeyWritable {
+    pub fn open_with_redis_string(
+        ctx: *mut raw::RedisModuleCtx,
+        string: *mut raw::RedisModuleString,
+    ) -> RedisKeyWritable {
         let key_str = RedisString::create_from_redis_string(ctx, string);
         let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::ReadWrite));
         RedisKeyWritable {
@@ -249,7 +252,7 @@ impl RedisKeyWritable {
         }
     }
 
-    pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&mut T>, RedisError> {
+    pub fn get_value<'a, 'b, T>(&'a self, redis_type: &RedisType) -> Result<Option<&'b mut T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
         let value =
             unsafe { raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner) as *mut T };

@@ -103,9 +103,14 @@ impl RedisString {
         RedisString { ctx, inner }
     }
 
-    pub fn create_from_redis_string(ctx: *mut raw::RedisModuleCtx, redis_string: *mut raw::RedisModuleString) -> RedisString {
-
-        RedisString { ctx, inner: redis_string }
+    pub fn create_from_redis_string(
+        ctx: *mut raw::RedisModuleCtx,
+        redis_string: *mut raw::RedisModuleString,
+    ) -> RedisString {
+        RedisString {
+            ctx,
+            inner: redis_string,
+        }
     }
 
     pub fn from_ptr<'a>(ptr: *const raw::RedisModuleString) -> Result<&'a str, Utf8Error> {

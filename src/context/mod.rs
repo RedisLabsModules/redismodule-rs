@@ -23,7 +23,6 @@ pub struct Context {
 }
 
 impl Context {
-
     pub fn get_ctx(&self) -> *mut raw::RedisModuleCtx {
         self.ctx
     }
@@ -223,10 +222,20 @@ impl Context {
         return self.ctx;
     }
 
-    pub fn export_shared_api(&self, func: *const ::std::os::raw::c_void, name: *const ::std::os::raw::c_char,) {
-        unsafe { raw::RedisModule_ExportSharedAPI.unwrap()(self.ctx, name, func as *mut ::std::os::raw::c_void) };
+    pub fn export_shared_api(
+        &self,
+        func: *const ::std::os::raw::c_void,
+        name: *const ::std::os::raw::c_char,
+    ) {
+        unsafe {
+            raw::RedisModule_ExportSharedAPI.unwrap()(
+                self.ctx,
+                name,
+                func as *mut ::std::os::raw::c_void,
+            )
+        };
     }
-    
+
     #[cfg(feature = "experimental-api")]
     pub fn notify_keyspace_event(
         &self,
