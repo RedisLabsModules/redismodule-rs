@@ -23,9 +23,6 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn get_ctx(&self) -> *mut raw::RedisModuleCtx {
-        self.ctx
-    }
 
     pub fn new(ctx: *mut raw::RedisModuleCtx) -> Self {
         Self { ctx }
