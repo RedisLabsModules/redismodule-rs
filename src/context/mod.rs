@@ -23,7 +23,6 @@ pub struct Context {
 }
 
 impl Context {
-
     pub fn new(ctx: *mut raw::RedisModuleCtx) -> Self {
         Self { ctx }
     }
@@ -224,13 +223,11 @@ impl Context {
         func: *const ::std::os::raw::c_void,
         name: *const ::std::os::raw::c_char,
     ) {
-        unsafe {
-            raw::RedisModule_ExportSharedAPI.unwrap()(
-                self.ctx,
-                name,
-                func as *mut ::std::os::raw::c_void,
-            )
-        };
+        raw::export_shared_api(
+            self.ctx,
+            func,
+            name,
+        );
     }
 
     #[cfg(feature = "experimental-api")]
