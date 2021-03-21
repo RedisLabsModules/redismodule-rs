@@ -103,6 +103,16 @@ impl RedisString {
         RedisString { ctx, inner }
     }
 
+    pub fn create_from_redis_string(
+        ctx: *mut raw::RedisModuleCtx,
+        redis_string: *mut raw::RedisModuleString,
+    ) -> RedisString {
+        RedisString {
+            ctx,
+            inner: redis_string,
+        }
+    }
+
     pub fn from_ptr<'a>(ptr: *const raw::RedisModuleString) -> Result<&'a str, Utf8Error> {
         let mut len: libc::size_t = 0;
         let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(ptr, &mut len) };
