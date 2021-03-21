@@ -10,6 +10,12 @@ use crate::{RedisError, RedisResult, RedisString, RedisValue};
 #[cfg(feature = "experimental-api")]
 mod timer;
 
+#[cfg(feature = "experimental-api")]
+pub(crate) mod thread_safe;
+
+#[cfg(feature = "experimental-api")]
+pub(crate) mod blocked;
+
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
@@ -27,30 +33,24 @@ impl Context {
         }
     }
 
-    #[cfg(feature = "experimental-api")]
-    pub fn get_thread_safe_context() -> Self {
-        let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(ptr::null_mut()) };
-        Context::new(ctx)
-    }
-
-    #[cfg(feature = "experimental-api")]
-    pub fn lock(&self) {
-        unsafe { raw::RedisModule_ThreadSafeContextLock.unwrap()(self.ctx) };
-    }
-
-    #[cfg(feature = "experimental-api")]
-    pub fn unlock(&self) {
-        unsafe { raw::RedisModule_ThreadSafeContextUnlock.unwrap()(self.ctx) };
-    }
-
     pub fn log(&self, level: LogLevel, message: &str) {
-        let level = CString::new(format!("{:?}", level).to_lowercase()).unwrap();
-        let fmt = CString::new(message).unwrap();
-        unsafe { raw::RedisModule_Log.unwrap()(self.ctx, level.as_ptr(), fmt.as_ptr()) }
+        crate::logging::log_internal(self.ctx, level, message);
     }
 
     pub fn log_debug(&self, message: &str) {
+        self.log(LogLevel::Debug, message);
+    }
+
+    pub fn log_notice(&self, message: &str) {
         self.log(LogLevel::Notice, message);
+    }
+
+    pub fn log_verbose(&self, message: &str) {
+        self.log(LogLevel::Verbose, message);
+    }
+
+    pub fn log_warning(&self, message: &str) {
+        self.log(LogLevel::Warning, message);
     }
 
     pub fn auto_memory(&self) {
@@ -208,5 +208,19 @@ impl Context {
 
     pub fn create_string(&self, s: &str) -> RedisString {
         RedisString::create(self.ctx, s)
+    }
+
+    pub fn get_raw(&self) -> *mut raw::RedisModuleCtx {
+        return self.ctx;
+    }
+
+    #[cfg(feature = "experimental-api")]
+    pub fn notify_keyspace_event(
+        &self,
+        event_type: raw::NotifyEvent,
+        event: &str,
+        keyname: &str,
+    ) -> raw::Status {
+        raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
     }
 }

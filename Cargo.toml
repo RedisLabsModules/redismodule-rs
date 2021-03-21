@@ -1,6 +1,6 @@
 [package]
 name = "redis-module"
-version = "0.9.2"
+version = "0.13.0"
 authors = ["Gavrie Philipson <gavrie@redislabs.com>", "Guy Korland <guy.korland@redislabs.com>"]
 edition = "2018"
 build = "build.rs"
@@ -23,18 +23,38 @@ crate-type = ["cdylib"]
 required-features = ["experimental-api"]
 
 [[example]]
+name = "threads"
+crate-type = ["cdylib"]
+required-features = ["experimental-api"]
+
+[[example]]
+name = "block"
+crate-type = ["cdylib"]
+required-features = ["experimental-api"]
+
+[[example]]
 name = "data_type"
 crate-type = ["cdylib"]
+
+[[example]]
+name = "load_unload"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "events"
+crate-type = ["cdylib"]
+required-features = ["experimental-api"]
 
 [dependencies]
 bitflags = "1.2"
 libc = "0.2"
 enum-primitive-derive = "^0.2"
 num-traits = "^0.2"
+strum_macros = "0.19"
 #failure = "0.1"
 
 [build-dependencies]
-bindgen = "0.54"
+bindgen = "0.57"
 cc = "1.0"
 
 [features]

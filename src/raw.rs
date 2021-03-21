@@ -2,21 +2,22 @@
 // point.
 #![allow(dead_code)]
 
-use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
-
 extern crate enum_primitive_derive;
 extern crate libc;
 extern crate num_traits;
 
+use bitflags::bitflags;
+use enum_primitive_derive::Primitive;
 use libc::size_t;
 use num_traits::FromPrimitive;
 use std::ffi::CString;
+use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
 use std::ptr;
 use std::slice;
 
 pub use crate::redisraw::bindings::*;
-use crate::RedisBuffer;
 use crate::RedisString;
+use crate::{RedisBuffer, RedisError};
 
 bitflags! {
     pub struct KeyMode: c_int {
@@ -85,6 +86,22 @@ impl From<Status> for Result<(), &str> {
     }
 }
 
+#[cfg(feature = "experimental-api")]
+bitflags! {
+    pub struct NotifyEvent : c_int {
+        const GENERIC = REDISMODULE_NOTIFY_GENERIC;
+        const STRING = REDISMODULE_NOTIFY_STRING;
+        const LIST = REDISMODULE_NOTIFY_LIST;
+        const SET = REDISMODULE_NOTIFY_SET;
+        const HASH = REDISMODULE_NOTIFY_HASH;
+        const ZSET = REDISMODULE_NOTIFY_ZSET;
+        const EXPIRED = REDISMODULE_NOTIFY_EXPIRED;
+        const EVICTED = REDISMODULE_NOTIFY_EVICTED;
+        const STREAM = REDISMODULE_NOTIFY_STREAM;
+        const ALL = REDISMODULE_NOTIFY_ALL;
+    }
+}
+
 #[derive(Debug)]
 pub enum CommandFlag {
     Write,
@@ -140,6 +157,11 @@ extern "C" {
 
 pub const FMT: *const c_char = b"v\0".as_ptr() as *const c_char;
 
+// REDISMODULE_HASH_DELETE is defined explicitly here because bindgen cannot
+// parse typecasts in C macro constants yet.
+// See https://github.com/rust-lang/rust-bindgen/issues/316
+pub const REDISMODULE_HASH_DELETE: *const RedisModuleString = 1 as *const RedisModuleString;
+
 // Helper functions for the raw bindings.
 
 pub fn call_reply_type(reply: *mut RedisModuleCallReply) -> ReplyType {
@@ -179,8 +201,8 @@ pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
             RedisModule_CallReplyStringPtr.unwrap()(reply, &mut len) as *mut u8;
         String::from_utf8(
             slice::from_raw_parts(reply_string, len)
-                .into_iter()
-                .map(|v| *v)
+                .iter()
+                .copied()
                 .collect(),
         )
         .unwrap()
@@ -232,28 +254,119 @@ pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> 
     unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits) }
 }
 
-pub fn hash_get(key: *mut RedisModuleKey, field: &str) -> *mut RedisModuleString {
-    let res: *mut RedisModuleString = ptr::null_mut();
-    unsafe {
-        RedisModule_HashGet.unwrap()(
-            key,
-            REDISMODULE_HASH_CFIELDS as i32,
-            CString::new(field).unwrap().as_ptr(),
-            &res,
-            0,
-        );
+pub fn hash_get_multi<T>(
+    key: *mut RedisModuleKey,
+    fields: &[T],
+    values: &mut [*mut RedisModuleString],
+) -> Result<(), RedisError>
+where
+    T: Into<Vec<u8>> + Clone,
+{
+    assert_eq!(fields.len(), values.len());
+
+    let mut fi = fields.iter();
+    let mut vi = values.iter_mut();
+
+    macro_rules! rm {
+        () => { unsafe {
+            RedisModule_HashGet.unwrap()(key, REDISMODULE_HASH_CFIELDS as i32,
+                                         ptr::null::<c_char>())
+        }};
+        ($($args:expr)*) => { unsafe {
+            RedisModule_HashGet.unwrap()(
+                key, REDISMODULE_HASH_CFIELDS as i32,
+                $($args),*,
+                ptr::null::<c_char>()
+            )
+        }};
     }
-    res
+    macro_rules! f {
+        () => {
+            CString::new((*fi.next().unwrap()).clone())
+                .unwrap()
+                .as_ptr()
+        };
+    }
+    macro_rules! v {
+        () => {
+            vi.next().unwrap()
+        };
+    }
+
+    // This convoluted code is necessary since Redis only exposes a varargs API for HashGet
+    // to modules. Unfortunately there's no straightforward or portable way of calling a
+    // a varargs function with a variable number of arguments that is determined at runtime.
+    // See also the following Redis ticket: https://github.com/redis/redis/issues/7860
+    let res = Status::from(match fields.len() {
+        0 => rm! {},
+        1 => rm! {f!() v!()},
+        2 => rm! {f!() v!() f!() v!()},
+        3 => rm! {f!() v!() f!() v!() f!() v!()},
+        4 => rm! {f!() v!() f!() v!() f!() v!() f!() v!()},
+        5 => rm! {f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()},
+        6 => rm! {f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()},
+        7 => rm! {
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+            f!() v!()
+        },
+        8 => rm! {
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+            f!() v!() f!() v!()
+        },
+        9 => rm! {
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+            f!() v!() f!() v!() f!() v!()
+        },
+        10 => rm! {
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+            f!() v!() f!() v!() f!() v!() f!() v!()
+        },
+        11 => rm! {
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+        },
+        12 => rm! {
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+            f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
+        },
+        _ => panic!("Unsupported length"),
+    });
+
+    match res {
+        Status::Ok => Ok(()),
+        _ => Err(RedisError::Str("ERR key is not a hash value")),
+    }
 }
 
 pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleString) -> Status {
+    let field = CString::new(field).unwrap();
+
     unsafe {
         RedisModule_HashSet.unwrap()(
             key,
             REDISMODULE_HASH_CFIELDS as i32,
-            CString::new(field).unwrap().as_ptr(),
+            field.as_ptr(),
             value,
-            0,
+            ptr::null::<c_char>(),
+        )
+        .into()
+    }
+}
+
+pub fn hash_del(key: *mut RedisModuleKey, field: &str) -> Status {
+    let field = CString::new(field).unwrap();
+
+    // TODO: Add hash_del_multi()
+    // Support to pass multiple fields is desired but is complicated.
+    // See hash_get_multi() and https://github.com/redis/redis/issues/7860
+
+    unsafe {
+        RedisModule_HashSet.unwrap()(
+            key,
+            REDISMODULE_HASH_CFIELDS as i32,
+            field.as_ptr(),
+            REDISMODULE_HASH_DELETE,
+            ptr::null::<c_char>(),
         )
         .into()
     }
@@ -360,4 +473,24 @@ pub fn subscribe_to_server_event(
     callback: RedisModuleEventCallback,
 ) -> Status {
     unsafe { RedisModule_SubscribeToServerEvent.unwrap()(ctx, event, callback).into() }
+}
+
+#[cfg(feature = "experimental-api")]
+pub fn notify_keyspace_event(
+    ctx: *mut RedisModuleCtx,
+    event_type: NotifyEvent,
+    event: &str,
+    keyname: &str,
+) -> Status {
+    let event = CString::new(event).unwrap();
+    let keyname = RedisString::create(ctx, keyname);
+    unsafe {
+        RedisModule_NotifyKeyspaceEvent.unwrap()(
+            ctx,
+            event_type.bits,
+            event.as_ptr(),
+            keyname.inner,
+        )
+        .into()
+    }
 }

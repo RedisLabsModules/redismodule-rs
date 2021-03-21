@@ -85,7 +85,31 @@ impl RedisKey {
         let val = if self.is_null() {
             None
         } else {
-            hash_get_key(self.ctx, self.key_inner, field)
+            hash_mget_key(self.ctx, self.key_inner, &[field])?
+                .pop()
+                .expect("hash_mget_key should return vector of same length as input")
+        };
+        Ok(val)
+    }
+
+    /// Returns the values associated with the specified fields in the hash stored at this key.
+    /// The result will be `None` if the key does not exist.
+    pub fn hash_get_multi<'a, A, B>(
+        &self,
+        fields: &'a [A],
+    ) -> Result<Option<HMGetResult<'a, A, B>>, RedisError>
+    where
+        A: Into<Vec<u8>> + Clone,
+        RedisString: Into<B>,
+    {
+        let val = if self.is_null() {
+            None
+        } else {
+            Some(HMGetResult {
+                fields,
+                values: hash_mget_key(self.ctx, self.key_inner, fields)?,
+                phantom: std::marker::PhantomData,
+            })
         };
         Ok(val)
     }
@@ -149,8 +173,30 @@ impl RedisKeyWritable {
         raw::hash_set(self.key_inner, field, value.inner)
     }
 
+    pub fn hash_del(&self, field: &str) -> raw::Status {
+        raw::hash_del(self.key_inner, field)
+    }
+
     pub fn hash_get(&self, field: &str) -> Result<Option<RedisString>, RedisError> {
-        Ok(hash_get_key(self.ctx, self.key_inner, field))
+        Ok(hash_mget_key(self.ctx, self.key_inner, &[field])?
+            .pop()
+            .expect("hash_mget_key should return vector of same length as input"))
+    }
+
+    /// Returns the values associated with the specified fields in the hash stored at this key.
+    pub fn hash_get_multi<'a, A, B>(
+        &self,
+        fields: &'a [A],
+    ) -> Result<HMGetResult<'a, A, B>, RedisError>
+    where
+        A: Into<Vec<u8>> + Clone,
+        RedisString: Into<B>,
+    {
+        Ok(HMGetResult {
+            fields,
+            values: hash_mget_key(self.ctx, self.key_inner, fields)?,
+            phantom: std::marker::PhantomData,
+        })
     }
 
     pub fn set_expire(&self, expire: Duration) -> RedisResult {
@@ -222,6 +268,107 @@ impl RedisKeyWritable {
     }
 }
 
+/// Opaque type used to hold multi-get results. Use the provided methods to convert
+/// the results into the desired type of Rust collection.
+pub struct HMGetResult<'a, A, B>
+where
+    A: Into<Vec<u8>> + Clone,
+    RedisString: Into<B>,
+{
+    fields: &'a [A],
+    values: Vec<Option<RedisString>>,
+    phantom: std::marker::PhantomData<B>,
+}
+
+pub struct HMGetIter<'a, A, B>
+where
+    A: Into<Vec<u8>>,
+    RedisString: Into<B>,
+{
+    fields_iter: std::slice::Iter<'a, A>,
+    values_iter: std::vec::IntoIter<Option<RedisString>>,
+    phantom: std::marker::PhantomData<B>,
+}
+
+impl<'a, A, B> Iterator for HMGetIter<'a, A, B>
+where
+    A: Into<Vec<u8>> + Clone,
+    RedisString: Into<B>,
+{
+    type Item = (A, B);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            let a = self.fields_iter.next();
+            let b = self.values_iter.next();
+            match b {
+                None => return None,
+                Some(None) => continue,
+                Some(Some(rs)) => {
+                    return Some((
+                        a.expect("field and value slices not of same length")
+                            .clone(),
+                        rs.into(),
+                    ))
+                }
+            }
+        }
+    }
+}
+
+impl<'a, A, B> IntoIterator for HMGetResult<'a, A, B>
+where
+    A: Into<Vec<u8>> + Clone,
+    RedisString: Into<B>,
+{
+    type Item = (A, B);
+    type IntoIter = HMGetIter<'a, A, B>;
+
+    /// Provides an iterator over the multi-get results in the form of (field-name, field-value)
+    /// pairs. The type of field-name elements is the same as that passed to the original multi-
+    /// get call, while the field-value elements may be of any type for which a RedisString `Into`
+    /// conversion is implemented.  
+    ///
+    /// # Examples
+    ///
+    /// Get a [`HashMap`] from the results:
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    /// use redis_module::RedisError;
+    ///
+    /// let keyname = "config";
+    /// let fields = &["username", "password", "email"];
+    /// let hm = ctx
+    ///      .open_key(keyname)
+    ///      .hash_get_multi(fields)?
+    ///      .ok_or(RedisError::Str("ERR key not found"))?;
+    /// let response: HashMap<&str, String> = hm.into_iter().collect();
+    /// ```
+    ///
+    /// Get a [`Vec`] of only the field values from the results:
+    ///
+    /// ```
+    /// use redis_module::RedisError;
+    ///
+    /// let hm = ctx
+    ///      .open_key(keyname)
+    ///      .hash_get_multi(fields)?
+    ///      .ok_or(RedisError::Str("ERR key not found"))?;
+    /// let response: Vec<String> = hm.into_iter().map(|(_, v)| v).collect();
+    /// ```
+    ///
+    /// [`HashMap`]: std::collections::HashMap
+    /// [`Vec`]: Vec
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter {
+            fields_iter: self.fields.into_iter(),
+            values_iter: self.values.into_iter(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
 impl From<raw::Status> for Result<(), RedisError> {
     fn from(s: raw::Status) -> Self {
         match s {
@@ -246,17 +393,34 @@ fn read_key(key: *mut raw::RedisModuleKey) -> Result<String, Utf8Error> {
     )
 }
 
-fn hash_get_key(
+/// Get an arbitrary number of hash fields from a key by batching calls
+/// to `raw::hash_get_multi`.
+fn hash_mget_key<T>(
     ctx: *mut raw::RedisModuleCtx,
     key: *mut raw::RedisModuleKey,
-    field: &str,
-) -> Option<RedisString> {
-    let res = raw::hash_get(key, field);
-    if res.is_null() {
-        None
-    } else {
-        Some(RedisString::new(ctx, res))
+    fields: &[T],
+) -> Result<Vec<Option<RedisString>>, RedisError>
+where
+    T: Into<Vec<u8>> + Clone,
+{
+    const BATCH_SIZE: usize = 12;
+
+    let mut values = Vec::with_capacity(fields.len());
+    let mut values_raw = [std::ptr::null_mut(); BATCH_SIZE];
+
+    for chunk_fields in fields.chunks(BATCH_SIZE) {
+        let mut chunk_values = &mut values_raw[..chunk_fields.len()];
+        raw::hash_get_multi(key, chunk_fields, &mut chunk_values)?;
+        values.extend(chunk_values.iter().map(|ptr| {
+            if ptr.is_null() {
+                None
+            } else {
+                Some(RedisString::new(ctx, *ptr))
+            }
+        }));
     }
+
+    Ok(values)
 }
 
 fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
@@ -274,9 +438,7 @@ fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> R
         let raw_type = unsafe { raw::RedisModule_ModuleTypeGetType.unwrap()(key_inner) };
 
         if raw_type != *redis_type.raw_type.borrow() {
-            return Err(RedisError::String(format!(
-                "Existing key has wrong Redis type"
-            )));
+            return Err(RedisError::Str("Existing key has wrong Redis type"));
         }
     }
 
