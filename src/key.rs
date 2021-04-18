@@ -33,7 +33,7 @@ pub enum KeyMode {
 pub struct RedisKey {
     ctx: *mut raw::RedisModuleCtx,
     key_inner: *mut raw::RedisModuleKey,
-    key_str: RedisString,
+    key_str: Option<RedisString>,
 }
 
 impl RedisKey {
@@ -41,9 +41,9 @@ impl RedisKey {
         let key_str = RedisString::create(ctx, key);
         let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::Read));
         RedisKey {
-            ctx,
-            key_inner,
-            key_str,
+            ctx: ctx,
+            key_inner: key_inner,
+            key_str: Some(key_str),
         }
     }
 
@@ -133,7 +133,7 @@ pub struct RedisKeyWritable {
     // This field is needed on the struct so that its Drop implementation gets
     // called when it goes out of scope.
     #[allow(dead_code)]
-    key_str: RedisString,
+    key_str: Option<RedisString>,
 }
 
 impl RedisKeyWritable {
@@ -141,9 +141,9 @@ impl RedisKeyWritable {
         let key_str = RedisString::create(ctx, key);
         let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::ReadWrite));
         RedisKeyWritable {
-            ctx,
-            key_inner,
-            key_str,
+            ctx: ctx,
+            key_inner: key_inner,
+            key_str: Some(key_str),
         }
     }
 
@@ -243,12 +243,11 @@ impl RedisKeyWritable {
         ctx: *mut raw::RedisModuleCtx,
         string: *mut raw::RedisModuleString,
     ) -> RedisKeyWritable {
-        let key_str = RedisString::create_from_redis_string(ctx, string);
-        let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::ReadWrite));
+        let key_inner = raw::open_key(ctx, string, to_raw_mode(KeyMode::ReadWrite));
         RedisKeyWritable {
-            ctx,
-            key_inner,
-            key_str,
+            ctx: ctx,
+            key_inner: key_inner,
+            key_str: None,
         }
     }
 
