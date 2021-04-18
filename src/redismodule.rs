@@ -139,6 +139,12 @@ impl RedisString {
         let bytes = unsafe { slice::from_raw_parts(bytes as *const u8, len) };
         String::from_utf8_lossy(bytes).into_owned()
     }
+
+    // TODO: Redis allows storing and retrieving any arbitrary bytes.
+    // However rust's String and str can only store valid UTF-8.
+    // Implement these to allow non-utf8 bytes to be consumed:
+    // pub fn into_bytes(self) -> Vec<u8> {}
+    // pub fn as_bytes(&self) -> &[u8] {}
 }
 
 impl Drop for RedisString {
@@ -146,6 +152,14 @@ impl Drop for RedisString {
         unsafe {
             raw::RedisModule_FreeString.unwrap()(self.ctx, self.inner);
         }
+    }
+}
+
+impl Clone for RedisString {
+    fn clone(&self) -> RedisString {
+        let inner =
+            unsafe { raw::RedisModule_CreateStringFromString.unwrap()(self.ctx, self.inner) };
+        RedisString::new(self.ctx, inner)
     }
 }
 

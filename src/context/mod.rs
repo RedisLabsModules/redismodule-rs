@@ -182,6 +182,11 @@ impl Context {
                 }
             },
 
+            Err(RedisError::WrongType) => unsafe {
+                let msg = CString::new(RedisError::WrongType.to_string()).unwrap();
+                raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
+            },
+
             Err(RedisError::String(s)) => unsafe {
                 let msg = CString::new(s).unwrap();
                 raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()

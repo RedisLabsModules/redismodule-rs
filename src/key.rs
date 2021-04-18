@@ -199,6 +199,44 @@ impl RedisKeyWritable {
         })
     }
 
+    // `list_push_head` inserts the specified element at the head of the list stored at this key.
+    pub fn list_push_head(&self, element: RedisString) -> raw::Status {
+        raw::list_push(self.key_inner, raw::Where::ListHead, element.inner)
+    }
+
+    // `list_push_tail` inserts the specified element at the tail of the list stored at this key.
+    pub fn list_push_tail(&self, element: RedisString) -> raw::Status {
+        raw::list_push(self.key_inner, raw::Where::ListTail, element.inner)
+    }
+
+    //  `list_pop_head` pops and returns the first element of the list.
+    //  Returns None when:
+    //     1. The list is empty.
+    //     2. The key is not a list.
+    pub fn list_pop_head(&self) -> Option<RedisString> {
+        let ptr = raw::list_pop(self.key_inner, raw::Where::ListHead);
+
+        if ptr.is_null() {
+            return None;
+        }
+
+        Some(RedisString::new(self.ctx, ptr))
+    }
+
+    //  `list_pop_head` pops and returns the last element of the list.
+    //  Returns None when:
+    //     1. The list is empty.
+    //     2. The key is not a list.
+    pub fn list_pop_tail(&self) -> Option<RedisString> {
+        let ptr = raw::list_pop(self.key_inner, raw::Where::ListTail);
+
+        if ptr.is_null() {
+            return None;
+        }
+
+        Some(RedisString::new(self.ctx, ptr))
+    }
+
     pub fn set_expire(&self, expire: Duration) -> RedisResult {
         let exp_millis = expire.as_millis();
 
