@@ -400,7 +400,7 @@ where
     /// [`Vec`]: Vec
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter {
-            fields_iter: self.fields.into_iter(),
+            fields_iter: self.fields.iter(),
             values_iter: self.values.into_iter(),
             phantom: std::marker::PhantomData,
         }

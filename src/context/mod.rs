@@ -216,7 +216,7 @@ impl Context {
     }
 
     pub fn get_raw(&self) -> *mut raw::RedisModuleCtx {
-        return self.ctx;
+        self.ctx
     }
 
     #[cfg(feature = "experimental-api")]

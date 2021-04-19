@@ -67,9 +67,9 @@ fn main() {
 
     let bindings = build
         .header("src/include/redismodule.h")
-        .whitelist_var("(REDIS|Redis).*")
-        .blacklist_type("__darwin_.*")
-        .whitelist_type("RedisModule.*")
+        .allowlist_var("(REDIS|Redis).*")
+        .blocklist_type("__darwin_.*")
+        .allowlist_type("RedisModule.*")
         .parse_callbacks(Box::new(RedisModuleCallback))
         .size_t_is_usize(true)
         .generate()

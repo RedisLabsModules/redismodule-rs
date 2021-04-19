@@ -59,7 +59,7 @@ pub fn decode_args(
     argc: c_int,
 ) -> Result<Vec<String>, RedisError> {
     unsafe { slice::from_raw_parts(argv, argc as usize) }
-        .into_iter()
+        .iter()
         .map(|&arg| {
             RedisString::from_ptr(arg)
                 .map(|v| v.to_owned())
