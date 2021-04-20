@@ -214,5 +214,4 @@ workflows:
             parameters:
               platform: [focal, bionic, xenial, centos7]
       - build-macos:
-          #@@<<: *on-integ-and-version-tags
-          <<: *on-any-branch
+          <<: *on-integ-and-version-tags
