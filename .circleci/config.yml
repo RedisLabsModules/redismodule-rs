@@ -83,9 +83,9 @@ commands:
       #      redis-server --version
       - restore_cache:
           keys:
-            - v1-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
+            - v2-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
             # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
+            - v2-dependencies-
       - run:
           name: Check formatting
           command: bash -l -c "make lint"
@@ -96,7 +96,7 @@ commands:
           name: Build release
           command: bash -l -c "make build <<parameters.build_params>>"
       - save_cache:
-          key: v1-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
+          key: v2-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
           paths:
             - "~/.cargo"
             - "./target"
@@ -207,12 +207,10 @@ workflows:
   default-flow:
     jobs:
       - build:
-          #@@<<: *not-on-integ-branch
-          <<: *on-any-branch
+          <<: *not-on-integ-branch
       - platforms-build:
           context: common
-          #@@<<: *on-integ-and-version-tags
-          <<: *on-any-branch
+          <<: *on-integ-and-version-tags
           matrix:
             parameters:
               platform: [focal, bionic, xenial, centos7]
