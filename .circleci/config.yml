@@ -83,9 +83,8 @@ commands:
       #      redis-server --version
       - restore_cache:
           keys:
-            - v2-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
+            - v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
             # fallback to using the latest cache if no exact match is found
-            - v2-dependencies-
       - run:
           name: Check formatting
           command: bash -l -c "make lint"
@@ -96,7 +95,7 @@ commands:
           name: Build release
           command: bash -l -c "make build <<parameters.build_params>>"
       - save_cache:
-          key: v2-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
+          key: v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
           paths:
             - "~/.cargo"
             - "./target"
