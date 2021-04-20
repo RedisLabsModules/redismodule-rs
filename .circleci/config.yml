@@ -84,7 +84,7 @@ commands:
     steps:
       - abort-for-docs
       - checkout-all
-	  - setup-automation
+      - setup-automation
       - run:
           name: Setup build environment
           command: |
