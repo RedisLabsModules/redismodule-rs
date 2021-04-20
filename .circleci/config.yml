@@ -49,23 +49,6 @@ commands:
       - run:
           name: Checkout submodules
           command: git submodule update --init --recursive
-
-  persist-artifacts:
-    steps:
-      - persist_to_workspace:
-          root: bin/
-          paths:
-            - artifacts/snapshots/*.zip
-            - artifacts/snapshots/*.tgz
-            - artifacts/snapshots/*.tar
-            - artifacts/*.zip
-            - artifacts/*.tgz
-            - artifacts/*.tar
-      - run:
-          name: Cleanup test log dir
-          command: rm -f tests/pytest/logs/*.rdb
-      - store_artifacts:
-          path: tests/pytest/logs
   
   build-steps:
     parameters:
@@ -93,11 +76,11 @@ commands:
             rustc --version
             cargo --version
             rustup --version
-      - run:
-          name: Install Redis
-          command: |
-            bash -l -c "./deps/readies/bin/getredis -v <<parameters.redis_version>> --force <<parameters.getredis_params>>"
-            redis-server --version
+      #- run:
+      #    name: Install Redis
+      #    command: |
+      #      bash -l -c "./deps/readies/bin/getredis -v <<parameters.redis_version>> --force <<parameters.getredis_params>>"
+      #      redis-server --version
       - restore_cache:
           keys:
             - v1-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
@@ -120,7 +103,6 @@ commands:
       - run:
           name: Run all tests
           command: bash -l -c "make test"
-      - persist-artifacts
 
   platforms-build-steps:
     parameters:
@@ -159,7 +141,6 @@ jobs:
       xcode: 11.3.0
     steps:
       - build-steps
-
 
 
 on-any-branch: &on-any-branch
@@ -226,14 +207,15 @@ workflows:
   default-flow:
     jobs:
       - build:
-          <<: *not-on-integ-branch
+          #@@<<: *not-on-integ-branch
+          <<: *on-any-branch
       - platforms-build:
           context: common
-          #@@ <<: *on-integ-and-version-tags
+          #@@<<: *on-integ-and-version-tags
           <<: *on-any-branch
           matrix:
             parameters:
               platform: [focal, bionic, xenial, centos7]
       - build-macos:
-          #@@ <<: *on-integ-and-version-tags
+          #@@<<: *on-integ-and-version-tags
           <<: *on-any-branch
