@@ -5,7 +5,7 @@ import os
 import argparse
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-ROOT = os.path.abspath(os.path.join(HERE, "..")) 
+ROOT = os.path.abspath(os.path.join(HERE, ".."))
 READIES = os.path.join(ROOT, "deps/readies")
 sys.path.insert(0, READIES)
 import paella
@@ -21,7 +21,7 @@ class RedisModuleRSSetup(paella.Setup):
         self.pip_install("wheel")
         self.pip_install("setuptools --upgrade")
 
-        self.install("git toml")
+        self.install("git")
 
         self.run("%s/bin/enable-utf8" % READIES)
 
@@ -45,7 +45,7 @@ class RedisModuleRSSetup(paella.Setup):
         self.run("%s/bin/getgcc" % READIES)
 
     def common_last(self):
-        pass
+        self.pip_install("toml")
 
 #----------------------------------------------------------------------------------------------
 
