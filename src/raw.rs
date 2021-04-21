@@ -104,6 +104,7 @@ bitflags! {
         const EXPIRED = REDISMODULE_NOTIFY_EXPIRED;
         const EVICTED = REDISMODULE_NOTIFY_EVICTED;
         const STREAM = REDISMODULE_NOTIFY_STREAM;
+        const MODULE = REDISMODULE_NOTIFY_MODULE;
         const ALL = REDISMODULE_NOTIFY_ALL;
     }
 }
@@ -510,5 +511,14 @@ pub fn notify_keyspace_event(
             keyname.inner,
         )
         .into()
+    }
+}
+
+
+#[cfg(feature = "experimental-api")]
+pub fn get_keyspace_events() -> NotifyEvent {
+    unsafe {
+        let events = RedisModule_GetNotifyKeyspaceEvents.unwrap()();
+        NotifyEvent::from_bits_truncate(events)
     }
 }
