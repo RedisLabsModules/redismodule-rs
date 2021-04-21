@@ -17,6 +17,8 @@ impl ParseCallbacks for RedisModuleCallback {
             || name.starts_with("REDISMODULE_AUX_")
             || name == "REDISMODULE_OK"
             || name == "REDISMODULE_ERR"
+            || name == "REDISMODULE_LIST_HEAD"
+            || name == "REDISMODULE_LIST_TAIL"
         {
             // These values are used as `enum` discriminants, and thus must be `isize`.
             Some(IntKind::Custom {
@@ -65,9 +67,9 @@ fn main() {
 
     let bindings = build
         .header("src/include/redismodule.h")
-        .whitelist_var("(REDIS|Redis).*")
-        .blacklist_type("__darwin_.*")
-        .whitelist_type("RedisModule.*")
+        .allowlist_var("(REDIS|Redis).*")
+        .blocklist_type("__darwin_.*")
+        .allowlist_type("RedisModule.*")
         .parse_callbacks(Box::new(RedisModuleCallback))
         .size_t_is_usize(true)
         .generate()
