@@ -513,3 +513,12 @@ pub fn notify_keyspace_event(
         .into()
     }
 }
+
+
+#[cfg(feature = "experimental-api")]
+pub fn get_keyspace_events() -> NotifyEvent {
+    unsafe {
+        let events = RedisModule_GetNotifyKeyspaceEvents.unwrap()();
+        NotifyEvent::from_bits_truncate(events)
+    }
+}
