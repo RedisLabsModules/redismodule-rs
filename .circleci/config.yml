@@ -85,9 +85,9 @@ commands:
           keys:
             - v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
             # fallback to using the latest cache if no exact match is found
-      - run:
-          name: Check formatting
-          command: bash -l -c "make lint"
+      #- run:
+      #    name: Check formatting
+      #    command: bash -l -c "make lint"
       - run:
           name: Build debug
           command: bash -l -c "make build DEBUG=1 <<parameters.build_params>>"
