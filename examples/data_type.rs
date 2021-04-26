@@ -28,7 +28,16 @@ static MY_REDIS_TYPE: RedisType = RedisType::new(
         aux_load: None,
         aux_save: None,
         aux_save_triggers: 0,
+
+        free_effort: None,
+        unlink: None,
+        copy: None,
+        defrag: None,
     },
+
+
+
+
 );
 
 unsafe extern "C" fn free(value: *mut c_void) {
