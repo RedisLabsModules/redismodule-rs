@@ -1,17 +1,18 @@
-use libc::size_t;
 use std::convert::TryFrom;
 use std::os::raw::c_void;
 use std::ptr;
 use std::str::Utf8Error;
 use std::time::Duration;
 
+use libc::size_t;
+
 use raw::KeyType;
 
 use crate::from_byte_string;
 use crate::native_types::RedisType;
 use crate::raw;
-use crate::redismodule::REDIS_OK;
 use crate::RedisError;
+use crate::redismodule::REDIS_OK;
 use crate::RedisResult;
 use crate::RedisString;
 
@@ -33,7 +34,6 @@ pub enum KeyMode {
 pub struct RedisKey {
     ctx: *mut raw::RedisModuleCtx,
     key_inner: *mut raw::RedisModuleKey,
-    key_str: Option<RedisString>,
 }
 
 impl RedisKey {
@@ -43,7 +43,6 @@ impl RedisKey {
         RedisKey {
             ctx: ctx,
             key_inner: key_inner,
-            key_str: Some(key_str),
         }
     }
 
@@ -127,13 +126,6 @@ impl Drop for RedisKey {
 pub struct RedisKeyWritable {
     ctx: *mut raw::RedisModuleCtx,
     key_inner: *mut raw::RedisModuleKey,
-
-    // The Redis string
-    //
-    // This field is needed on the struct so that its Drop implementation gets
-    // called when it goes out of scope.
-    #[allow(dead_code)]
-    key_str: Option<RedisString>,
 }
 
 impl RedisKeyWritable {
@@ -143,7 +135,6 @@ impl RedisKeyWritable {
         RedisKeyWritable {
             ctx: ctx,
             key_inner: key_inner,
-            key_str: Some(key_str),
         }
     }
 
@@ -285,7 +276,6 @@ impl RedisKeyWritable {
         RedisKeyWritable {
             ctx: ctx,
             key_inner: key_inner,
-            key_str: None,
         }
     }
 
