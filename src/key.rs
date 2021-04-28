@@ -270,9 +270,9 @@ impl RedisKeyWritable {
 
     pub fn open_with_redis_string(
         ctx: *mut raw::RedisModuleCtx,
-        string: *mut raw::RedisModuleString,
+        key: *mut raw::RedisModuleString,
     ) -> RedisKeyWritable {
-        let key_inner = raw::open_key(ctx, string, to_raw_mode(KeyMode::ReadWrite));
+        let key_inner = raw::open_key(ctx, key, to_raw_mode(KeyMode::ReadWrite));
         RedisKeyWritable {
             ctx: ctx,
             key_inner: key_inner,
