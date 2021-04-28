@@ -203,8 +203,8 @@ impl Context {
         RedisKey::open(self.ctx, key)
     }
 
-    pub fn open_with_redis_string(&self, string: *mut raw::RedisModuleString) -> RedisKeyWritable {
-        RedisKeyWritable::open_with_redis_string(self.ctx, string)
+    pub fn open_with_redis_string(&self, key: *mut raw::RedisModuleString) -> RedisKeyWritable {
+        RedisKeyWritable::open_with_redis_string(self.ctx, key)
     }
 
     pub fn open_key_writable(&self, key: &str) -> RedisKeyWritable {
