@@ -203,6 +203,10 @@ impl Context {
         RedisKey::open(self.ctx, key)
     }
 
+    pub fn open_with_redis_string(&self, key: *mut raw::RedisModuleString) -> RedisKeyWritable {
+        RedisKeyWritable::open_with_redis_string(self.ctx, key)
+    }
+
     pub fn open_key_writable(&self, key: &str) -> RedisKeyWritable {
         RedisKeyWritable::open(self.ctx, key)
     }
@@ -217,6 +221,18 @@ impl Context {
 
     pub fn get_raw(&self) -> *mut raw::RedisModuleCtx {
         self.ctx
+    }
+
+    pub fn export_shared_api(
+        &self,
+        func: *const ::std::os::raw::c_void,
+        name: *const ::std::os::raw::c_char,
+    ) {
+        raw::export_shared_api(
+            self.ctx,
+            func,
+            name,
+        );
     }
 
     #[cfg(feature = "experimental-api")]

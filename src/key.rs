@@ -1,17 +1,18 @@
-use libc::size_t;
 use std::convert::TryFrom;
 use std::os::raw::c_void;
 use std::ptr;
 use std::str::Utf8Error;
 use std::time::Duration;
 
+use libc::size_t;
+
 use raw::KeyType;
 
 use crate::from_byte_string;
 use crate::native_types::RedisType;
 use crate::raw;
-use crate::redismodule::REDIS_OK;
 use crate::RedisError;
+use crate::redismodule::REDIS_OK;
 use crate::RedisResult;
 use crate::RedisString;
 
@@ -33,7 +34,6 @@ pub enum KeyMode {
 pub struct RedisKey {
     ctx: *mut raw::RedisModuleCtx,
     key_inner: *mut raw::RedisModuleKey,
-    key_str: RedisString,
 }
 
 impl RedisKey {
@@ -41,9 +41,8 @@ impl RedisKey {
         let key_str = RedisString::create(ctx, key);
         let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::Read));
         RedisKey {
-            ctx,
-            key_inner,
-            key_str,
+            ctx: ctx,
+            key_inner: key_inner,
         }
     }
 
@@ -127,13 +126,6 @@ impl Drop for RedisKey {
 pub struct RedisKeyWritable {
     ctx: *mut raw::RedisModuleCtx,
     key_inner: *mut raw::RedisModuleKey,
-
-    // The Redis string
-    //
-    // This field is needed on the struct so that its Drop implementation gets
-    // called when it goes out of scope.
-    #[allow(dead_code)]
-    key_str: RedisString,
 }
 
 impl RedisKeyWritable {
@@ -141,9 +133,8 @@ impl RedisKeyWritable {
         let key_str = RedisString::create(ctx, key);
         let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::ReadWrite));
         RedisKeyWritable {
-            ctx,
-            key_inner,
-            key_str,
+            ctx: ctx,
+            key_inner: key_inner,
         }
     }
 
@@ -277,7 +268,18 @@ impl RedisKeyWritable {
         self.key_type() == KeyType::Empty
     }
 
-    pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&mut T>, RedisError> {
+    pub fn open_with_redis_string(
+        ctx: *mut raw::RedisModuleCtx,
+        key: *mut raw::RedisModuleString,
+    ) -> RedisKeyWritable {
+        let key_inner = raw::open_key(ctx, key, to_raw_mode(KeyMode::ReadWrite));
+        RedisKeyWritable {
+            ctx: ctx,
+            key_inner: key_inner,
+        }
+    }
+
+    pub fn get_value<'a, 'b, T>(&'a self, redis_type: &RedisType) -> Result<Option<&'b mut T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
         let value =
             unsafe { raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner) as *mut T };
