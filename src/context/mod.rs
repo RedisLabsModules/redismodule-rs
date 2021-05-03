@@ -223,16 +223,13 @@ impl Context {
         self.ctx
     }
 
+    #[cfg(feature = "experimental-api")]
     pub fn export_shared_api(
         &self,
         func: *const ::std::os::raw::c_void,
         name: *const ::std::os::raw::c_char,
     ) {
-        raw::export_shared_api(
-            self.ctx,
-            func,
-            name,
-        );
+        raw::export_shared_api(self.ctx, func, name);
     }
 
     #[cfg(feature = "experimental-api")]
