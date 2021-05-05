@@ -1,6 +1,6 @@
 [package]
 name = "redis-module"
-version = "0.15.0"
+version = "0.16.0"
 authors = ["Gavrie Philipson <gavrie@redislabs.com>", "Guy Korland <guy.korland@redislabs.com>"]
 edition = "2018"
 build = "build.rs"
