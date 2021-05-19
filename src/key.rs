@@ -470,7 +470,7 @@ fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
     }
 }
 
-fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> RedisResult {
+pub fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> RedisResult {
     let key_type: KeyType = unsafe { raw::RedisModule_KeyType.unwrap()(key_inner) }.into();
 
     if key_type != KeyType::Empty {
