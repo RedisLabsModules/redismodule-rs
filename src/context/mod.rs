@@ -19,7 +19,7 @@ pub(crate) mod blocked;
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
-    pub(crate) ctx: *mut raw::RedisModuleCtx,
+    pub ctx: *mut raw::RedisModuleCtx,
 }
 
 impl Context {
