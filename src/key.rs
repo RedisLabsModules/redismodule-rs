@@ -41,8 +41,8 @@ impl RedisKey {
         let key_str = RedisString::create(ctx, key);
         let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::Read));
         RedisKey {
-            ctx: ctx,
-            key_inner: key_inner,
+            ctx,
+            key_inner,
         }
     }
 
@@ -133,8 +133,8 @@ impl RedisKeyWritable {
         let key_str = RedisString::create(ctx, key);
         let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::ReadWrite));
         RedisKeyWritable {
-            ctx: ctx,
-            key_inner: key_inner,
+            ctx,
+            key_inner,
         }
     }
 
@@ -274,8 +274,8 @@ impl RedisKeyWritable {
     ) -> RedisKeyWritable {
         let key_inner = raw::open_key(ctx, key, to_raw_mode(KeyMode::ReadWrite));
         RedisKeyWritable {
-            ctx: ctx,
-            key_inner: key_inner,
+            ctx,
+            key_inner,
         }
     }
 
