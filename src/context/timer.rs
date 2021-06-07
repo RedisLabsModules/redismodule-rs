@@ -20,7 +20,12 @@ impl Context {
     /// This function takes ownership of the provided data, and transfers it to Redis.
     /// The callback will get the original data back in a type safe manner.
     /// When the callback is done, the data will be dropped.
-    pub fn create_timer<F, T>(&self, period: Duration, callback: F, data: T) -> RedisModuleTimerID
+    pub fn create_timer<F, T: 'static>(
+        &self,
+        period: Duration,
+        callback: F,
+        data: T,
+    ) -> RedisModuleTimerID
     where
         F: FnOnce(&Context, T),
     {
