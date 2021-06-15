@@ -35,6 +35,7 @@ pub enum KeyType {
     Set = REDISMODULE_KEYTYPE_SET,
     ZSet = REDISMODULE_KEYTYPE_ZSET,
     Module = REDISMODULE_KEYTYPE_MODULE,
+    Stream = REDISMODULE_KEYTYPE_STREAM,
 }
 
 impl From<c_int> for KeyType {
