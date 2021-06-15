@@ -11,8 +11,8 @@ use raw::KeyType;
 use crate::from_byte_string;
 use crate::native_types::RedisType;
 use crate::raw;
-use crate::RedisError;
 use crate::redismodule::REDIS_OK;
+use crate::RedisError;
 use crate::RedisResult;
 use crate::RedisString;
 
@@ -279,7 +279,10 @@ impl RedisKeyWritable {
         }
     }
 
-    pub fn get_value<'a, 'b, T>(&'a self, redis_type: &RedisType) -> Result<Option<&'b mut T>, RedisError> {
+    pub fn get_value<'a, 'b, T>(
+        &'a self,
+        redis_type: &RedisType,
+    ) -> Result<Option<&'b mut T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
         let value =
             unsafe { raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner) as *mut T };

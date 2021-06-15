@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{parse_integer, Context, RedisError, RedisResult};
+use redis_module::{Context, RedisError, RedisResult, RedisString};
 
-fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
+fn hello_mul(_: &Context, args: Vec<RedisString>) -> RedisResult {
     if args.len() < 2 {
         return Err(RedisError::WrongArity);
     }
@@ -11,7 +11,7 @@ fn hello_mul(_: &Context, args: Vec<String>) -> RedisResult {
     let nums = args
         .into_iter()
         .skip(1)
-        .map(|s| parse_integer(&s))
+        .map(|s| s.parse_integer())
         .collect::<Result<Vec<i64>, RedisError>>()?;
 
     let product = nums.iter().product();

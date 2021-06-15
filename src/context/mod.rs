@@ -153,6 +153,10 @@ impl Context {
                 .into()
             },
 
+            Ok(RedisValue::BulkRedisString(s)) => unsafe {
+                raw::RedisModule_ReplyWithString.unwrap()(self.ctx, s.inner).into()
+            },
+
             Ok(RedisValue::Array(array)) => {
                 unsafe {
                     // According to the Redis source code this always succeeds,

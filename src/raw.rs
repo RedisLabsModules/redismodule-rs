@@ -398,6 +398,14 @@ pub fn string_ptr_len(s: *mut RedisModuleString, len: *mut size_t) -> *const c_c
     unsafe { RedisModule_StringPtrLen.unwrap()(s, len) }
 }
 
+pub fn string_to_longlong(s: *mut RedisModuleString, len: *mut i64) -> Status {
+    unsafe { RedisModule_StringToLongLong.unwrap()(s, len).into() }
+}
+
+pub fn string_to_double(s: *mut RedisModuleString, len: *mut f64) -> Status {
+    unsafe { RedisModule_StringToDouble.unwrap()(s, len).into() }
+}
+
 pub fn string_set(key: *mut RedisModuleKey, s: *mut RedisModuleString) -> Status {
     unsafe { RedisModule_StringSet.unwrap()(key, s).into() }
 }
