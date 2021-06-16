@@ -41,8 +41,8 @@ mod tests {
     use super::*;
     use redis_module::RedisValue;
 
-    fn into_string_vec(args: &[&str]) -> Vec<String> {
-        args.iter().map(|v| String::from(*v)).collect()
+    fn into_string_vec(ctx: &Context, args: &[&str]) -> Vec<RedisString> {
+        args.iter().map(|v| RedisString::create(ctx.ctx, v)).collect()
     }
 
     fn into_redisvalue_vec(args: &[&str]) -> Vec<RedisValue> {
@@ -55,7 +55,7 @@ mod tests {
     fn test_keys_pos() {
         let result = keys_pos(
             &Context::dummy(),
-            into_string_vec(&["keys_pos", "a", "1", "b", "2"]),
+            into_string_vec(&Context::dummy(), &["keys_pos", "a", "1", "b", "2"]),
         );
 
         match result {
@@ -70,7 +70,7 @@ mod tests {
     fn test_keys_pos_bad_args() {
         let result = keys_pos(
             &Context::dummy(),
-            into_string_vec(&["keys_pos", "a", "1", "b"]),
+            into_string_vec(&Context::dummy(), &["keys_pos", "a", "1", "b"]),
         );
 
         match result {

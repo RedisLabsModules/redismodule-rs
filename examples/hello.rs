@@ -40,10 +40,14 @@ mod tests {
     use super::*;
     use redis_module::RedisValue;
 
+    fn into_string_vec(ctx: &Context, args: &[&str]) -> Vec<RedisString> {
+        args.iter().map(|v| RedisString::create(ctx.ctx, v)).collect()
+    }
+
     fn run_hello_mul(args: &[&str]) -> RedisResult {
         hello_mul(
             &Context::dummy(),
-            args.iter().map(|v| String::from(*v)).collect(),
+            into_string_vec( &Context::dummy(), args),
         )
     }
 
