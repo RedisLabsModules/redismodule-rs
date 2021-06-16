@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{Context, NotifyEvent, RedisError, RedisResult, Status, RedisString};
+use redis_module::{Context, NotifyEvent, RedisError, RedisResult, RedisString, Status};
 
 fn on_event(ctx: &Context, event_type: NotifyEvent, event: &str, key: &str) {
     let msg = format!(

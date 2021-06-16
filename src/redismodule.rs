@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::convert::TryFrom;
 use std::ffi::CString;
 use std::fmt;
@@ -7,7 +8,6 @@ use std::slice;
 use std::str;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
-use std::borrow::Borrow;
 
 pub use crate::raw;
 pub use crate::rediserror::RedisError;
@@ -32,8 +32,7 @@ where
     T: Iterator<Item = RedisString>,
 {
     fn next_redis_string(&mut self) -> Result<RedisString, RedisError> {
-        self.next()
-            .map_or(Err(RedisError::WrongArity), |v| Ok(v))
+        self.next().map_or(Err(RedisError::WrongArity), |v| Ok(v))
     }
 
     fn next_string(&mut self) -> Result<String, RedisError> {
@@ -175,7 +174,7 @@ impl Display for RedisString {
 }
 
 impl Borrow<str> for RedisString {
-    fn borrow(&self) -> &str { 
+    fn borrow(&self) -> &str {
         // TODO remove unwrap()
         self.try_as_str().unwrap()
     }
