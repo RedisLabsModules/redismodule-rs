@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{Context, NextArg, RedisResult};
+use redis_module::{Context, NextArg, RedisResult, RedisString};
 use std::time::Duration;
 
 fn callback(ctx: &Context, data: String) {
@@ -10,7 +10,7 @@ fn callback(ctx: &Context, data: String) {
 
 type MyData = String;
 
-fn timer_create(ctx: &Context, args: Vec<String>) -> RedisResult {
+fn timer_create(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let mut args = args.into_iter().skip(1);
     let duration = args.next_i64()?;
     let data: MyData = args.next_string()?;
@@ -20,7 +20,7 @@ fn timer_create(ctx: &Context, args: Vec<String>) -> RedisResult {
     return Ok(format!("{}", timer_id).into());
 }
 
-fn timer_info(ctx: &Context, args: Vec<String>) -> RedisResult {
+fn timer_info(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let mut args = args.into_iter().skip(1);
     let timer_id = args.next_u64()?;
 
@@ -30,7 +30,7 @@ fn timer_info(ctx: &Context, args: Vec<String>) -> RedisResult {
     return Ok(reply.into());
 }
 
-fn timer_stop(ctx: &Context, args: Vec<String>) -> RedisResult {
+fn timer_stop(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let mut args = args.into_iter().skip(1);
     let timer_id = args.next_u64()?;
 

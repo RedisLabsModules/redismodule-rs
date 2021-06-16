@@ -19,6 +19,7 @@ pub const REDIS_OK: RedisResult = Ok(RedisValue::SimpleStringStatic("OK"));
 pub const TYPE_METHOD_VERSION: u64 = raw::REDISMODULE_TYPE_METHOD_VERSION as u64;
 
 pub trait NextArg {
+    fn next_redis_string(&mut self) -> Result<RedisString, RedisError>;
     fn next_string(&mut self) -> Result<String, RedisError>;
     fn next_i64(&mut self) -> Result<i64, RedisError>;
     fn next_u64(&mut self) -> Result<u64, RedisError>;
@@ -30,6 +31,11 @@ impl<T> NextArg for T
 where
     T: Iterator<Item = RedisString>,
 {
+    fn next_redis_string(&mut self) -> Result<RedisString, RedisError> {
+        self.next()
+            .map_or(Err(RedisError::WrongArity), |v| Ok(v))
+    }
+
     fn next_string(&mut self) -> Result<String, RedisError> {
         self.next()
             .map_or(Err(RedisError::WrongArity), |v| Ok(v.into_string_lossy()))

@@ -1,12 +1,12 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{Context, RedisResult, ThreadSafeContext};
+use redis_module::{Context, RedisResult, ThreadSafeContext, RedisString};
 use std::mem::drop;
 use std::thread;
 use std::time::Duration;
 
-fn threads(_: &Context, _args: Vec<String>) -> RedisResult {
+fn threads(_: &Context, _args: Vec<RedisString>) -> RedisResult {
     thread::spawn(move || {
         let thread_ctx = ThreadSafeContext::new();
 

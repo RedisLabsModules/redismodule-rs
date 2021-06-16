@@ -203,15 +203,15 @@ impl Context {
         }
     }
 
-    pub fn open_key(&self, key: &str) -> RedisKey {
+    pub fn open_key(&self, key: &RedisString) -> RedisKey {
         RedisKey::open(self.ctx, key)
     }
 
-    pub fn open_with_redis_string(&self, key: *mut raw::RedisModuleString) -> RedisKeyWritable {
-        RedisKeyWritable::open_with_redis_string(self.ctx, key)
-    }
+    // pub fn open_with_redis_string(&self, key: *mut raw::RedisModuleString) -> RedisKeyWritable {
+    //     RedisKeyWritable::open_with_redis_string(self.ctx, key)
+    // }
 
-    pub fn open_key_writable(&self, key: &str) -> RedisKeyWritable {
+    pub fn open_key_writable(&self, key: &RedisString) -> RedisKeyWritable {
         RedisKeyWritable::open(self.ctx, key)
     }
 
@@ -241,7 +241,7 @@ impl Context {
         &self,
         event_type: raw::NotifyEvent,
         event: &str,
-        keyname: &str,
+        keyname: &RedisString,
     ) -> raw::Status {
         raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
     }

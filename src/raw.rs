@@ -518,10 +518,9 @@ pub fn notify_keyspace_event(
     ctx: *mut RedisModuleCtx,
     event_type: NotifyEvent,
     event: &str,
-    keyname: &str,
+    keyname: &RedisString,
 ) -> Status {
     let event = CString::new(event).unwrap();
-    let keyname = RedisString::create(ctx, keyname);
     unsafe {
         RedisModule_NotifyKeyspaceEvent.unwrap()(
             ctx,
