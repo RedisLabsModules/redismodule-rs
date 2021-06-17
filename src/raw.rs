@@ -35,12 +35,19 @@ pub enum KeyType {
     Set = REDISMODULE_KEYTYPE_SET,
     ZSet = REDISMODULE_KEYTYPE_ZSET,
     Module = REDISMODULE_KEYTYPE_MODULE,
+    Stream = REDISMODULE_KEYTYPE_STREAM,
 }
 
 impl From<c_int> for KeyType {
     fn from(v: c_int) -> Self {
         KeyType::from_i32(v).unwrap()
     }
+}
+
+#[derive(Primitive, Debug, PartialEq)]
+pub enum Where {
+    ListHead = REDISMODULE_LIST_HEAD,
+    ListTail = REDISMODULE_LIST_TAIL,
 }
 
 #[derive(Primitive, Debug, PartialEq)]
@@ -98,6 +105,8 @@ bitflags! {
         const EXPIRED = REDISMODULE_NOTIFY_EXPIRED;
         const EVICTED = REDISMODULE_NOTIFY_EVICTED;
         const STREAM = REDISMODULE_NOTIFY_STREAM;
+        const MODULE = REDISMODULE_NOTIFY_MODULE;
+        const LOADED = REDISMODULE_NOTIFY_LOADED;
         const ALL = REDISMODULE_NOTIFY_ALL;
     }
 }
@@ -372,6 +381,18 @@ pub fn hash_del(key: *mut RedisModuleKey, field: &str) -> Status {
     }
 }
 
+pub fn list_push(
+    key: *mut RedisModuleKey,
+    list_where: Where,
+    element: *mut RedisModuleString,
+) -> Status {
+    unsafe { RedisModule_ListPush.unwrap()(key, list_where as i32, element).into() }
+}
+
+pub fn list_pop(key: *mut RedisModuleKey, list_where: Where) -> *mut RedisModuleString {
+    unsafe { RedisModule_ListPop.unwrap()(key, list_where as i32) }
+}
+
 // Returns pointer to the C string, and sets len to its length
 pub fn string_ptr_len(s: *mut RedisModuleString, len: *mut size_t) -> *const c_char {
     unsafe { RedisModule_StringPtrLen.unwrap()(s, len) }
@@ -476,6 +497,15 @@ pub fn subscribe_to_server_event(
 }
 
 #[cfg(feature = "experimental-api")]
+pub fn export_shared_api(
+    ctx: *mut RedisModuleCtx,
+    func: *const ::std::os::raw::c_void,
+    name: *const ::std::os::raw::c_char,
+) {
+    unsafe { RedisModule_ExportSharedAPI.unwrap()(ctx, name, func as *mut ::std::os::raw::c_void) };
+}
+
+#[cfg(feature = "experimental-api")]
 pub fn notify_keyspace_event(
     ctx: *mut RedisModuleCtx,
     event_type: NotifyEvent,
@@ -492,5 +522,13 @@ pub fn notify_keyspace_event(
             keyname.inner,
         )
         .into()
+    }
+}
+
+#[cfg(feature = "experimental-api")]
+pub fn get_keyspace_events() -> NotifyEvent {
+    unsafe {
+        let events = RedisModule_GetNotifyKeyspaceEvents.unwrap()();
+        NotifyEvent::from_bits_truncate(events)
     }
 }

@@ -1,59 +1,217 @@
-version: 2
+version: 2.1
+
+commands:
+  abort-for-docs:
+    steps:
+      - run:
+          name: Avoid tests for docs
+          command: |
+            if [[ $CIRCLE_BRANCH == *_docs ]]; then
+              echo "Identifies as documents PR, no testing required"
+              circleci step halt
+            fi
+
+  early-return-for-forked-pull-requests:
+    description: >-
+      If this build is from a fork, stop executing the current job and return success.
+      This is useful to avoid steps that will fail due to missing credentials.
+    steps:
+      - run:
+          name: Early return if this build is from a forked PR
+          command: |
+            if [[ -n "$CIRCLE_PR_NUMBER" ]]; then
+              echo "Nothing to do for forked PRs, so marking this step successful"
+              circleci step halt
+            fi
+
+  setup-executor:
+    steps:
+      - run:
+          name: Setup executor
+          command: |
+            apt-get -qq update
+            apt-get -q install -y git openssh-client curl ca-certificates make tar gzip
+            bash <(curl -fsSL https://get.docker.com)
+      - setup_remote_docker:
+          docker_layer_caching: true
+
+  setup-automation:
+    steps:
+      - run:
+          name: Setup automation
+          command: |
+            (mkdir -p deps; cd deps; git clone https://github.com/RedisLabsModules/readies.git)
+            ./deps/readies/bin/getpy3
+
+  checkout-all:
+    steps:
+      - checkout
+      - run:
+          name: Checkout submodules
+          command: git submodule update --init --recursive
+  
+  build-steps:
+    parameters:
+      build_params:
+        type: string
+        default: ""
+      test_params:
+        type: string
+        default: ""
+      redis_version:
+        type: string
+        default: "6"
+      getredis_params:
+        type: string
+        default: ""
+    steps:
+      - abort-for-docs
+      - checkout-all
+      - setup-automation
+      - run:
+          name: Setup build environment
+          command: |
+            ./sbin/system-setup.py
+            source $HOME/.cargo/env
+            rustc --version
+            cargo --version
+            rustup --version
+      #- run:
+      #    name: Install Redis
+      #    command: |
+      #      bash -l -c "./deps/readies/bin/getredis -v <<parameters.redis_version>> --force <<parameters.getredis_params>>"
+      #      redis-server --version
+      - restore_cache:
+          keys:
+            - v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
+            # fallback to using the latest cache if no exact match is found
+      #- run:
+      #    name: Check formatting
+      #    command: bash -l -c "make lint"
+      - run:
+          name: Build debug
+          command: bash -l -c "make build DEBUG=1 <<parameters.build_params>>"
+      - run:
+          name: Build release
+          command: bash -l -c "make build <<parameters.build_params>>"
+      - save_cache:
+          key: v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
+          paths:
+            - "~/.cargo"
+            - "./target"
+      - run:
+          name: Run all tests
+          command: bash -l -c "make test"
+
+  platforms-build-steps:
+    parameters:
+      platform:
+        type: string
+    steps:
+      - abort-for-docs
+      - setup-executor
+      - checkout-all
+      - setup-automation
+      - run:
+          name: Build for platform
+          command: |
+            cd build/platforms
+            make build OSNICK=<<parameters.platform>> VERSION=$CIRCLE_TAG BRANCH=$CIRCLE_BRANCH TEST=1 SHOW=1
 
 jobs:
   build:
     docker:
-      - image: circleci/rust
-
+      - image: redisfab/rmbuilder:6.2.1-x64-buster
     steps:
-      - checkout
-      - run:
-          name: Version information
-          command: rustc --version; cargo --version; rustup --version
+      - build-steps
 
-      - run:
-          name: Install prerequisite
-          command: sudo apt-get install -y clang llvm
+  platforms-build:
+    parameters:
+      platform:
+        type: string
+    docker:
+      - image: debian:buster
+    steps:
+      - platforms-build-steps:
+          platform: <<parameters.platform>>
 
-      - restore_cache:
-          keys:
-            - v1-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
-#      - run:
-#          name: Check formatting
-#          command: |
-#            rustfmt --version
-#            cargo fmt -- --write-mode=diff
+  build-macos:
+    macos:
+      xcode: 11.3.0
+    steps:
+      - build-steps
 
-      - run:
-          name: Build all targets
-          command: cargo build --features experimental-api --all --all-targets
 
-#      - run:
-#          name: Nightly Build
-#          command: |
-#            rustup run nightly rustc --version --verbose
-#            rustup run nightly cargo --version --verbose
-#            rustup run nightly cargo build
-#      - run:
-#          name: Stable Build
-#          command: |
-#            rustup run stable rustc --version --verbose
-#            rustup run stable cargo --version --verbose
-#            rustup run stable cargo build
-#      - run:
-#          name: Test
-#          command: rustup run stable cargo test
-#      - run:
-#          name: Upload Coverage
-#          command: ./scripts/codecov.sh
-      - save_cache:
-          key: v1-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
-          paths:
-            - "~/.cargo"
-            - "./target"
+on-any-branch: &on-any-branch
+  filters:
+    branches:
+      only: /.*/
+    tags:
+      only: /.*/
 
-      - run:
-          name: Run all tests
-          command: cargo test --features test,experimental-api --all-targets
+never: &never
+  filters:
+    branches:
+      ignore: /.*/
+    tags:
+      ignore: /.*/
+
+on-master: &on-master
+  filters:
+    branches:
+      only: master
+    tags:
+      ignore: /.*/
+
+on-integ-branch: &on-integ-branch
+  filters:
+    branches:
+      only:
+        - master
+        - /^\d+\.\d+.*$/
+        - /^feature-.*$/
+    tags:
+      ignore: /.*/
+
+not-on-integ-branch: &not-on-integ-branch
+  filters:
+    branches:
+      ignore:
+        - master
+        - /^\d+\.\d+.*$/
+        - /^feature-.*$/
+    tags:
+      ignore: /.*/
+
+on-version-tags: &on-version-tags
+  filters:
+    branches:
+      ignore: /.*/
+    tags:
+      only: /^v[0-9].*/
+
+on-integ-and-version-tags: &on-integ-and-version-tags
+  filters:
+    branches:
+      only:
+        - master
+        - /^\d+\.\d+.*$/
+        - /^feature-.*$/
+    tags:
+      only: /^v[0-9].*/
+
+
+workflows:
+  version: 2
+  default-flow:
+    jobs:
+      - build:
+          <<: *not-on-integ-branch
+      - platforms-build:
+          context: common
+          <<: *on-integ-and-version-tags
+          matrix:
+            parameters:
+              platform: [focal, bionic, xenial, centos7]
+      - build-macos:
+          <<: *on-integ-and-version-tags

@@ -19,7 +19,7 @@ pub(crate) mod blocked;
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
-    pub(crate) ctx: *mut raw::RedisModuleCtx,
+    pub ctx: *mut raw::RedisModuleCtx,
 }
 
 impl Context {
@@ -182,6 +182,11 @@ impl Context {
                 }
             },
 
+            Err(RedisError::WrongType) => unsafe {
+                let msg = CString::new(RedisError::WrongType.to_string()).unwrap();
+                raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
+            },
+
             Err(RedisError::String(s)) => unsafe {
                 let msg = CString::new(s).unwrap();
                 raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
@@ -198,6 +203,10 @@ impl Context {
         RedisKey::open(self.ctx, key)
     }
 
+    pub fn open_with_redis_string(&self, key: *mut raw::RedisModuleString) -> RedisKeyWritable {
+        RedisKeyWritable::open_with_redis_string(self.ctx, key)
+    }
+
     pub fn open_key_writable(&self, key: &str) -> RedisKeyWritable {
         RedisKeyWritable::open(self.ctx, key)
     }
@@ -211,7 +220,16 @@ impl Context {
     }
 
     pub fn get_raw(&self) -> *mut raw::RedisModuleCtx {
-        return self.ctx;
+        self.ctx
+    }
+
+    #[cfg(feature = "experimental-api")]
+    pub fn export_shared_api(
+        &self,
+        func: *const ::std::os::raw::c_void,
+        name: *const ::std::os::raw::c_char,
+    ) {
+        raw::export_shared_api(self.ctx, func, name);
     }
 
     #[cfg(feature = "experimental-api")]

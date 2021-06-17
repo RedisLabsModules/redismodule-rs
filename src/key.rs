@@ -1,17 +1,18 @@
-use libc::size_t;
 use std::convert::TryFrom;
 use std::os::raw::c_void;
 use std::ptr;
 use std::str::Utf8Error;
 use std::time::Duration;
 
+use libc::size_t;
+
 use raw::KeyType;
 
 use crate::from_byte_string;
 use crate::native_types::RedisType;
 use crate::raw;
-use crate::redismodule::REDIS_OK;
 use crate::RedisError;
+use crate::redismodule::REDIS_OK;
 use crate::RedisResult;
 use crate::RedisString;
 
@@ -33,7 +34,6 @@ pub enum KeyMode {
 pub struct RedisKey {
     ctx: *mut raw::RedisModuleCtx,
     key_inner: *mut raw::RedisModuleKey,
-    key_str: RedisString,
 }
 
 impl RedisKey {
@@ -41,9 +41,8 @@ impl RedisKey {
         let key_str = RedisString::create(ctx, key);
         let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::Read));
         RedisKey {
-            ctx,
-            key_inner,
-            key_str,
+            ctx: ctx,
+            key_inner: key_inner,
         }
     }
 
@@ -127,13 +126,6 @@ impl Drop for RedisKey {
 pub struct RedisKeyWritable {
     ctx: *mut raw::RedisModuleCtx,
     key_inner: *mut raw::RedisModuleKey,
-
-    // The Redis string
-    //
-    // This field is needed on the struct so that its Drop implementation gets
-    // called when it goes out of scope.
-    #[allow(dead_code)]
-    key_str: RedisString,
 }
 
 impl RedisKeyWritable {
@@ -141,9 +133,8 @@ impl RedisKeyWritable {
         let key_str = RedisString::create(ctx, key);
         let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::ReadWrite));
         RedisKeyWritable {
-            ctx,
-            key_inner,
-            key_str,
+            ctx: ctx,
+            key_inner: key_inner,
         }
     }
 
@@ -199,6 +190,44 @@ impl RedisKeyWritable {
         })
     }
 
+    // `list_push_head` inserts the specified element at the head of the list stored at this key.
+    pub fn list_push_head(&self, element: RedisString) -> raw::Status {
+        raw::list_push(self.key_inner, raw::Where::ListHead, element.inner)
+    }
+
+    // `list_push_tail` inserts the specified element at the tail of the list stored at this key.
+    pub fn list_push_tail(&self, element: RedisString) -> raw::Status {
+        raw::list_push(self.key_inner, raw::Where::ListTail, element.inner)
+    }
+
+    //  `list_pop_head` pops and returns the first element of the list.
+    //  Returns None when:
+    //     1. The list is empty.
+    //     2. The key is not a list.
+    pub fn list_pop_head(&self) -> Option<RedisString> {
+        let ptr = raw::list_pop(self.key_inner, raw::Where::ListHead);
+
+        if ptr.is_null() {
+            return None;
+        }
+
+        Some(RedisString::new(self.ctx, ptr))
+    }
+
+    //  `list_pop_head` pops and returns the last element of the list.
+    //  Returns None when:
+    //     1. The list is empty.
+    //     2. The key is not a list.
+    pub fn list_pop_tail(&self) -> Option<RedisString> {
+        let ptr = raw::list_pop(self.key_inner, raw::Where::ListTail);
+
+        if ptr.is_null() {
+            return None;
+        }
+
+        Some(RedisString::new(self.ctx, ptr))
+    }
+
     pub fn set_expire(&self, expire: Duration) -> RedisResult {
         let exp_millis = expire.as_millis();
 
@@ -239,7 +268,18 @@ impl RedisKeyWritable {
         self.key_type() == KeyType::Empty
     }
 
-    pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&mut T>, RedisError> {
+    pub fn open_with_redis_string(
+        ctx: *mut raw::RedisModuleCtx,
+        key: *mut raw::RedisModuleString,
+    ) -> RedisKeyWritable {
+        let key_inner = raw::open_key(ctx, key, to_raw_mode(KeyMode::ReadWrite));
+        RedisKeyWritable {
+            ctx: ctx,
+            key_inner: key_inner,
+        }
+    }
+
+    pub fn get_value<'a, 'b, T>(&'a self, redis_type: &RedisType) -> Result<Option<&'b mut T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
         let value =
             unsafe { raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner) as *mut T };
@@ -362,7 +402,7 @@ where
     /// [`Vec`]: Vec
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter {
-            fields_iter: self.fields.into_iter(),
+            fields_iter: self.fields.iter(),
             values_iter: self.values.into_iter(),
             phantom: std::marker::PhantomData,
         }
@@ -430,7 +470,7 @@ fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
     }
 }
 
-fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> RedisResult {
+pub fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> RedisResult {
     let key_type: KeyType = unsafe { raw::RedisModule_KeyType.unwrap()(key_inner) }.into();
 
     if key_type != KeyType::Empty {
