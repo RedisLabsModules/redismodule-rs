@@ -57,6 +57,10 @@ num-traits = "^0.2"
 strum_macros = "0.21"
 #failure = "0.1"
 
+[dev-dependencies]
+anyhow = "1.0.38"
+redis = "0.20.0"
+
 [build-dependencies]
 bindgen = "0.58"
 cc = "1.0"
