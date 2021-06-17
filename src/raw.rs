@@ -398,6 +398,10 @@ pub fn string_ptr_len(s: *mut RedisModuleString, len: *mut size_t) -> *const c_c
     unsafe { RedisModule_StringPtrLen.unwrap()(s, len) }
 }
 
+pub fn string_retain_string(ctx: *mut RedisModuleCtx, s: *mut RedisModuleString) {
+    unsafe { RedisModule_RetainString.unwrap()(ctx, s) }
+}
+
 pub fn string_to_longlong(s: *mut RedisModuleString, len: *mut i64) -> Status {
     unsafe { RedisModule_StringToLongLong.unwrap()(s, len).into() }
 }

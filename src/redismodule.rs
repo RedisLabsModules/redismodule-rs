@@ -32,7 +32,7 @@ where
     T: Iterator<Item = RedisString>,
 {
     fn next_redis_string(&mut self) -> Result<RedisString, RedisError> {
-        self.next().map_or(Err(RedisError::WrongArity), |v| Ok(v))
+        self.next().map_or(Err(RedisError::WrongArity), Ok)
     }
 
     fn next_string(&mut self) -> Result<String, RedisError> {
@@ -83,6 +83,7 @@ pub struct RedisString {
 
 impl RedisString {
     pub fn new(ctx: *mut raw::RedisModuleCtx, inner: *mut raw::RedisModuleString) -> RedisString {
+        raw::string_retain_string(ctx, inner);
         RedisString { ctx, inner }
     }
 
@@ -117,8 +118,7 @@ impl RedisString {
     }
 
     pub fn try_as_str(&self) -> Result<&str, RedisError> {
-        Self::from_ptr(self.inner)
-            .map_err(|_e| RedisError::String(format!("Couldn't parse as UTF-8 string")))
+        Self::from_ptr(self.inner).map_err(|_e| RedisError::Str("Couldn't parse as UTF-8 string"))
     }
 
     /// Performs lossy conversion of a `RedisString` into an owned `String. This conversion
@@ -133,14 +133,14 @@ impl RedisString {
 
     pub fn parse_unsigned_integer(&self) -> Result<u64, RedisError> {
         let val = self.parse_integer()?;
-        u64::try_from(val).map_err(|_e| RedisError::String(format!("Couldn't parse as integer")))
+        u64::try_from(val).map_err(|_e| RedisError::Str("Couldn't parse as integer"))
     }
 
     pub fn parse_integer(&self) -> Result<i64, RedisError> {
         let mut val: i64 = 0;
         match raw::string_to_longlong(self.inner, &mut val) {
             raw::Status::Ok => Ok(val),
-            raw::Status::Err => Err(RedisError::String(format!("Couldn't parse as integer"))),
+            raw::Status::Err => Err(RedisError::Str("Couldn't parse as integer")),
         }
     }
 
@@ -148,7 +148,7 @@ impl RedisString {
         let mut val: f64 = 0.0;
         match raw::string_to_double(self.inner, &mut val) {
             raw::Status::Ok => Ok(val),
-            raw::Status::Err => Err(RedisError::String(format!("Couldn't parse as float"))),
+            raw::Status::Err => Err(RedisError::Str("Couldn't parse as float")),
         }
     }
 

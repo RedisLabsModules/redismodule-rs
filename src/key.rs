@@ -39,10 +39,7 @@ pub struct RedisKey {
 impl RedisKey {
     pub fn open(ctx: *mut raw::RedisModuleCtx, key: &RedisString) -> RedisKey {
         let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::Read));
-        RedisKey {
-            ctx: ctx,
-            key_inner: key_inner,
-        }
+        RedisKey { ctx, key_inner }
     }
 
     pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&T>, RedisError> {
@@ -130,10 +127,7 @@ pub struct RedisKeyWritable {
 impl RedisKeyWritable {
     pub fn open(ctx: *mut raw::RedisModuleCtx, key: &RedisString) -> RedisKeyWritable {
         let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::ReadWrite));
-        RedisKeyWritable {
-            ctx: ctx,
-            key_inner: key_inner,
-        }
+        RedisKeyWritable { ctx, key_inner }
     }
 
     /// Detects whether the value stored in a Redis key is empty.
@@ -271,10 +265,7 @@ impl RedisKeyWritable {
         key: *mut raw::RedisModuleString,
     ) -> RedisKeyWritable {
         let key_inner = raw::open_key(ctx, key, to_raw_mode(KeyMode::ReadWrite));
-        RedisKeyWritable {
-            ctx: ctx,
-            key_inner: key_inner,
-        }
+        RedisKeyWritable { ctx, key_inner }
     }
 
     pub fn get_value<'a, 'b, T>(
