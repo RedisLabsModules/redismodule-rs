@@ -6,7 +6,6 @@ use utils::{get_redis_connection, start_redis_server_with_module};
 
 #[test]
 fn test_hello() -> Result<()> {
-
     let _guards = vec![start_redis_server_with_module("hello", 6479)?];
     let mut con = get_redis_connection(6479)?;
 
@@ -24,7 +23,6 @@ fn test_hello() -> Result<()> {
 
 #[test]
 fn test_keys_pos() -> Result<()> {
-
     let _guards = vec![start_redis_server_with_module("keys_pos", 6480)?];
     let mut con = get_redis_connection(6480)?;
 
