@@ -1,6 +1,6 @@
 [package]
 name = "redis-module"
-version = "0.17.0"
+version = "0.18.0"
 authors = ["Gavrie Philipson <gavrie@redislabs.com>", "Guy Korland <guy.korland@redislabs.com>"]
 edition = "2018"
 build = "build.rs"
@@ -56,6 +56,10 @@ enum-primitive-derive = "^0.1"
 num-traits = "^0.2"
 strum_macros = "0.21"
 #failure = "0.1"
+
+[dev-dependencies]
+anyhow = "1.0.38"
+redis = "0.20.0"
 
 [build-dependencies]
 bindgen = "0.58"
