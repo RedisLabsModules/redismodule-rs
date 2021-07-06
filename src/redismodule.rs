@@ -118,7 +118,7 @@ impl RedisString {
     }
 
     pub fn try_as_str(&self) -> Result<&str, RedisError> {
-        Self::from_ptr(self.inner).map_err(|_e| RedisError::Str("Couldn't parse as UTF-8 string"))
+        Self::from_ptr(self.inner).map_err(|_| RedisError::Str("Couldn't parse as UTF-8 string"))
     }
 
     /// Performs lossy conversion of a `RedisString` into an owned `String. This conversion
@@ -133,7 +133,8 @@ impl RedisString {
 
     pub fn parse_unsigned_integer(&self) -> Result<u64, RedisError> {
         let val = self.parse_integer()?;
-        u64::try_from(val).map_err(|_e| RedisError::Str("Couldn't parse as integer"))
+        u64::try_from(val)
+            .map_err(|_| RedisError::Str("Couldn't parse negative number as unsigned integer"))
     }
 
     pub fn parse_integer(&self) -> Result<i64, RedisError> {
@@ -175,8 +176,8 @@ impl Display for RedisString {
 
 impl Borrow<str> for RedisString {
     fn borrow(&self) -> &str {
-        // TODO remove unwrap()
-        self.try_as_str().unwrap()
+        // RedisString might not be UTF-8 safe
+        self.try_as_str().unwrap_or_default()
     }
 }
 

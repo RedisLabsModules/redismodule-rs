@@ -15,7 +15,7 @@ fn test_hello() -> Result<()> {
     let res: Result<Vec<i32>, RedisError> =
         redis::cmd("hello.mul").arg(&["3", "xx"]).query(&mut con);
     if let Ok(_) = res {
-        return Err(anyhow::Error::msg("Shold return an error"));
+        return Err(anyhow::Error::msg("Should return an error"));
     }
 
     Ok(())
