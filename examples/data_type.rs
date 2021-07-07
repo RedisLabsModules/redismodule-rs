@@ -42,7 +42,7 @@ unsafe extern "C" fn free(value: *mut c_void) {
 
 fn alloc_set(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let mut args = args.into_iter().skip(1);
-    let key = args.next_redis_string()?;
+    let key = args.next_arg()?;
     let size = args.next_i64()?;
 
     ctx.log_debug(format!("key: {}, size: {}", key, size).as_str());
@@ -67,7 +67,7 @@ fn alloc_set(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 
 fn alloc_get(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let mut args = args.into_iter().skip(1);
-    let key = args.next_redis_string()?;
+    let key = args.next_arg()?;
 
     let key = ctx.open_key(&key);
 

@@ -11,8 +11,8 @@ use redis_module::{Context, NextArg, RedisError, RedisResult, RedisString, Redis
 fn lpoprpush(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let mut args = args.into_iter().skip(1);
 
-    let src = args.next_redis_string()?;
-    let dst = args.next_redis_string()?;
+    let src = args.next_arg()?;
+    let dst = args.next_arg()?;
 
     let src_key = ctx.open_key_writable(&src);
     let dst_key = ctx.open_key_writable(&dst);
