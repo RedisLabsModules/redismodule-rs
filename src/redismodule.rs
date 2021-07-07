@@ -177,7 +177,7 @@ impl Display for RedisString {
 impl Borrow<str> for RedisString {
     fn borrow(&self) -> &str {
         // RedisString might not be UTF-8 safe
-        self.try_as_str().unwrap_or_default()
+        self.try_as_str().unwrap_or("<Invalid UTF-8 data>")
     }
 }
 

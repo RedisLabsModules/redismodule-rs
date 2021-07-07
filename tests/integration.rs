@@ -29,12 +29,15 @@ fn test_hello() -> Result<()> {
 
 #[test]
 fn test_keys_pos() -> Result<()> {
-    let _guards = vec![start_redis_server_with_module("keys_pos", 6480)?];
-    let mut con = get_redis_connection(6480)?;
+    let _guards = vec![start_redis_server_with_module("keys_pos", 6480)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(6480).with_context(|| "failed to connect to redis server")?;
 
     let res: Vec<String> = redis::cmd("keys_pos")
         .arg(&["a", "1", "b", "2"])
-        .query(&mut con)?;
+        .query(&mut con)
+        .with_context(|| "failed to run hello.mul")?;
     assert_eq!(res, vec!["a", "b"]);
 
     let res: Result<Vec<String>, RedisError> =
