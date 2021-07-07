@@ -49,7 +49,7 @@ commands:
       - run:
           name: Checkout submodules
           command: git submodule update --init --recursive
-  
+
   build-steps:
     parameters:
       build_params:
@@ -206,7 +206,7 @@ workflows:
   default-flow:
     jobs:
       - build:
-          <<: *not-on-integ-branch
+          <<: *on-any-branch
       - platforms-build:
           context: common
           <<: *on-integ-and-version-tags
@@ -214,4 +214,4 @@ workflows:
             parameters:
               platform: [focal, bionic, xenial, centos7]
       - build-macos:
-          <<: *on-integ-and-version-tags
+          <<: *on-any-branch
