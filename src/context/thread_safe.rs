@@ -46,6 +46,12 @@ impl ThreadSafeContext<DetachedFromClient> {
     }
 }
 
+impl Default for ThreadSafeContext<DetachedFromClient> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ThreadSafeContext<BlockedClient> {
     pub fn with_blocked_client(blocked_client: BlockedClient) -> Self {
         let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(blocked_client.inner) };

@@ -11,8 +11,8 @@ use raw::KeyType;
 use crate::from_byte_string;
 use crate::native_types::RedisType;
 use crate::raw;
-use crate::RedisError;
 use crate::redismodule::REDIS_OK;
+use crate::RedisError;
 use crate::RedisResult;
 use crate::RedisString;
 
@@ -37,13 +37,9 @@ pub struct RedisKey {
 }
 
 impl RedisKey {
-    pub fn open(ctx: *mut raw::RedisModuleCtx, key: &str) -> RedisKey {
-        let key_str = RedisString::create(ctx, key);
-        let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::Read));
-        RedisKey {
-            ctx,
-            key_inner,
-        }
+    pub fn open(ctx: *mut raw::RedisModuleCtx, key: &RedisString) -> RedisKey {
+        let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::Read));
+        RedisKey { ctx, key_inner }
     }
 
     pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&T>, RedisError> {
@@ -129,13 +125,9 @@ pub struct RedisKeyWritable {
 }
 
 impl RedisKeyWritable {
-    pub fn open(ctx: *mut raw::RedisModuleCtx, key: &str) -> RedisKeyWritable {
-        let key_str = RedisString::create(ctx, key);
-        let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::ReadWrite));
-        RedisKeyWritable {
-            ctx,
-            key_inner,
-        }
+    pub fn open(ctx: *mut raw::RedisModuleCtx, key: &RedisString) -> RedisKeyWritable {
+        let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::ReadWrite));
+        RedisKeyWritable { ctx, key_inner }
     }
 
     /// Detects whether the value stored in a Redis key is empty.
@@ -273,13 +265,13 @@ impl RedisKeyWritable {
         key: *mut raw::RedisModuleString,
     ) -> RedisKeyWritable {
         let key_inner = raw::open_key(ctx, key, to_raw_mode(KeyMode::ReadWrite));
-        RedisKeyWritable {
-            ctx,
-            key_inner,
-        }
+        RedisKeyWritable { ctx, key_inner }
     }
 
-    pub fn get_value<'a, 'b, T>(&'a self, redis_type: &RedisType) -> Result<Option<&'b mut T>, RedisError> {
+    pub fn get_value<'a, 'b, T>(
+        &'a self,
+        redis_type: &RedisType,
+    ) -> Result<Option<&'b mut T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
         let value =
             unsafe { raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner) as *mut T };

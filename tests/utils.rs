@@ -2,13 +2,9 @@ use anyhow::{Context, Result};
 
 use redis::Connection;
 use std::fs;
-use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::Duration;
-
-const LOG_DIR: &str = "tests/log";
-const REDIS_PORT: u16 = 6666;
 
 /// Ensure child process is killed both on normal exit and when panicking due to a failed test.
 pub struct ChildGuard {
@@ -27,25 +23,7 @@ impl Drop for ChildGuard {
     }
 }
 
-pub fn prepare_dirs() -> Result<()> {
-    let dirs = &[LOG_DIR];
-
-    for dir in dirs {
-        remove_tree(dir).context(dir)?;
-        fs::create_dir(dir).context(dir)?;
-    }
-
-    Ok(())
-}
-
-fn remove_tree(dir: &str) -> Result<()> {
-    match fs::remove_dir_all(dir) {
-        Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
-        res => res.with_context(|| dir.to_string()),
-    }
-}
-
-pub fn start_redis_server_with_module(module_name: &str) -> Result<ChildGuard> {
+pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<ChildGuard> {
     let extension = if cfg!(target_os = "macos") {
         "dylib"
     } else {
@@ -67,14 +45,12 @@ pub fn start_redis_server_with_module(module_name: &str) -> Result<ChildGuard> {
         .is_file());
 
     let module_path = format!("{}", module_path.display());
-    let port = REDIS_PORT.to_string();
 
-    #[rustfmt::skip]
-        let args = &[
-        "--port", port.as_str(),
-        "--loadmodule", module_path.as_str(),
-        "--dir", LOG_DIR,
-        "--logfile", "redis.log",
+    let args = &[
+        "--port",
+        &port.to_string(),
+        "--loadmodule",
+        module_path.as_str(),
     ];
 
     let redis_server = Command::new("redis-server")
@@ -89,8 +65,8 @@ pub fn start_redis_server_with_module(module_name: &str) -> Result<ChildGuard> {
 }
 
 // Get connection to Redis
-pub fn get_redis_connection() -> Result<Connection> {
-    let client = redis::Client::open(format!("redis://127.0.0.1:{}/", REDIS_PORT))?;
+pub fn get_redis_connection(port: u64) -> Result<Connection> {
+    let client = redis::Client::open(format!("redis://127.0.0.1:{}/", port))?;
     loop {
         let res = client.get_connection();
         match res {

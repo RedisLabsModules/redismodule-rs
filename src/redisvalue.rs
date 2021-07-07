@@ -1,8 +1,11 @@
+use crate::RedisString;
+
 #[derive(Debug, PartialEq)]
 pub enum RedisValue {
     SimpleStringStatic(&'static str),
     SimpleString(String),
     BulkString(String),
+    BulkRedisString(RedisString),
     Integer(i64),
     Float(f64),
     Array(Vec<RedisValue>),
@@ -37,6 +40,18 @@ impl From<f64> for RedisValue {
 impl From<String> for RedisValue {
     fn from(s: String) -> Self {
         RedisValue::BulkString(s)
+    }
+}
+
+impl From<RedisString> for RedisValue {
+    fn from(s: RedisString) -> Self {
+        RedisValue::BulkRedisString(s)
+    }
+}
+
+impl From<&RedisString> for RedisValue {
+    fn from(s: &RedisString) -> Self {
+        s.to_owned().into()
     }
 }
 

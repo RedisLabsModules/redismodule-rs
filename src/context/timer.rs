@@ -38,7 +38,7 @@ impl Context {
         // Take ownership of the data inside the box and obtain a raw pointer to pass to Redis.
         let data = Box::into_raw(data);
 
-        let timer_id = unsafe {
+        unsafe {
             raw::RedisModule_CreateTimer.unwrap()(
                 self.ctx,
                 period
@@ -48,9 +48,7 @@ impl Context {
                 Some(raw_callback::<F, T>),
                 data as *mut c_void,
             )
-        };
-
-        timer_id
+        }
     }
 
     /// Wrapper for `RedisModule_StopTimer`.
@@ -72,7 +70,7 @@ impl Context {
         }
 
         let data: T = take_data(data);
-        return Ok(data);
+        Ok(data)
     }
 
     /// Wrapper for `RedisModule_GetTimerInfo`.

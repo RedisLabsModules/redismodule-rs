@@ -1,11 +1,11 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{Context, RedisResult, RedisValue, ThreadSafeContext};
+use redis_module::{Context, RedisResult, RedisString, RedisValue, ThreadSafeContext};
 use std::thread;
 use std::time::Duration;
 
-fn block(ctx: &Context, _args: Vec<String>) -> RedisResult {
+fn block(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     let blocked_client = ctx.block_client();
 
     thread::spawn(move || {

@@ -398,6 +398,18 @@ pub fn string_ptr_len(s: *mut RedisModuleString, len: *mut size_t) -> *const c_c
     unsafe { RedisModule_StringPtrLen.unwrap()(s, len) }
 }
 
+pub fn string_retain_string(ctx: *mut RedisModuleCtx, s: *mut RedisModuleString) {
+    unsafe { RedisModule_RetainString.unwrap()(ctx, s) }
+}
+
+pub fn string_to_longlong(s: *mut RedisModuleString, len: *mut i64) -> Status {
+    unsafe { RedisModule_StringToLongLong.unwrap()(s, len).into() }
+}
+
+pub fn string_to_double(s: *mut RedisModuleString, len: *mut f64) -> Status {
+    unsafe { RedisModule_StringToDouble.unwrap()(s, len).into() }
+}
+
 pub fn string_set(key: *mut RedisModuleKey, s: *mut RedisModuleString) -> Status {
     unsafe { RedisModule_StringSet.unwrap()(key, s).into() }
 }
@@ -510,10 +522,9 @@ pub fn notify_keyspace_event(
     ctx: *mut RedisModuleCtx,
     event_type: NotifyEvent,
     event: &str,
-    keyname: &str,
+    keyname: &RedisString,
 ) -> Status {
     let event = CString::new(event).unwrap();
-    let keyname = RedisString::create(ctx, keyname);
     unsafe {
         RedisModule_NotifyKeyspaceEvent.unwrap()(
             ctx,
