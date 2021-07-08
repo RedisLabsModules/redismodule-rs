@@ -157,6 +157,15 @@ impl Context {
                 raw::RedisModule_ReplyWithString.unwrap()(self.ctx, s.inner).into()
             },
 
+            Ok(RedisValue::Buffer(s)) => unsafe {
+                raw::RedisModule_ReplyWithStringBuffer.unwrap()(
+                    self.ctx,
+                    s.as_ptr() as *const i8,
+                    s.len() as usize,
+                )
+                .into()
+            },
+
             Ok(RedisValue::Array(array)) => {
                 unsafe {
                     // According to the Redis source code this always succeeds,
