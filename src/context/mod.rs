@@ -157,7 +157,7 @@ impl Context {
                 raw::RedisModule_ReplyWithString.unwrap()(self.ctx, s.inner).into()
             },
 
-            Ok(RedisValue::Buffer(s)) => unsafe {
+            Ok(RedisValue::StringBuffer(s)) => unsafe {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
                     s.as_ptr() as *const i8,
