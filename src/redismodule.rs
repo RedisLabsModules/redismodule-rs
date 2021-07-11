@@ -21,6 +21,7 @@ pub const TYPE_METHOD_VERSION: u64 = raw::REDISMODULE_TYPE_METHOD_VERSION as u64
 pub trait NextArg {
     fn next_arg(&mut self) -> Result<RedisString, RedisError>;
     fn next_string(&mut self) -> Result<String, RedisError>;
+    fn next_str<'a>(&mut self) -> Result<&'a str, RedisError>;
     fn next_i64(&mut self) -> Result<i64, RedisError>;
     fn next_u64(&mut self) -> Result<u64, RedisError>;
     fn next_f64(&mut self) -> Result<f64, RedisError>;
@@ -31,31 +32,43 @@ impl<T> NextArg for T
 where
     T: Iterator<Item = RedisString>,
 {
+    #[inline]
     fn next_arg(&mut self) -> Result<RedisString, RedisError> {
         self.next().map_or(Err(RedisError::WrongArity), Ok)
     }
 
+    #[inline]
     fn next_string(&mut self) -> Result<String, RedisError> {
         self.next()
             .map_or(Err(RedisError::WrongArity), |v| Ok(v.into_string_lossy()))
     }
 
+    #[inline]
+    fn next_str<'a>(&mut self) -> Result<&'a str, RedisError> {
+        self.next()
+        .map_or(Err(RedisError::WrongArity), |v| v.try_as_str())
+    }
+
+    #[inline]
     fn next_i64(&mut self) -> Result<i64, RedisError> {
         self.next()
             .map_or(Err(RedisError::WrongArity), |v| v.parse_integer())
     }
 
+    #[inline]
     fn next_u64(&mut self) -> Result<u64, RedisError> {
         self.next()
             .map_or(Err(RedisError::WrongArity), |v| v.parse_unsigned_integer())
     }
 
+    #[inline]
     fn next_f64(&mut self) -> Result<f64, RedisError> {
         self.next()
             .map_or(Err(RedisError::WrongArity), |v| v.parse_float())
     }
 
     /// Return an error if there are any more arguments
+    #[inline]
     fn done(&mut self) -> Result<(), RedisError> {
         self.next().map_or(Ok(()), |_| Err(RedisError::WrongArity))
     }
@@ -117,7 +130,7 @@ impl RedisString {
         len == 0
     }
 
-    pub fn try_as_str(&self) -> Result<&str, RedisError> {
+    pub fn try_as_str<'a>(&self) -> Result<&'a str, RedisError> {
         Self::from_ptr(self.inner).map_err(|_| RedisError::Str("Couldn't parse as UTF-8 string"))
     }
 
