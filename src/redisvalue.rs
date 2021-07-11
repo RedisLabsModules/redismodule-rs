@@ -6,7 +6,7 @@ pub enum RedisValue {
     SimpleString(String),
     BulkString(String),
     BulkRedisString(RedisString),
-    StringBuffer(Vec<u8>),
+    Buffer(Vec<u8>),
     Integer(i64),
     Float(f64),
     Array(Vec<RedisValue>),
@@ -52,7 +52,7 @@ impl From<RedisString> for RedisValue {
 
 impl From<Vec<u8>> for RedisValue {
     fn from(s: Vec<u8>) -> Self {
-        RedisValue::StringBuffer(s)
+        RedisValue::Buffer(s)
     }
 }
 
