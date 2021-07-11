@@ -46,7 +46,7 @@ where
     #[inline]
     fn next_str<'a>(&mut self) -> Result<&'a str, RedisError> {
         self.next()
-        .map_or(Err(RedisError::WrongArity), |v| v.try_as_str())
+            .map_or(Err(RedisError::WrongArity), |v| v.try_as_str())
     }
 
     #[inline]
