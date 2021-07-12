@@ -76,11 +76,11 @@ commands:
             rustc --version
             cargo --version
             rustup --version
-      #- run:
-      #    name: Install Redis
-      #    command: |
-      #      bash -l -c "./deps/readies/bin/getredis -v <<parameters.redis_version>> --force <<parameters.getredis_params>>"
-      #      redis-server --version
+      - run:
+          name: Install Redis
+          command: |
+            bash -l -c "./deps/readies/bin/getredis -v <<parameters.redis_version>> --force <<parameters.getredis_params>>"
+            redis-server --version
       - restore_cache:
           keys:
             - v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
