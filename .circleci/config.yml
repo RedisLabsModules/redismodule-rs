@@ -121,7 +121,7 @@ commands:
 jobs:
   build:
     docker:
-      - image: redisfab/rmbuilder:6.2.1-x64-buster
+      - image: redisfab/rmbuilder:6.2.4-x64-buster
     steps:
       - build-steps
 
@@ -205,13 +205,11 @@ workflows:
   version: 2
   default-flow:
     jobs:
-      - build:
-          <<: *on-any-branch
       - platforms-build:
           context: common
-          <<: *on-integ-and-version-tags
+          <<: *on-any-branch
           matrix:
             parameters:
-              platform: [focal, bionic, xenial, centos7]
+              platform: [focal, buster, bionic, xenial, centos7, centos8]
       - build-macos:
           <<: *on-any-branch
