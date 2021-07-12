@@ -200,11 +200,9 @@ workflows:
   version: 2
   default-flow:
     jobs:
-      - build:
-          <<: *on-any-branch
       - platforms-build:
           context: common
-          <<: *on-integ-and-version-tags
+          <<: *on-any-branch
           matrix:
             parameters:
               platform: [focal, bionic, xenial, centos7]
