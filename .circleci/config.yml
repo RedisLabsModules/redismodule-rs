@@ -126,6 +126,11 @@ commands:
             make build OSNICK=<<parameters.platform>> VERSION=$CIRCLE_TAG BRANCH=$CIRCLE_BRANCH TEST=1 SHOW=1
 
 jobs:
+  build:
+    docker:
+      - image: redisfab/rmbuilder:6.2.1-x64-buster
+    steps:
+      - build-steps
 
   platforms-build:
     parameters:
@@ -207,8 +212,7 @@ workflows:
   version: 2
   default-flow:
     jobs:
-      - build-steps:
-          context: common
+      - build:
           <<: *on-any-branch
       - platforms-build:
           context: common
