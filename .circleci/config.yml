@@ -43,6 +43,17 @@ commands:
             (mkdir -p deps; cd deps; git clone https://github.com/RedisLabsModules/readies.git)
             ./deps/readies/bin/getpy3
 
+  setup-build-environment:
+    steps:
+      - run:
+          name: Setup build environment
+          command: |
+            ./sbin/system-setup.py
+            source $HOME/.cargo/env
+            rustc --version
+            cargo --version
+            rustup --version
+
   checkout-all:
     steps:
       - checkout
@@ -107,6 +118,7 @@ commands:
       - setup-executor
       - checkout-all
       - setup-automation
+      - setup-build-environment
       - run:
           name: Build for platform
           command: |
@@ -195,6 +207,9 @@ workflows:
   version: 2
   default-flow:
     jobs:
+      - build-steps:
+          context: common
+          <<: *on-any-branch
       - platforms-build:
           context: common
           <<: *on-any-branch
