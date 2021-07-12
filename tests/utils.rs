@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 
 use redis::Connection;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
 
@@ -53,7 +53,11 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
         module_path.as_str(),
     ];
 
-    let redis_server = Command::new("redis-server")
+    let mut redis_servercmd = "redis-server";
+    if Path::new("/usr/local/bin/redis-server").exists() {
+        redis_servercmd = "/usr/local/bin/redis-server";
+    }
+    let redis_server = Command::new(redis_servercmd)
         .args(args)
         .spawn()
         .map(|c| ChildGuard {
