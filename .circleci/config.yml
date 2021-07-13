@@ -110,7 +110,7 @@ commands:
             - "./target"
       - run:
           name: Run all tests
-          command: bash -l -c "make test"
+          command: bash -l -c "<<parameters.make_bin>> test"
 
   platforms-build-steps:
     parameters:
