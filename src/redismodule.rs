@@ -21,6 +21,7 @@ pub const TYPE_METHOD_VERSION: u64 = raw::REDISMODULE_TYPE_METHOD_VERSION as u64
 pub trait NextArg {
     fn next_arg(&mut self) -> Result<RedisString, RedisError>;
     fn next_string(&mut self) -> Result<String, RedisError>;
+    fn next_str<'a>(&mut self) -> Result<&'a str, RedisError>;
     fn next_i64(&mut self) -> Result<i64, RedisError>;
     fn next_u64(&mut self) -> Result<u64, RedisError>;
     fn next_f64(&mut self) -> Result<f64, RedisError>;
@@ -43,7 +44,13 @@ where
     }
 
     #[inline]
-    fn next_i64(&mut self) -> Result<i64, RedisError> {
+    fn next_str<'a>(&mut self) -> Result<&'a str, RedisError> {
+        self.next()
+            .map_or(Err(RedisError::WrongArity), |v| v.try_as_str())
+    }
+
+    #[inline]
+   fn next_i64(&mut self) -> Result<i64, RedisError> {
         self.next()
             .map_or(Err(RedisError::WrongArity), |v| v.parse_integer())
     }
@@ -126,7 +133,7 @@ impl RedisString {
         len == 0
     }
 
-    pub fn try_as_str(&self) -> Result<&str, RedisError> {
+    pub fn try_as_str<'a>(&self) -> Result<&'a str, RedisError> {
         Self::from_ptr(self.inner).map_err(|_| RedisError::Str("Couldn't parse as UTF-8 string"))
     }
 
