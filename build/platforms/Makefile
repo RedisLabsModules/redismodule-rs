@@ -8,7 +8,7 @@ OSNICK ?= buster
 
 REPO=redismodule-rs
 
-REDIS_VER=6.2.2
+REDIS_VER=6.2.4
 
 INT_BRANCHES=
 

@@ -30,11 +30,15 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
         "so"
     };
 
+    let mut profile = "debug";
+    if cfg!(not(debug_assertions)) {
+        profile = "release";
+    }
     let module_path: PathBuf = [
         std::env::current_dir()?,
         PathBuf::from(format!(
-            "target/debug/examples/lib{}.{}",
-            module_name, extension
+            "target/{}/examples/lib{}.{}",
+            profile, module_name, extension
         )),
     ]
     .iter()
@@ -57,7 +61,7 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
         .args(args)
         .spawn()
         .map(|c| ChildGuard {
-            name: "redis_server",
+            name: "redis-server",
             child: c,
         })?;
 
