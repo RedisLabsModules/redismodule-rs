@@ -43,6 +43,17 @@ commands:
             (mkdir -p deps; cd deps; git clone https://github.com/RedisLabsModules/readies.git)
             ./deps/readies/bin/getpy3
 
+  setup-build-environment:
+    steps:
+      - run:
+          name: Setup build environment
+          command: |
+            ./sbin/system-setup.py
+            source $HOME/.cargo/env
+            rustc --version
+            cargo --version
+            rustup --version
+
   checkout-all:
     steps:
       - checkout
@@ -52,6 +63,9 @@ commands:
 
   build-steps:
     parameters:
+      make_bin:
+        type: string
+        default: "make"
       build_params:
         type: string
         default: ""
@@ -76,11 +90,6 @@ commands:
             rustc --version
             cargo --version
             rustup --version
-      - run:
-          name: Install Redis
-          command: |
-            bash -l -c "./deps/readies/bin/getredis -v <<parameters.redis_version>> --force <<parameters.getredis_params>>"
-            redis-server --version
       - restore_cache:
           keys:
             - v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
@@ -90,10 +99,10 @@ commands:
       #    command: bash -l -c "make lint"
       - run:
           name: Build debug
-          command: bash -l -c "make build DEBUG=1 <<parameters.build_params>>"
+          command: bash -l -c "<<parameters.make_bin>> build DEBUG=1 <<parameters.build_params>>"
       - run:
           name: Build release
-          command: bash -l -c "make build <<parameters.build_params>>"
+          command: bash -l -c "<<parameters.make_bin>> build <<parameters.build_params>>"
       - save_cache:
           key: v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
           paths:
@@ -101,7 +110,7 @@ commands:
             - "./target"
       - run:
           name: Run all tests
-          command: bash -l -c "make test"
+          command: bash -l -c "<<parameters.make_bin>> test"
 
   platforms-build-steps:
     parameters:
@@ -112,6 +121,7 @@ commands:
       - setup-executor
       - checkout-all
       - setup-automation
+      - setup-build-environment
       - run:
           name: Build for platform
           command: |
@@ -130,7 +140,7 @@ jobs:
       platform:
         type: string
     docker:
-      - image: debian:buster
+      - image: redisfab/rmbuilder:6.2.1-x64-buster
     steps:
       - platforms-build-steps:
           platform: <<parameters.platform>>
@@ -139,7 +149,8 @@ jobs:
     macos:
       xcode: 11.3.0
     steps:
-      - build-steps
+      - build-steps:
+          make_bin: gmake
 
 
 on-any-branch: &on-any-branch
@@ -209,7 +220,7 @@ workflows:
           <<: *on-any-branch
       - platforms-build:
           context: common
-          <<: *on-integ-and-version-tags
+          <<: *on-any-branch
           matrix:
             parameters:
               platform: [focal, bionic, xenial, centos7]
