@@ -29,6 +29,7 @@ impl RedisType {
         }
     }
 
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn create_data_type(&self, ctx: *mut raw::RedisModuleCtx) -> Result<(), &str> {
         if self.name.len() != 9 {
             let msg = "Redis requires the length of native type names to be exactly 9 characters";
@@ -64,6 +65,7 @@ impl RedisType {
 }
 
 // TODO: Move to raw
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn redis_log(ctx: *mut raw::RedisModuleCtx, msg: &str) {
     let level = CString::new("notice").unwrap(); // FIXME reuse this
     let msg = CString::new(msg).unwrap();
