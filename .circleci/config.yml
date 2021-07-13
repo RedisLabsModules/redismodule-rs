@@ -63,6 +63,9 @@ commands:
 
   build-steps:
     parameters:
+      make_bin:
+        type: string
+        default: "make"
       build_params:
         type: string
         default: ""
@@ -96,10 +99,10 @@ commands:
       #    command: bash -l -c "make lint"
       - run:
           name: Build debug
-          command: bash -l -c "make build DEBUG=1 <<parameters.build_params>>"
+          command: bash -l -c "<<parameters.make_bin>> build DEBUG=1 <<parameters.build_params>>"
       - run:
           name: Build release
-          command: bash -l -c "make build <<parameters.build_params>>"
+          command: bash -l -c "<<parameters.make_bin>> build <<parameters.build_params>>"
       - save_cache:
           key: v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
           paths:
@@ -146,7 +149,8 @@ jobs:
     macos:
       xcode: 11.3.0
     steps:
-      - build-steps
+      - build-steps:
+          make_bin: gmake
 
 
 on-any-branch: &on-any-branch
