@@ -85,7 +85,7 @@ impl<T: Into<RedisValue>> From<Option<T>> for RedisValue {
 
 impl<T: Into<RedisValue>> From<Vec<T>> for RedisValue {
     fn from(items: Vec<T>) -> Self {
-        RedisValue::Array(items.into_iter().map(|item| item.into()).collect())
+        RedisValue::Array(items.into_iter().map(Into::into).collect())
     }
 }
 

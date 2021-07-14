@@ -21,6 +21,7 @@ pub const TYPE_METHOD_VERSION: u64 = raw::REDISMODULE_TYPE_METHOD_VERSION as u64
 pub trait NextArg {
     fn next_arg(&mut self) -> Result<RedisString, RedisError>;
     fn next_string(&mut self) -> Result<String, RedisError>;
+    fn next_str<'a>(&mut self) -> Result<&'a str, RedisError>;
     fn next_i64(&mut self) -> Result<i64, RedisError>;
     fn next_u64(&mut self) -> Result<u64, RedisError>;
     fn next_f64(&mut self) -> Result<f64, RedisError>;
@@ -31,36 +32,49 @@ impl<T> NextArg for T
 where
     T: Iterator<Item = RedisString>,
 {
+    #[inline]
     fn next_arg(&mut self) -> Result<RedisString, RedisError> {
-        self.next().map_or(Err(RedisError::WrongArity), Ok)
+        self.next().ok_or(RedisError::WrongArity)
     }
 
+    #[inline]
     fn next_string(&mut self) -> Result<String, RedisError> {
         self.next()
-            .map_or(Err(RedisError::WrongArity), |v| Ok(v.into_string_lossy()))
+            .map_or(Err(RedisError::WrongArity), |v| Ok(v.to_string_lossy()))
     }
 
-    fn next_i64(&mut self) -> Result<i64, RedisError> {
+    #[inline]
+    fn next_str<'a>(&mut self) -> Result<&'a str, RedisError> {
+        self.next()
+            .map_or(Err(RedisError::WrongArity), |v| v.try_as_str())
+    }
+
+    #[inline]
+   fn next_i64(&mut self) -> Result<i64, RedisError> {
         self.next()
             .map_or(Err(RedisError::WrongArity), |v| v.parse_integer())
     }
 
+    #[inline]
     fn next_u64(&mut self) -> Result<u64, RedisError> {
         self.next()
             .map_or(Err(RedisError::WrongArity), |v| v.parse_unsigned_integer())
     }
 
+    #[inline]
     fn next_f64(&mut self) -> Result<f64, RedisError> {
         self.next()
             .map_or(Err(RedisError::WrongArity), |v| v.parse_float())
     }
 
     /// Return an error if there are any more arguments
+    #[inline]
     fn done(&mut self) -> Result<(), RedisError> {
         self.next().map_or(Ok(()), |_| Err(RedisError::WrongArity))
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn decode_args(
     ctx: *mut raw::RedisModuleCtx,
     argv: *mut *mut raw::RedisModuleString,
@@ -87,6 +101,7 @@ impl RedisString {
         RedisString { ctx, inner }
     }
 
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn create(ctx: *mut raw::RedisModuleCtx, s: &str) -> RedisString {
         let str = CString::new(s).unwrap();
         let inner = unsafe { raw::RedisModule_CreateString.unwrap()(ctx, str.as_ptr(), s.len()) };
@@ -94,11 +109,12 @@ impl RedisString {
         RedisString { ctx, inner }
     }
 
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn from_ptr<'a>(ptr: *const raw::RedisModuleString) -> Result<&'a str, Utf8Error> {
         let mut len: libc::size_t = 0;
         let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(ptr, &mut len) };
 
-        str::from_utf8(unsafe { slice::from_raw_parts(bytes as *const u8, len) })
+        str::from_utf8(unsafe { slice::from_raw_parts(bytes.cast::<u8>(), len) })
     }
 
     pub fn append(&mut self, s: &str) -> raw::Status {
@@ -117,17 +133,21 @@ impl RedisString {
         len == 0
     }
 
-    pub fn try_as_str(&self) -> Result<&str, RedisError> {
+    pub fn try_as_str<'a>(&self) -> Result<&'a str, RedisError> {
         Self::from_ptr(self.inner).map_err(|_| RedisError::Str("Couldn't parse as UTF-8 string"))
     }
 
     /// Performs lossy conversion of a `RedisString` into an owned `String. This conversion
     /// will replace any invalid UTF-8 sequences with U+FFFD REPLACEMENT CHARACTER, which
     /// looks like this: �.
-    pub fn into_string_lossy(&self) -> String {
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_StringPtrLen` is missing in redismodule.h
+    pub fn to_string_lossy(&self) -> String {
         let mut len: libc::size_t = 0;
         let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(self.inner, &mut len) };
-        let bytes = unsafe { slice::from_raw_parts(bytes as *const u8, len) };
+        let bytes = unsafe { slice::from_raw_parts(bytes.cast::<u8>(), len) };
         String::from_utf8_lossy(bytes).into_owned()
     }
 
@@ -170,7 +190,7 @@ impl Drop for RedisString {
 
 impl Display for RedisString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.into_string_lossy())
+        write!(f, "{}", self.to_string_lossy())
     }
 }
 
@@ -191,7 +211,7 @@ impl Clone for RedisString {
 
 impl From<RedisString> for String {
     fn from(rs: RedisString) -> Self {
-        rs.into_string_lossy()
+        rs.to_string_lossy()
     }
 }
 
@@ -222,7 +242,7 @@ impl AsRef<[u8]> for RedisBuffer {
 impl Drop for RedisBuffer {
     fn drop(&mut self) {
         unsafe {
-            raw::RedisModule_Free.unwrap()(self.buffer as *mut c_void);
+            raw::RedisModule_Free.unwrap()(self.buffer.cast::<c_void>());
         }
     }
 }

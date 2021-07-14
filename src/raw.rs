@@ -164,7 +164,7 @@ extern "C" {
 
 ///////////////////////////////////////////////////////////////
 
-pub const FMT: *const c_char = b"v\0".as_ptr() as *const c_char;
+pub const FMT: *const c_char = b"v\0".as_ptr().cast::<c_char>();
 
 // REDISMODULE_HASH_DELETE is defined explicitly here because bindgen cannot
 // parse typecasts in C macro constants yet.
@@ -173,6 +173,7 @@ pub const REDISMODULE_HASH_DELETE: *const RedisModuleString = 1 as *const RedisM
 
 // Helper functions for the raw bindings.
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_type(reply: *mut RedisModuleCallReply) -> ReplyType {
     unsafe {
         // TODO: Cache the unwrapped functions and use them instead of unwrapping every time?
@@ -180,14 +181,17 @@ pub fn call_reply_type(reply: *mut RedisModuleCallReply) -> ReplyType {
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn free_call_reply(reply: *mut RedisModuleCallReply) {
     unsafe { RedisModule_FreeCallReply.unwrap()(reply) }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_integer(reply: *mut RedisModuleCallReply) -> c_longlong {
     unsafe { RedisModule_CallReplyInteger.unwrap()(reply) }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_array_element(
     reply: *mut RedisModuleCallReply,
     idx: usize,
@@ -195,14 +199,17 @@ pub fn call_reply_array_element(
     unsafe { RedisModule_CallReplyArrayElement.unwrap()(reply, idx) }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_length(reply: *mut RedisModuleCallReply) -> usize {
     unsafe { RedisModule_CallReplyLength.unwrap()(reply) }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_string_ptr(reply: *mut RedisModuleCallReply, len: *mut size_t) -> *const c_char {
     unsafe { RedisModule_CallReplyStringPtr.unwrap()(reply, len) }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
     unsafe {
         let mut len: size_t = 0;
@@ -218,36 +225,43 @@ pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn close_key(kp: *mut RedisModuleKey) {
     unsafe { RedisModule_CloseKey.unwrap()(kp) }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn open_key(
     ctx: *mut RedisModuleCtx,
     keyname: *mut RedisModuleString,
     mode: KeyMode,
 ) -> *mut RedisModuleKey {
-    unsafe { RedisModule_OpenKey.unwrap()(ctx, keyname, mode.bits) as *mut RedisModuleKey }
+    unsafe { RedisModule_OpenKey.unwrap()(ctx, keyname, mode.bits).cast::<RedisModuleKey>() }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn reply_with_array(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
     unsafe { RedisModule_ReplyWithArray.unwrap()(ctx, len).into() }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn reply_with_error(ctx: *mut RedisModuleCtx, err: *const c_char) {
     unsafe {
         RedisModule_ReplyWithError.unwrap()(ctx, err);
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn reply_with_long_long(ctx: *mut RedisModuleCtx, ll: c_longlong) -> Status {
     unsafe { RedisModule_ReplyWithLongLong.unwrap()(ctx, ll).into() }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn reply_with_double(ctx: *mut RedisModuleCtx, f: c_double) -> Status {
     unsafe { RedisModule_ReplyWithDouble.unwrap()(ctx, f).into() }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn reply_with_string(ctx: *mut RedisModuleCtx, s: *mut RedisModuleString) -> Status {
     unsafe { RedisModule_ReplyWithString.unwrap()(ctx, s).into() }
 }
@@ -255,14 +269,17 @@ pub fn reply_with_string(ctx: *mut RedisModuleCtx, s: *mut RedisModuleString) ->
 // Sets the expiry on a key.
 //
 // Expire is in milliseconds.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn set_expire(key: *mut RedisModuleKey, expire: c_longlong) -> Status {
     unsafe { RedisModule_SetExpire.unwrap()(key, expire).into() }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> *const c_char {
     unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits) }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn hash_get_multi<T>(
     key: *mut RedisModuleKey,
     fields: &[T],
@@ -343,10 +360,11 @@ where
 
     match res {
         Status::Ok => Ok(()),
-        _ => Err(RedisError::Str("ERR key is not a hash value")),
+        Status::Err => Err(RedisError::Str("ERR key is not a hash value")),
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleString) -> Status {
     let field = CString::new(field).unwrap();
 
@@ -362,6 +380,7 @@ pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleSt
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn hash_del(key: *mut RedisModuleKey, field: &str) -> Status {
     let field = CString::new(field).unwrap();
 
@@ -381,6 +400,7 @@ pub fn hash_del(key: *mut RedisModuleKey, field: &str) -> Status {
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn list_push(
     key: *mut RedisModuleKey,
     list_where: Where,
@@ -389,43 +409,53 @@ pub fn list_push(
     unsafe { RedisModule_ListPush.unwrap()(key, list_where as i32, element).into() }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn list_pop(key: *mut RedisModuleKey, list_where: Where) -> *mut RedisModuleString {
     unsafe { RedisModule_ListPop.unwrap()(key, list_where as i32) }
 }
 
 // Returns pointer to the C string, and sets len to its length
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn string_ptr_len(s: *mut RedisModuleString, len: *mut size_t) -> *const c_char {
     unsafe { RedisModule_StringPtrLen.unwrap()(s, len) }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn string_retain_string(ctx: *mut RedisModuleCtx, s: *mut RedisModuleString) {
     unsafe { RedisModule_RetainString.unwrap()(ctx, s) }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn string_to_longlong(s: *mut RedisModuleString, len: *mut i64) -> Status {
     unsafe { RedisModule_StringToLongLong.unwrap()(s, len).into() }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn string_to_double(s: *mut RedisModuleString, len: *mut f64) -> Status {
     unsafe { RedisModule_StringToDouble.unwrap()(s, len).into() }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn string_set(key: *mut RedisModuleKey, s: *mut RedisModuleString) -> Status {
     unsafe { RedisModule_StringSet.unwrap()(key, s).into() }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn replicate_verbatim(ctx: *mut RedisModuleCtx) -> Status {
     unsafe { RedisModule_ReplicateVerbatim.unwrap()(ctx).into() }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn load_unsigned(rdb: *mut RedisModuleIO) -> u64 {
     unsafe { RedisModule_LoadUnsigned.unwrap()(rdb) }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn load_signed(rdb: *mut RedisModuleIO) -> i64 {
     unsafe { RedisModule_LoadSigned.unwrap()(rdb) }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn load_string(rdb: *mut RedisModuleIO) -> String {
     let p = unsafe { RedisModule_LoadString.unwrap()(rdb) };
     RedisString::from_ptr(p)
@@ -433,6 +463,7 @@ pub fn load_string(rdb: *mut RedisModuleIO) -> String {
         .to_string()
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn load_string_buffer(rdb: *mut RedisModuleIO) -> RedisBuffer {
     unsafe {
         let mut len = 0;
@@ -441,6 +472,7 @@ pub fn load_string_buffer(rdb: *mut RedisModuleIO) -> RedisBuffer {
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Status {
     let terminated_args: Vec<RedisString> =
         args.iter().map(|s| RedisString::create(ctx, s)).collect();
@@ -461,34 +493,42 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn load_double(rdb: *mut RedisModuleIO) -> f64 {
     unsafe { RedisModule_LoadDouble.unwrap()(rdb) }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn load_float(rdb: *mut RedisModuleIO) -> f32 {
     unsafe { RedisModule_LoadFloat.unwrap()(rdb) }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn save_string(rdb: *mut RedisModuleIO, buf: &str) {
-    unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr() as *const c_char, buf.len()) };
+    unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr().cast::<c_char>(), buf.len()) };
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn save_double(rdb: *mut RedisModuleIO, val: f64) {
     unsafe { RedisModule_SaveDouble.unwrap()(rdb, val) };
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn save_signed(rdb: *mut RedisModuleIO, val: i64) {
     unsafe { RedisModule_SaveSigned.unwrap()(rdb, val) };
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn save_float(rdb: *mut RedisModuleIO, val: f32) {
     unsafe { RedisModule_SaveFloat.unwrap()(rdb, val) };
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn save_unsigned(rdb: *mut RedisModuleIO, val: u64) {
     unsafe { RedisModule_SaveUnsigned.unwrap()(rdb, val) };
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn string_append_buffer(
     ctx: *mut RedisModuleCtx,
     s: *mut RedisModuleString,
@@ -500,6 +540,7 @@ pub fn string_append_buffer(
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn subscribe_to_server_event(
     ctx: *mut RedisModuleCtx,
     event: RedisModuleEvent,

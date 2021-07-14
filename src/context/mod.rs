@@ -53,12 +53,18 @@ impl Context {
         self.log(LogLevel::Warning, message);
     }
 
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_AutoMemory` is missing in redismodule.h
     pub fn auto_memory(&self) {
         unsafe {
             raw::RedisModule_AutoMemory.unwrap()(self.ctx);
         }
     }
 
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_IsKeysPositionRequest` is missing in redismodule.h
     pub fn is_keys_position_request(&self) -> bool {
         // We want this to be available in tests where we don't have an actual Redis to call
         if cfg!(feature = "test") {
@@ -70,6 +76,9 @@ impl Context {
         result != 0
     }
 
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_KeyAtPos` is missing in redismodule.h
     pub fn key_at_pos(&self, pos: i32) {
         // TODO: This will crash redis if `pos` is out of range.
         // Think of a way to make this safe by checking the range.
@@ -125,6 +134,9 @@ impl Context {
         }
     }
 
+    /// # Panics
+    ///
+    /// Will panic if methods used are missing in redismodule.h
     pub fn reply(&self, r: RedisResult) -> raw::Status {
         match r {
             Ok(RedisValue::Integer(v)) => unsafe {
