@@ -6,6 +6,7 @@ pub enum RedisValue {
     SimpleString(String),
     BulkString(String),
     BulkRedisString(RedisString),
+    StringBuffer(Vec<u8>),
     Integer(i64),
     Float(f64),
     Array(Vec<RedisValue>),
@@ -46,6 +47,12 @@ impl From<String> for RedisValue {
 impl From<RedisString> for RedisValue {
     fn from(s: RedisString) -> Self {
         RedisValue::BulkRedisString(s)
+    }
+}
+
+impl From<Vec<u8>> for RedisValue {
+    fn from(s: Vec<u8>) -> Self {
+        RedisValue::StringBuffer(s)
     }
 }
 
@@ -117,6 +124,15 @@ mod tests {
         assert_eq!(
             RedisValue::from(Some("foo")),
             RedisValue::BulkString("foo".to_owned())
+        );
+    }
+
+    #[test]
+    fn from_vec() {
+        let v : Vec<u8> = vec![0,3,5,21,255];
+        assert_eq!(
+            RedisValue::from(v),
+            RedisValue::StringBuffer(vec![0,3,5,21,255])
         );
     }
 
