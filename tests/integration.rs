@@ -48,3 +48,26 @@ fn test_keys_pos() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(feature = "experimental-api")]
+#[test]
+fn test_command_filter() -> Result<()> {
+    let _guards = vec![start_redis_server_with_module("command_filter", 6481)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(6481).with_context(|| "failed to connect to redis server")?;
+
+    let res: i32 = redis::cmd("HSET")
+        .arg(&["mykey", "first", "Don"])
+        .query(&mut con)
+        .with_context(|| "failed to run HSET")?;
+    assert_eq!(res, 2);
+
+    let res: Vec<String> = redis::cmd("HGETALL")
+        .arg(&["mykey"])
+        .query(&mut con)
+        .with_context(|| "failed to run HSET")?;
+    assert_eq!(res, ["first", "Don"]);
+
+    Ok(())
+}
