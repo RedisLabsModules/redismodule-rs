@@ -17,19 +17,22 @@ mod redismodule;
 pub mod redisraw;
 pub mod redisvalue;
 
+#[cfg(feature = "experimental-api")]
+mod commandfilter;
 mod context;
 pub mod key;
 pub mod logging;
 mod macros;
 
 #[cfg(feature = "experimental-api")]
+pub use crate::commandfilter::CommandFilterContext;
+#[cfg(feature = "experimental-api")]
 pub use crate::context::blocked::BlockedClient;
 #[cfg(feature = "experimental-api")]
 pub use crate::context::thread_safe::{DetachedFromClient, ThreadSafeContext};
+pub use crate::context::Context;
 #[cfg(feature = "experimental-api")]
 pub use crate::raw::NotifyEvent;
-
-pub use crate::context::Context;
 pub use crate::raw::Status;
 pub use crate::redismodule::*;
 

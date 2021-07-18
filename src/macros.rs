@@ -82,6 +82,31 @@ macro_rules! redis_event_handler {
     }};
 }
 
+#[cfg(feature = "experimental-api")]
+#[macro_export]
+macro_rules! redis_commnad_filter {
+    ($ctx:expr,
+     $filter_handler:expr,
+     $filter_flags:expr) => {{
+        /////////////////////
+        extern "C" fn __do_filter(ctx: *mut $crate::raw::RedisModuleCommandFilterCtx) {
+            let context = $crate::CommandFilterContext::new(ctx);
+            $filter_handler(&context);
+        }
+        /////////////////////
+        if unsafe {
+            $crate::raw::RedisModule_RegisterCommandFilter.unwrap()(
+                $ctx,
+                Some(__do_filter),
+                $filter_flags as c_int,
+            )
+        } == std::ptr::null_mut()
+        {
+            return $crate::raw::Status::Err as c_int;
+        }
+    }};
+}
+
 #[macro_export]
 macro_rules! redis_module {
     (
@@ -102,6 +127,12 @@ macro_rules! redis_module {
                 $keystep:expr
               ]),* $(,)*
         ] $(,)*
+        $(filters: [
+            $([
+                $filter_handler:expr,
+                $filter_flags:expr
+              ]),* $(,)*
+        ] $(,)*)?
         $(event_handlers: [
             $([
                 $(@$event_type:ident) +:
@@ -161,6 +192,12 @@ macro_rules! redis_module {
             $(
                 redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep);
             )*
+
+            $(
+                $(
+                    redis_commnad_filter!(ctx, $filter_handler, $filter_flags);
+                )*
+            )?
 
             $(
                 $(
