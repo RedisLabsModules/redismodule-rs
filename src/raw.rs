@@ -416,7 +416,7 @@ pub fn list_pop(key: *mut RedisModuleKey, list_where: Where) -> *mut RedisModule
 
 // Returns pointer to the C string, and sets len to its length
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn string_ptr_len(s: *mut RedisModuleString, len: *mut size_t) -> *const c_char {
+pub fn string_ptr_len(s: *const RedisModuleString, len: *mut size_t) -> *const c_char {
     unsafe { RedisModule_StringPtrLen.unwrap()(s, len) }
 }
 
@@ -426,12 +426,12 @@ pub fn string_retain_string(ctx: *mut RedisModuleCtx, s: *mut RedisModuleString)
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn string_to_longlong(s: *mut RedisModuleString, len: *mut i64) -> Status {
+pub fn string_to_longlong(s: *const RedisModuleString, len: *mut i64) -> Status {
     unsafe { RedisModule_StringToLongLong.unwrap()(s, len).into() }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn string_to_double(s: *mut RedisModuleString, len: *mut f64) -> Status {
+pub fn string_to_double(s: *const RedisModuleString, len: *mut f64) -> Status {
     unsafe { RedisModule_StringToDouble.unwrap()(s, len).into() }
 }
 
