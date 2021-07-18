@@ -25,6 +25,8 @@ impl CommandFilterContext {
     }
 
     pub fn args_insert(&self, pos: usize, arg: RedisString) -> usize {
+        // retain arg to since RedisModule_CommandFilterArgInsert going to release it too
+        raw::string_retain_string(std::ptr::null_mut(), arg.inner);
         unsafe {
             raw::RedisModule_CommandFilterArgInsert.unwrap()(self.ctx, pos as c_int, arg.inner)
                 as usize
@@ -32,6 +34,8 @@ impl CommandFilterContext {
     }
 
     pub fn args_replace(&self, pos: usize, arg: RedisString) -> usize {
+        // retain arg to since RedisModule_CommandFilterArgInsert going to release it too
+        raw::string_retain_string(std::ptr::null_mut(), arg.inner);
         unsafe {
             raw::RedisModule_CommandFilterArgReplace.unwrap()(self.ctx, pos as c_int, arg.inner)
                 as usize

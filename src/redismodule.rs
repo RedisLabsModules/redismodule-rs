@@ -50,7 +50,7 @@ where
     }
 
     #[inline]
-   fn next_i64(&mut self) -> Result<i64, RedisError> {
+    fn next_i64(&mut self) -> Result<i64, RedisError> {
         self.next()
             .map_or(Err(RedisError::WrongArity), |v| v.parse_integer())
     }
