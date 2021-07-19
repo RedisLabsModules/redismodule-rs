@@ -32,10 +32,16 @@ impl CommandFilterContext {
     pub fn args_insert(&self, pos: usize, arg: RedisString) -> Status {
         // retain arg since RedisModule_CommandFilterArgInsert going to release it too
         raw::string_retain_string(std::ptr::null_mut(), arg.inner);
-        unsafe {
+        let status = unsafe {
             raw::RedisModule_CommandFilterArgInsert.unwrap()(self.ctx, pos as c_int, arg.inner)
                 .into()
+        };
+
+        // If the string wasn't inserted we have to release it ourself
+        if status == Status::Err {
+            unsafe { raw::RedisModule_FreeString.unwrap()(std::ptr::null_mut(), arg.inner) };
         }
+        status
     }
 
     pub fn args_replace(&self, pos: usize, arg: RedisString) -> Status {
