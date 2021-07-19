@@ -67,7 +67,7 @@ fn test_command_filter() -> Result<()> {
         .arg(&["mykey"])
         .query(&mut con)
         .with_context(|| "failed to run HSET")?;
-    
+
     assert_eq!(res.len(), 4);
     assert_eq!(res[0..3], ["first", "Don", "__TIME__"]);
 
