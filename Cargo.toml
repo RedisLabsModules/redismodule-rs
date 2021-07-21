@@ -62,7 +62,7 @@ anyhow = "1.0.38"
 redis = "0.20.0"
 
 [build-dependencies]
-bindgen = "0.58"
+bindgen = "0.59"
 cc = "1.0"
 
 [features]
