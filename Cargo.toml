@@ -59,7 +59,7 @@ strum_macros = "0.21"
 
 [dev-dependencies]
 anyhow = "1.0.38"
-redis = "0.20.0"
+redis = "0.21.0"
 
 [build-dependencies]
 bindgen = "0.59"
