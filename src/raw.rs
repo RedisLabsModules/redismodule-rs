@@ -6,15 +6,17 @@ extern crate enum_primitive_derive;
 extern crate libc;
 extern crate num_traits;
 
-use bitflags::bitflags;
-use enum_primitive_derive::Primitive;
-use libc::size_t;
-use num_traits::FromPrimitive;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
 use std::ptr;
 use std::slice;
 
+use bitflags::bitflags;
+use enum_primitive_derive::Primitive;
+use libc::size_t;
+use num_traits::FromPrimitive;
+
+use crate::error::Error;
 pub use crate::redisraw::bindings::*;
 use crate::RedisString;
 use crate::{RedisBuffer, RedisError};
@@ -81,6 +83,15 @@ pub enum Status {
 impl From<c_int> for Status {
     fn from(v: c_int) -> Self {
         Status::from_i32(v).unwrap()
+    }
+}
+
+impl From<Status> for c_int {
+    fn from(v: Status) -> Self {
+        match v {
+            Status::Ok => REDISMODULE_OK as c_int,
+            Status::Err => REDISMODULE_OK as c_int,
+        }
     }
 }
 
@@ -445,30 +456,56 @@ pub fn replicate_verbatim(ctx: *mut RedisModuleCtx) -> Status {
     unsafe { RedisModule_ReplicateVerbatim.unwrap()(ctx).into() }
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn load_unsigned(rdb: *mut RedisModuleIO) -> u64 {
-    unsafe { RedisModule_LoadUnsigned.unwrap()(rdb) }
+fn load<T>(
+    rdb: *mut RedisModuleIO,
+    f: Option<unsafe extern "C" fn(io: *mut RedisModuleIO) -> T>,
+) -> Result<T, Error> {
+    let res = unsafe { f.unwrap()(rdb) };
+    if is_io_error(rdb) {
+        Err(RedisError::short_read().into())
+    } else {
+        Ok(res)
+    }
+}
+
+fn load_with_param<T, V>(
+    rdb: *mut RedisModuleIO,
+    f: Option<unsafe extern "C" fn(io: *mut RedisModuleIO, *mut V) -> T>,
+    v: *mut V,
+) -> Result<T, Error> {
+    let res = unsafe { f.unwrap()(rdb, v) };
+    if is_io_error(rdb) {
+        Err(RedisError::short_read().into())
+    } else {
+        Ok(res)
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn load_signed(rdb: *mut RedisModuleIO) -> i64 {
-    unsafe { RedisModule_LoadSigned.unwrap()(rdb) }
+pub fn load_unsigned(rdb: *mut RedisModuleIO) -> Result<u64, Error> {
+    unsafe { load::<u64>(rdb, RedisModule_LoadUnsigned) }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn load_string(rdb: *mut RedisModuleIO) -> String {
-    let p = unsafe { RedisModule_LoadString.unwrap()(rdb) };
-    RedisString::from_ptr(p)
+pub fn load_signed(rdb: *mut RedisModuleIO) -> Result<i64, Error> {
+    unsafe { load::<i64>(rdb, RedisModule_LoadSigned) }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn load_string(rdb: *mut RedisModuleIO) -> Result<String, Error> {
+    let p = unsafe { load::<*mut RedisModuleString>(rdb, RedisModule_LoadString)? };
+    Ok(RedisString::from_ptr(p)
         .expect("UTF8 encoding error in load string")
-        .to_string()
+        .to_string())
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn load_string_buffer(rdb: *mut RedisModuleIO) -> RedisBuffer {
+pub fn load_string_buffer(rdb: *mut RedisModuleIO) -> Result<RedisBuffer, Error> {
     unsafe {
         let mut len = 0;
-        let buffer = RedisModule_LoadStringBuffer.unwrap()(rdb, &mut len);
-        RedisBuffer::new(buffer, len)
+        let buffer =
+            load_with_param::<*mut c_char, usize>(rdb, RedisModule_LoadStringBuffer, &mut len)?;
+        Ok(RedisBuffer::new(buffer, len))
     }
 }
 
@@ -494,8 +531,8 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn load_double(rdb: *mut RedisModuleIO) -> f64 {
-    unsafe { RedisModule_LoadDouble.unwrap()(rdb) }
+pub fn load_double(rdb: *mut RedisModuleIO) -> Result<f64, Error> {
+    unsafe { load::<f64>(rdb, RedisModule_LoadDouble) }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -582,5 +619,55 @@ pub fn get_keyspace_events() -> NotifyEvent {
     unsafe {
         let events = RedisModule_GetNotifyKeyspaceEvents.unwrap()();
         NotifyEvent::from_bits_truncate(events)
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn is_io_error(rdb: *mut RedisModuleIO) -> bool {
+    unsafe { RedisModule_IsIOError.unwrap()(rdb) != 0 }
+}
+
+pub struct Version {
+    pub major: c_int,
+    pub minor: c_int,
+    pub patch: c_int,
+}
+
+impl From<c_int> for Version {
+    fn from(ver: c_int) -> Self {
+        // Expected format: 0x00MMmmpp for Major, minor, patch
+        Version {
+            major: (ver & 0x00FF_0000) >> 16,
+            minor: (ver & 0x0000_FF00) >> 8,
+            patch: ver & 0x0000_00FF,
+        }
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn get_redis_version() -> Version {
+    unsafe { Version::from(RedisModule_GetServerVersion.unwrap()()) }
+}
+
+pub fn check_minimal_version_for_short_read() -> bool {
+    // Minimal versions: 6.2.5 or 6.0.15
+    let v = get_redis_version();
+    match v {
+        Version {
+            major: 6,
+            minor: 2,
+            patch,
+        } => patch >= 5,
+        Version {
+            major: 6,
+            minor: 0,
+            patch,
+        } => patch >= 15,
+        Version {
+            major: 255,
+            minor: 255,
+            patch: 255,
+        } => true,
+        _ => false,
     }
 }
