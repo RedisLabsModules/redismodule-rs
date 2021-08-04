@@ -650,7 +650,8 @@ pub fn get_redis_version() -> Version {
 }
 
 pub fn check_minimal_version_for_short_read() -> bool {
-    // Minimal versions: 6.2.5 or 6.0.15
+    // Minimal versions: 6.2.5
+    // (6.0.15 is not supporting the required event notification for modules)
     let v = get_redis_version();
     match v {
         Version {
@@ -658,11 +659,6 @@ pub fn check_minimal_version_for_short_read() -> bool {
             minor: 2,
             patch,
         } => patch >= 5,
-        Version {
-            major: 6,
-            minor: 0,
-            patch,
-        } => patch >= 15,
         Version {
             major: 255,
             minor: 255,
