@@ -1,0 +1,32 @@
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: get version from tag
+        id: get_version
+        run: |
+            realversion="${GITHUB_REF/refs\/tags\//}"
+            realversion="${realversion//v/}"
+            echo "::set-output name=VERSION::$realversion"
+
+      - name: Set the version for publishing
+        uses: ciiiii/toml-editor@1.0.0
+        with:
+          file: "Cargo.toml"
+          key: "package.version"
+          value: "${{ steps.get_version.outputs.VERSION }}"
+
+      - uses: katyo/publish-crates@v1
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
