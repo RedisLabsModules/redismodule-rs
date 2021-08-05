@@ -158,9 +158,10 @@ impl Context {
             },
 
             Ok(RedisValue::BulkString(s)) => unsafe {
-                raw::RedisModule_ReplyWithString.unwrap()(
+                raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
-                    RedisString::create(self.ctx, s.as_ref()).inner,
+                    s.as_ptr() as *const c_char,
+                    s.len() as usize,
                 )
                 .into()
             },
@@ -172,7 +173,7 @@ impl Context {
             Ok(RedisValue::StringBuffer(s)) => unsafe {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
-                    s.as_ptr() as *const i8,
+                    s.as_ptr() as *const c_char,
                     s.len() as usize,
                 )
                 .into()
