@@ -7,6 +7,7 @@ use crate::raw;
 use crate::LogLevel;
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
+
 #[cfg(feature = "experimental-api")]
 mod timer;
 
