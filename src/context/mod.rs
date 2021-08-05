@@ -103,7 +103,7 @@ impl Context {
                 self.ctx,
                 cmd.as_ptr(),
                 raw::FMT,
-                inner_args.as_ptr() as *mut c_char,
+                inner_args.as_ptr() as *mut std::os::raw::c_char,
                 terminated_args.len(),
             )
         };
