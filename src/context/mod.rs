@@ -285,19 +285,23 @@ impl Context {
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn get_redis_version(&self) -> Result<Version, RedisError> {
         match unsafe { raw::RedisModule_GetServerVersion } {
-            Some(api) => Ok(Version::from(unsafe { api() })),
+            Some(api) => {
+                // Call existing API
+                Ok(Version::from(unsafe { api() }))
+            }
             None => {
+                // Call "info server"
                 if let Ok(RedisValue::SimpleString(s)) = self.call("info", &["server"]) {
-                    match Context::extract_token_value(
+                    if let Some(ver) = Context::extract_token_value(
                         s.as_str(),
                         r"(?m)\bredis_version:([0-9]+\.[0-9]+\.[0-9]+)\b",
                     ) {
-                        Some(ver) => Ok(Version::from(ver)),
-                        None => Err(RedisError::Str("Error on info method call")),
+                        return Ok(Version::from(ver));
                     }
-                } else {
-                    Err(RedisError::Str("Error on info method call"))
                 }
+                return Err(RedisError::Str(
+                    "Error getting redis_version from \"info server\" call",
+                ));
             }
         }
     }
