@@ -1,9 +1,11 @@
+use regex::Regex;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long};
 use std::ptr;
 
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::raw;
+use crate::raw::Version;
 use crate::LogLevel;
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
@@ -262,5 +264,41 @@ impl Context {
         keyname: &RedisString,
     ) -> raw::Status {
         raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
+    }
+
+    /// Extracts the first regexp capture
+    fn extract_token_value<'a, 'b>(s: &'a str, reg_exp: &'b str) -> Option<&'a str> {
+        match Regex::new(reg_exp) {
+            Ok(re) => match re.captures(s) {
+                Some(captures) => match captures.get(1) {
+                    Some(m) => Some(m.as_str()),
+                    None => None,
+                },
+                None => None,
+            },
+            Err(_) => None,
+        }
+    }
+
+    /// Returns the redis version either by calling RedisModule_GetServerVersion API,
+    /// Or if it is not available, by calling "info server" API and parsing the reply
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    pub fn get_redis_version(&self) -> Result<Version, RedisError> {
+        match unsafe { raw::RedisModule_GetServerVersion } {
+            Some(api) => Ok(Version::from(unsafe { api() })),
+            None => {
+                if let Ok(RedisValue::SimpleString(s)) = self.call("info", &["server"]) {
+                    match Context::extract_token_value(
+                        s.as_str(),
+                        r"(?m)\bredis_version:([0-9]+\.[0-9]+\.[0-9]+)\b",
+                    ) {
+                        Some(ver) => Ok(Version::from(ver)),
+                        None => Err(RedisError::Str("Error on info method call")),
+                    }
+                } else {
+                    Err(RedisError::Str("Error on info method call"))
+                }
+            }
+        }
     }
 }

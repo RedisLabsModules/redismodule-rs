@@ -644,26 +644,24 @@ impl From<c_int> for Version {
     }
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn get_redis_version() -> Version {
-    unsafe { Version::from(RedisModule_GetServerVersion.unwrap()()) }
-}
-
-pub fn check_minimal_version_for_short_read() -> bool {
-    // Minimal versions: 6.2.5
-    // (6.0.15 is not supporting the required event notification for modules)
-    let v = get_redis_version();
-    match v {
-        Version {
-            major: 6,
-            minor: 2,
-            patch,
-        } => patch >= 5,
-        Version {
-            major: 255,
-            minor: 255,
-            patch: 255,
-        } => true,
-        _ => false,
+impl From<&str> for Version {
+    fn from(ver: &str) -> Self {
+        // Expected format: Major,minor,patch
+        let values = ver
+            .split('.')
+            .map(|v| v.parse::<c_int>().unwrap_or(0))
+            .collect::<Vec<_>>();
+        match values.len() {
+            3 => Version {
+                major: values[0],
+                minor: values[1],
+                patch: values[2],
+            },
+            _ => Version {
+                major: 0,
+                minor: 0,
+                patch: 0,
+            },
+        }
     }
 }
