@@ -266,7 +266,7 @@ impl Context {
         raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
     }
 
-    /// Extracts the first regexp capture
+    /// Extracts the first regexp capture/group
     fn extract_token_value<'a, 'b>(s: &'a str, reg_exp: &'b str) -> Option<&'a str> {
         match Regex::new(reg_exp) {
             Ok(re) => match re.captures(s) {
