@@ -59,6 +59,13 @@ commands:
             ./deps/readies/bin/getpy3
 
   install-prerequisites:
+    parameters:
+      redis_version:
+        type: string
+        default: "6"
+      getredis_params:
+        type: string
+        default: ""
     steps:
       - setup-automation
       - run:
