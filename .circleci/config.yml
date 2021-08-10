@@ -72,10 +72,7 @@ commands:
           name: Setup build environment
           command: |
             ./sbin/system-setup.py
-            source $HOME/.cargo/env
-            rustc --version
-            cargo --version
-            rustup --version
+            bash -l -c "make info"
       - run:
           name: Install Redis
           command: |
