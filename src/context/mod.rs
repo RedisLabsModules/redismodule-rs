@@ -2,8 +2,11 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long};
 use std::ptr;
 
+use regex::Regex;
+
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::raw;
+use crate::raw::Version;
 use crate::LogLevel;
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
@@ -262,5 +265,55 @@ impl Context {
         keyname: &RedisString,
     ) -> raw::Status {
         raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
+    }
+
+    /// Extracts the first regexp capture
+    fn extract_token_value<'a, 'b>(s: &'a str, reg_exp: &'b str) -> Option<&'a str> {
+        match Regex::new(reg_exp) {
+            Ok(re) => match re.captures(s) {
+                Some(captures) => match captures.get(1) {
+                    Some(m) => Some(m.as_str()),
+                    None => None,
+                },
+                None => None,
+            },
+            Err(_) => None,
+        }
+    }
+
+    /// Returns the redis version either by calling RedisModule_GetServerVersion API,
+    /// Or if it is not available, by calling "info server" API and parsing the reply
+    pub fn get_redis_version(&self) -> Result<Version, RedisError> {
+        self.get_redis_version_internal(false)
+    }
+
+    /// Returns the redis version by calling "info server" API and parsing the reply
+    #[cfg(feature = "test")]
+    pub fn get_redis_version_rm_call(&self) -> Result<Version, RedisError> {
+        self.get_redis_version_internal(true)
+    }
+
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    fn get_redis_version_internal(&self, force_use_rm_call: bool) -> Result<Version, RedisError> {
+        match unsafe { raw::RedisModule_GetServerVersion } {
+            Some(api) if !force_use_rm_call => {
+                // Call existing API
+                Ok(Version::from(unsafe { api() }))
+            }
+            _ => {
+                // Call "info server"
+                if let Ok(RedisValue::SimpleString(s)) = self.call("info", &["server"]) {
+                    if let Some(ver) = Context::extract_token_value(
+                        s.as_str(),
+                        r"(?m)\bredis_version:([0-9]+\.[0-9]+\.[0-9]+)\b",
+                    ) {
+                        return Ok(Version::from(ver));
+                    }
+                }
+                Err(RedisError::Str(
+                    "Error getting redis_version from \"info server\" call",
+                ))
+            }
+        }
     }
 }

@@ -584,3 +584,54 @@ pub fn get_keyspace_events() -> NotifyEvent {
         NotifyEvent::from_bits_truncate(events)
     }
 }
+
+#[derive(Debug, PartialEq)]
+pub struct Version {
+    pub major: c_int,
+    pub minor: c_int,
+    pub patch: c_int,
+}
+
+impl From<c_int> for Version {
+    fn from(ver: c_int) -> Self {
+        // Expected format: 0x00MMmmpp for Major, minor, patch
+        Version {
+            major: (ver & 0x00FF_0000) >> 16,
+            minor: (ver & 0x0000_FF00) >> 8,
+            patch: ver & 0x0000_00FF,
+        }
+    }
+}
+
+impl From<&str> for Version {
+    fn from(ver: &str) -> Self {
+        // Expected format: Major,minor,patch
+        let values = ver
+            .split('.')
+            .map(|v| v.parse::<c_int>().unwrap_or(0))
+            .collect::<Vec<_>>();
+        match values.len() {
+            3 => Version {
+                major: values[0],
+                minor: values[1],
+                patch: values[2],
+            },
+            _ => Version {
+                major: 0,
+                minor: 0,
+                patch: 0,
+            },
+        }
+    }
+}
+
+impl Version {
+    pub fn to_string(&self) -> String {
+        format!(
+            "{}.{}.{}",
+            self.major.to_string(),
+            self.minor.to_string(),
+            self.patch.to_string()
+        )
+    }
+}
