@@ -69,7 +69,7 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
 }
 
 // Get connection to Redis
-pub fn get_redis_connection(port: u64) -> Result<Connection> {
+pub fn get_redis_connection(port: u16) -> Result<Connection> {
     let client = redis::Client::open(format!("redis://127.0.0.1:{}/", port))?;
     loop {
         let res = client.get_connection();

@@ -50,8 +50,9 @@ crate-type = ["cdylib"]
 required-features = ["experimental-api"]
 
 [[example]]
-name = "misc"
+name = "test_helper"
 crate-type = ["cdylib"]
+required-features = ["test"]
 
 [dependencies]
 bitflags = "1.2"

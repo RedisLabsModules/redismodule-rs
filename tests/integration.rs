@@ -51,24 +51,25 @@ fn test_keys_pos() -> Result<()> {
 }
 
 #[test]
-fn test_misc_version() -> Result<()> {
-    let _guards = vec![start_redis_server_with_module("misc", 6479)
+fn test_test_helper_version() -> Result<()> {
+    let port: u16 = 6481;
+    let _guards = vec![start_redis_server_with_module("test_helper", port)
         .with_context(|| "failed to start redis server")?];
     let mut con =
-        get_redis_connection(6479).with_context(|| "failed to connect to redis server")?;
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
-    let res: Vec<i64> = redis::cmd("misc.version")
+    let res: Vec<i64> = redis::cmd("test_helper.version")
         .query(&mut con)
-        .with_context(|| "failed to run misc.version")?;
+        .with_context(|| "failed to run test_helper.version")?;
     assert!(
         (res[0] == 6 && res[1] == 2 && res[2] >= 3) || (res[0] == 6 && res[1] == 0 && res[2] >= 15)
     );
 
     if cfg!(feature = "test") {
-        // Test also the internal implementation that might not always be reached
-        let res2: Vec<i64> = redis::cmd("misc._version_rm_call")
+        // Test also an internal implementation that might not always be reached
+        let res2: Vec<i64> = redis::cmd("test_helper._version_rm_call")
             .query(&mut con)
-            .with_context(|| "failed to run misc._version_rm_call")?;
+            .with_context(|| "failed to run test_helper._version_rm_call")?;
         assert_eq!(res, res2);
     }
 
