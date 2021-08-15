@@ -131,7 +131,7 @@ commands:
 jobs:
   build:
     docker:
-      - image: redisfab/rmbuilder:6.2.1-x64-buster
+      - image: redisfab/rmbuilder:6.2.5-x64-buster
     steps:
       - build-steps
 
@@ -140,7 +140,7 @@ jobs:
       platform:
         type: string
     docker:
-      - image: redisfab/rmbuilder:6.2.1-x64-buster
+      - image: redisfab/rmbuilder:6.2.5-x64-buster
     steps:
       - platforms-build-steps:
           platform: <<parameters.platform>>
