@@ -113,6 +113,7 @@ impl RedisString {
         ctx: *mut raw::RedisModuleCtx,
         inner: *mut raw::RedisModuleString,
     ) -> RedisString {
+        // Need to avoid string_retain_string
         RedisString { ctx, inner }
     }
 
