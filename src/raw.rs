@@ -492,11 +492,10 @@ pub fn load_signed(rdb: *mut RedisModuleIO) -> Result<i64, Error> {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn load_string(rdb: *mut RedisModuleIO) -> Result<String, Error> {
+pub fn load_string(rdb: *mut RedisModuleIO) -> Result<RedisString, Error> {
     let p = unsafe { load::<*mut RedisModuleString>(rdb, RedisModule_LoadString)? };
-    Ok(RedisString::from_ptr(p)
-        .expect("UTF8 encoding error in load string")
-        .to_string())
+    let ctx = unsafe { RedisModule_GetContextFromIO.unwrap()(rdb) };
+    Ok(RedisString::from_redis_module_string(ctx, p))
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]

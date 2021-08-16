@@ -50,7 +50,7 @@ where
     }
 
     #[inline]
-   fn next_i64(&mut self) -> Result<i64, RedisError> {
+    fn next_i64(&mut self) -> Result<i64, RedisError> {
         self.next()
             .map_or(Err(RedisError::WrongArity), |v| v.parse_integer())
     }
@@ -106,6 +106,13 @@ impl RedisString {
         let str = CString::new(s).unwrap();
         let inner = unsafe { raw::RedisModule_CreateString.unwrap()(ctx, str.as_ptr(), s.len()) };
 
+        RedisString { ctx, inner }
+    }
+
+    pub fn from_redis_module_string(
+        ctx: *mut raw::RedisModuleCtx,
+        inner: *mut raw::RedisModuleString,
+    ) -> RedisString {
         RedisString { ctx, inner }
     }
 
