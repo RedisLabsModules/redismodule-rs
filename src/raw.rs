@@ -456,24 +456,11 @@ pub fn replicate_verbatim(ctx: *mut RedisModuleCtx) -> Status {
     unsafe { RedisModule_ReplicateVerbatim.unwrap()(ctx).into() }
 }
 
-fn load<T>(
-    rdb: *mut RedisModuleIO,
-    f: Option<unsafe extern "C" fn(io: *mut RedisModuleIO) -> T>,
-) -> Result<T, Error> {
-    let res = unsafe { f.unwrap()(rdb) };
-    if is_io_error(rdb) {
-        Err(RedisError::short_read().into())
-    } else {
-        Ok(res)
-    }
-}
-
-fn load_with_param<T, V>(
-    rdb: *mut RedisModuleIO,
-    f: Option<unsafe extern "C" fn(io: *mut RedisModuleIO, *mut V) -> T>,
-    v: *mut V,
-) -> Result<T, Error> {
-    let res = unsafe { f.unwrap()(rdb, v) };
+fn load<F, T>(rdb: *mut RedisModuleIO, f: F) -> Result<T, Error>
+where
+    F: FnOnce(*mut RedisModuleIO) -> T,
+{
+    let res = f(rdb);
     if is_io_error(rdb) {
         Err(RedisError::short_read().into())
     } else {
@@ -483,17 +470,17 @@ fn load_with_param<T, V>(
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn load_unsigned(rdb: *mut RedisModuleIO) -> Result<u64, Error> {
-    unsafe { load::<u64>(rdb, RedisModule_LoadUnsigned) }
+    unsafe { load(rdb, |rdb| RedisModule_LoadUnsigned.unwrap()(rdb)) }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn load_signed(rdb: *mut RedisModuleIO) -> Result<i64, Error> {
-    unsafe { load::<i64>(rdb, RedisModule_LoadSigned) }
+    unsafe { load(rdb, |rdb| RedisModule_LoadSigned.unwrap()(rdb)) }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn load_string(rdb: *mut RedisModuleIO) -> Result<RedisString, Error> {
-    let p = unsafe { load::<*mut RedisModuleString>(rdb, RedisModule_LoadString)? };
+    let p = unsafe { load(rdb, |rdb| RedisModule_LoadString.unwrap()(rdb))? };
     let ctx = unsafe { RedisModule_GetContextFromIO.unwrap()(rdb) };
     Ok(RedisString::from_redis_module_string(ctx, p))
 }
@@ -502,8 +489,9 @@ pub fn load_string(rdb: *mut RedisModuleIO) -> Result<RedisString, Error> {
 pub fn load_string_buffer(rdb: *mut RedisModuleIO) -> Result<RedisBuffer, Error> {
     unsafe {
         let mut len = 0;
-        let buffer =
-            load_with_param::<*mut c_char, usize>(rdb, RedisModule_LoadStringBuffer, &mut len)?;
+        let buffer = load(rdb, |rdb| {
+            RedisModule_LoadStringBuffer.unwrap()(rdb, &mut len)
+        })?;
         Ok(RedisBuffer::new(buffer, len))
     }
 }
@@ -531,12 +519,12 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn load_double(rdb: *mut RedisModuleIO) -> Result<f64, Error> {
-    unsafe { load::<f64>(rdb, RedisModule_LoadDouble) }
+    unsafe { load(rdb, |rdb| RedisModule_LoadDouble.unwrap()(rdb)) }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn load_float(rdb: *mut RedisModuleIO) -> f32 {
-    unsafe { RedisModule_LoadFloat.unwrap()(rdb) }
+pub fn load_float(rdb: *mut RedisModuleIO) -> Result<f32, Error> {
+    unsafe { load(rdb, |rdb| RedisModule_LoadFloat.unwrap()(rdb)) }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
