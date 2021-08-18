@@ -28,6 +28,13 @@ bitflags! {
     }
 }
 
+bitflags! {
+    pub struct ModuleOptions: c_int {
+        const HANDLE_IO_ERRORS = REDISMODULE_OPTIONS_HANDLE_IO_ERRORS as c_int;
+        const NO_IMPLICIT_SIGNAL_MODIFIED = REDISMODULE_OPTION_NO_IMPLICIT_SIGNAL_MODIFIED as c_int;
+    }
+}
+
 #[derive(Primitive, Debug, PartialEq)]
 pub enum KeyType {
     Empty = REDISMODULE_KEYTYPE_EMPTY,

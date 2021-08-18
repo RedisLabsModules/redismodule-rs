@@ -4,6 +4,7 @@ use std::ptr;
 
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::raw;
+use crate::raw::ModuleOptions;
 use crate::LogLevel;
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
@@ -262,5 +263,9 @@ impl Context {
         keyname: &RedisString,
     ) -> raw::Status {
         raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
+    }
+
+    pub fn set_module_options(&self, options: ModuleOptions) {
+        unsafe { raw::RedisModule_SetModuleOptions.unwrap()(self.ctx, options.bits()) };
     }
 }
