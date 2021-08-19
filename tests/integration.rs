@@ -63,7 +63,7 @@ fn test_test_helper_version() -> Result<()> {
     let res: Vec<i64> = redis::cmd("test_helper.version")
         .query(&mut con)
         .with_context(|| "failed to run test_helper.version")?;
-    assert!(res[0] != 0);
+    assert!(res[0] > 0);
 
     // Test also an internal implementation that might not always be reached
     let res2: Vec<i64> = redis::cmd("test_helper._version_rm_call")
