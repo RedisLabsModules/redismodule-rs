@@ -128,6 +128,8 @@ commands:
             cd build/platforms
             make build OSNICK=<<parameters.platform>> VERSION=$CIRCLE_TAG BRANCH=$CIRCLE_BRANCH TEST=1 SHOW=1
 
+#----------------------------------------------------------------------------------------------------------------------------------
+
 jobs:
   build:
     docker:
@@ -140,7 +142,7 @@ jobs:
       platform:
         type: string
     docker:
-      - image: redisfab/rmbuilder:6.2.5-x64-buster
+      - image: ubuntu:bionic
     steps:
       - platforms-build-steps:
           platform: <<parameters.platform>>
@@ -152,6 +154,7 @@ jobs:
       - build-steps:
           make_bin: gmake
 
+#----------------------------------------------------------------------------------------------------------------------------------
 
 on-any-branch: &on-any-branch
   filters:
@@ -211,6 +214,7 @@ on-integ-and-version-tags: &on-integ-and-version-tags
     tags:
       only: /^v[0-9].*/
 
+#----------------------------------------------------------------------------------------------------------------------------------
 
 workflows:
   version: 2
