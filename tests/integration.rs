@@ -8,10 +8,11 @@ mod utils;
 
 #[test]
 fn test_hello() -> Result<()> {
-    let _guards = vec![start_redis_server_with_module("hello", 6479)
+    let port: u16 = 6479;
+    let _guards = vec![start_redis_server_with_module("hello", port)
         .with_context(|| "failed to start redis server")?];
     let mut con =
-        get_redis_connection(6479).with_context(|| "failed to connect to redis server")?;
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
     let res: Vec<i32> = redis::cmd("hello.mul")
         .arg(&[3, 4])
@@ -30,10 +31,11 @@ fn test_hello() -> Result<()> {
 
 #[test]
 fn test_keys_pos() -> Result<()> {
-    let _guards = vec![start_redis_server_with_module("keys_pos", 6480)
+    let port: u16 = 6480;
+    let _guards = vec![start_redis_server_with_module("keys_pos", port)
         .with_context(|| "failed to start redis server")?];
     let mut con =
-        get_redis_connection(6480).with_context(|| "failed to connect to redis server")?;
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
     let res: Vec<String> = redis::cmd("keys_pos")
         .arg(&["a", "1", "b", "2"])
@@ -61,17 +63,13 @@ fn test_test_helper_version() -> Result<()> {
     let res: Vec<i64> = redis::cmd("test_helper.version")
         .query(&mut con)
         .with_context(|| "failed to run test_helper.version")?;
-    assert!(
-        (res[0] == 6 && res[1] == 2 && res[2] >= 3) || (res[0] == 6 && res[1] == 0 && res[2] >= 15)
-    );
+    assert!(res[0] != 0);
 
-    if cfg!(feature = "test") {
-        // Test also an internal implementation that might not always be reached
-        let res2: Vec<i64> = redis::cmd("test_helper._version_rm_call")
-            .query(&mut con)
-            .with_context(|| "failed to run test_helper._version_rm_call")?;
-        assert_eq!(res, res2);
-    }
+    // Test also an internal implementation that might not always be reached
+    let res2: Vec<i64> = redis::cmd("test_helper._version_rm_call")
+        .query(&mut con)
+        .with_context(|| "failed to run test_helper._version_rm_call")?;
+    assert_eq!(res, res2);
 
     Ok(())
 }

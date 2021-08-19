@@ -21,6 +21,7 @@ mod context;
 pub mod key;
 pub mod logging;
 mod macros;
+mod utils;
 
 #[cfg(feature = "experimental-api")]
 pub use crate::context::blocked::BlockedClient;

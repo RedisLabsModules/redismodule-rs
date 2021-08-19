@@ -2,12 +2,10 @@ use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long};
 use std::ptr;
 
-use regex::Regex;
-
 use crate::key::{RedisKey, RedisKeyWritable};
-use crate::raw;
 use crate::raw::Version;
 use crate::LogLevel;
+use crate::{raw, utils};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
 #[cfg(feature = "experimental-api")]
@@ -267,20 +265,6 @@ impl Context {
         raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
     }
 
-    /// Extracts the first regexp capture
-    fn extract_token_value<'a, 'b>(s: &'a str, reg_exp: &'b str) -> Option<&'a str> {
-        match Regex::new(reg_exp) {
-            Ok(re) => match re.captures(s) {
-                Some(captures) => match captures.get(1) {
-                    Some(m) => Some(m.as_str()),
-                    None => None,
-                },
-                None => None,
-            },
-            Err(_) => None,
-        }
-    }
-
     /// Returns the redis version either by calling RedisModule_GetServerVersion API,
     /// Or if it is not available, by calling "info server" API and parsing the reply
     pub fn get_redis_version(&self) -> Result<Version, RedisError> {
@@ -303,11 +287,15 @@ impl Context {
             _ => {
                 // Call "info server"
                 if let Ok(RedisValue::SimpleString(s)) = self.call("info", &["server"]) {
-                    if let Some(ver) = Context::extract_token_value(
+                    if let Some(ver) = utils::get_regexp_captures(
                         s.as_str(),
-                        r"(?m)\bredis_version:([0-9]+\.[0-9]+\.[0-9]+)\b",
+                        r"(?m)\bredis_version:([0-9]+)\.([0-9]+)\.([0-9]+)\b",
                     ) {
-                        return Ok(Version::from(ver));
+                        return Ok(Version {
+                            major: ver[0].parse::<c_int>().unwrap(),
+                            minor: ver[1].parse::<c_int>().unwrap(),
+                            patch: ver[2].parse::<c_int>().unwrap(),
+                        });
                     }
                 }
                 Err(RedisError::Str(
