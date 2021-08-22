@@ -1,3 +1,4 @@
+use crate::RedisError;
 use std::error;
 use std::fmt;
 use std::fmt::Display;
@@ -12,6 +13,12 @@ pub enum Error {
 impl Error {
     pub fn generic(message: &str) -> Error {
         Error::Generic(GenericError::new(message))
+    }
+}
+
+impl From<RedisError> for Error {
+    fn from(err: RedisError) -> Error {
+        Error::generic(err.to_string().as_str())
     }
 }
 
