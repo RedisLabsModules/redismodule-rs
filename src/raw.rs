@@ -93,15 +93,6 @@ impl From<c_int> for Status {
     }
 }
 
-impl From<Status> for c_int {
-    fn from(v: Status) -> Self {
-        match v {
-            Status::Ok => REDISMODULE_OK as c_int,
-            Status::Err => REDISMODULE_OK as c_int,
-        }
-    }
-}
-
 impl From<Status> for Result<(), &str> {
     fn from(s: Status) -> Self {
         match s {
