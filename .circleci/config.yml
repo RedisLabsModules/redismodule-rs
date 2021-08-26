@@ -137,6 +137,8 @@ commands:
 
 #----------------------------------------------------------------------------------------------------------------------------------
 
+#----------------------------------------------------------------------------------------------------------------------------------
+
 jobs:
   build:
     docker:
@@ -230,8 +232,7 @@ workflows:
           <<: *not-on-integ-branch
       - platforms-build:
           context: common
-          #@@<<: *on-integ-and-version-tags
-          <<: *on-any-branch
+          <<: *on-integ-and-version-tags
           matrix:
             parameters:
               platform: [focal, bionic, xenial, centos8, centos7, buster]
