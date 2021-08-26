@@ -3,7 +3,6 @@ use std::os::raw::{c_char, c_int, c_long};
 use std::ptr;
 
 use crate::key::{RedisKey, RedisKeyWritable};
-use crate::raw;
 use crate::raw::{ModuleOptions, Version};
 use crate::LogLevel;
 use crate::{raw, utils};
