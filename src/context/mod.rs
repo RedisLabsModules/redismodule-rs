@@ -3,7 +3,8 @@ use std::os::raw::{c_char, c_int, c_long};
 use std::ptr;
 
 use crate::key::{RedisKey, RedisKeyWritable};
-use crate::raw::Version;
+use crate::raw;
+use crate::raw::{ModuleOptions, Version};
 use crate::LogLevel;
 use crate::{raw, utils};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
@@ -303,5 +304,8 @@ impl Context {
                 ))
             }
         }
+    }
+    pub fn set_module_options(&self, options: ModuleOptions) {
+        unsafe { raw::RedisModule_SetModuleOptions.unwrap()(self.ctx, options.bits()) };
     }
 }

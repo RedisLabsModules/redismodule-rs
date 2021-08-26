@@ -1,13 +1,20 @@
 version: 2.1
 
 commands:
-  abort-for-docs:
+  early-returns:
     steps:
       - run:
-          name: Avoid tests for docs
+          name: Early return if this is a docs build
           command: |
-            if [[ $CIRCLE_BRANCH == *_docs ]]; then
-              echo "Identifies as documents PR, no testing required"
+            if [[ $CIRCLE_BRANCH == *docs ]]; then
+              echo "Identifies as documents PR, no testing required."
+              circleci step halt
+            fi
+      - run:
+          name: Early return if this branch should ignore CI
+          command: |
+            if [[ $CIRCLE_BRANCH == *noci ]]; then
+              echo "Identifies as actively ignoring CI, no testing required."
               circleci step halt
             fi
 
@@ -33,7 +40,15 @@ commands:
             apt-get -q install -y git openssh-client curl ca-certificates make tar gzip
             bash <(curl -fsSL https://raw.githubusercontent.com/docker/docker-install/master/install.sh)
       - setup_remote_docker:
+          version: 20.10.2
           docker_layer_caching: true
+
+  checkout-all:
+    steps:
+      - checkout
+      - run:
+          name: Checkout submodules
+          command: git submodule update --init --recursive
 
   setup-automation:
     steps:
@@ -43,29 +58,29 @@ commands:
             (mkdir -p deps; cd deps; git clone https://github.com/RedisLabsModules/readies.git)
             ./deps/readies/bin/getpy3
 
-  setup-build-environment:
+  install-prerequisites:
+    parameters:
+      redis_version:
+        type: string
+        default: "6"
+      getredis_params:
+        type: string
+        default: ""
     steps:
+      - setup-automation
       - run:
           name: Setup build environment
           command: |
             ./sbin/system-setup.py
-            source $HOME/.cargo/env
-            rustc --version
-            cargo --version
-            rustup --version
-
-  checkout-all:
-    steps:
-      - checkout
+            bash -l -c "make info"
       - run:
-          name: Checkout submodules
-          command: git submodule update --init --recursive
+          name: Install Redis
+          command: |
+            bash -l -c "./deps/readies/bin/getredis -v \"<<parameters.redis_version>>\" --force <<parameters.getredis_params>>"
+            redis-server --version
 
   build-steps:
     parameters:
-      make_bin:
-        type: string
-        default: "make"
       build_params:
         type: string
         default: ""
@@ -79,30 +94,23 @@ commands:
         type: string
         default: ""
     steps:
-      - abort-for-docs
+      - early-returns
       - checkout-all
-      - setup-automation
-      - run:
-          name: Setup build environment
-          command: |
-            ./sbin/system-setup.py
-            source $HOME/.cargo/env
-            rustc --version
-            cargo --version
-            rustup --version
+      - install-prerequisites:
+          redis_version: <<parameters.redis_version>>
+          getredis_params: <<parameters.getredis_params>>
       - restore_cache:
           keys:
             - v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
-            # fallback to using the latest cache if no exact match is found
       #- run:
       #    name: Check formatting
       #    command: bash -l -c "make lint"
       - run:
           name: Build debug
-          command: bash -l -c "<<parameters.make_bin>> build DEBUG=1 <<parameters.build_params>>"
+          command: bash -l -c "make build DEBUG=1 <<parameters.build_params>>"
       - run:
           name: Build release
-          command: bash -l -c "<<parameters.make_bin>> build <<parameters.build_params>>"
+          command: bash -l -c "make build <<parameters.build_params>>"
       - save_cache:
           key: v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
           paths:
@@ -110,23 +118,24 @@ commands:
             - "./target"
       - run:
           name: Run all tests
-          command: bash -l -c "<<parameters.make_bin>> test"
+          command: bash -l -c "make test"
 
   platforms-build-steps:
     parameters:
       platform:
         type: string
     steps:
-      - abort-for-docs
+      - early-returns
       - setup-executor
       - checkout-all
       - setup-automation
-      - setup-build-environment
       - run:
           name: Build for platform
           command: |
             cd build/platforms
-            make build OSNICK=<<parameters.platform>> VERSION=$CIRCLE_TAG BRANCH=$CIRCLE_BRANCH TEST=1 SHOW=1
+            make build OSNICK="<<parameters.platform>>" VERSION="$CIRCLE_TAG" BRANCH="$CIRCLE_BRANCH" TEST=1 SHOW=1
+
+#----------------------------------------------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------------------------------------------
 
@@ -142,17 +151,16 @@ jobs:
       platform:
         type: string
     docker:
-      - image: ubuntu:bionic
+      - image: debian:buster
     steps:
       - platforms-build-steps:
           platform: <<parameters.platform>>
 
   build-macos:
     macos:
-      xcode: 11.3.0
+      xcode: 11.6.0
     steps:
-      - build-steps:
-          make_bin: gmake
+      - build-steps
 
 #----------------------------------------------------------------------------------------------------------------------------------
 
@@ -221,12 +229,12 @@ workflows:
   default-flow:
     jobs:
       - build:
-          <<: *on-any-branch
+          <<: *not-on-integ-branch
       - platforms-build:
           context: common
-          <<: *on-any-branch
+          <<: *on-integ-and-version-tags
           matrix:
             parameters:
-              platform: [focal, bionic, xenial, centos7]
+              platform: [focal, bionic, xenial, centos8, centos7, buster]
       - build-macos:
           <<: *on-any-branch

@@ -99,3 +99,12 @@ platform:
 ifeq ($(PUBLISH),1)
 	@make -C build/platforms publish
 endif
+
+info:
+	gcc --version
+	cmake --version
+	clang --version
+	rustc --version
+	cargo --version
+	rustup --version
+	rustup show

@@ -6,15 +6,17 @@ extern crate enum_primitive_derive;
 extern crate libc;
 extern crate num_traits;
 
-use bitflags::bitflags;
-use enum_primitive_derive::Primitive;
-use libc::size_t;
-use num_traits::FromPrimitive;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
 use std::ptr;
 use std::slice;
 
+use bitflags::bitflags;
+use enum_primitive_derive::Primitive;
+use libc::size_t;
+use num_traits::FromPrimitive;
+
+use crate::error::Error;
 pub use crate::redisraw::bindings::*;
 use crate::RedisString;
 use crate::{RedisBuffer, RedisError};
@@ -23,6 +25,13 @@ bitflags! {
     pub struct KeyMode: c_int {
         const READ = REDISMODULE_READ as c_int;
         const WRITE = REDISMODULE_WRITE as c_int;
+    }
+}
+
+bitflags! {
+    pub struct ModuleOptions: c_int {
+        const HANDLE_IO_ERRORS = REDISMODULE_OPTIONS_HANDLE_IO_ERRORS as c_int;
+        const NO_IMPLICIT_SIGNAL_MODIFIED = REDISMODULE_OPTION_NO_IMPLICIT_SIGNAL_MODIFIED as c_int;
     }
 }
 
@@ -445,30 +454,43 @@ pub fn replicate_verbatim(ctx: *mut RedisModuleCtx) -> Status {
     unsafe { RedisModule_ReplicateVerbatim.unwrap()(ctx).into() }
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn load_unsigned(rdb: *mut RedisModuleIO) -> u64 {
-    unsafe { RedisModule_LoadUnsigned.unwrap()(rdb) }
+fn load<F, T>(rdb: *mut RedisModuleIO, f: F) -> Result<T, Error>
+where
+    F: FnOnce(*mut RedisModuleIO) -> T,
+{
+    let res = f(rdb);
+    if is_io_error(rdb) {
+        Err(RedisError::short_read().into())
+    } else {
+        Ok(res)
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn load_signed(rdb: *mut RedisModuleIO) -> i64 {
-    unsafe { RedisModule_LoadSigned.unwrap()(rdb) }
+pub fn load_unsigned(rdb: *mut RedisModuleIO) -> Result<u64, Error> {
+    unsafe { load(rdb, |rdb| RedisModule_LoadUnsigned.unwrap()(rdb)) }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn load_string(rdb: *mut RedisModuleIO) -> String {
-    let p = unsafe { RedisModule_LoadString.unwrap()(rdb) };
-    RedisString::from_ptr(p)
-        .expect("UTF8 encoding error in load string")
-        .to_string()
+pub fn load_signed(rdb: *mut RedisModuleIO) -> Result<i64, Error> {
+    unsafe { load(rdb, |rdb| RedisModule_LoadSigned.unwrap()(rdb)) }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn load_string_buffer(rdb: *mut RedisModuleIO) -> RedisBuffer {
+pub fn load_string(rdb: *mut RedisModuleIO) -> Result<RedisString, Error> {
+    let p = unsafe { load(rdb, |rdb| RedisModule_LoadString.unwrap()(rdb))? };
+    let ctx = unsafe { RedisModule_GetContextFromIO.unwrap()(rdb) };
+    Ok(RedisString::from_redis_module_string(ctx, p))
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn load_string_buffer(rdb: *mut RedisModuleIO) -> Result<RedisBuffer, Error> {
     unsafe {
         let mut len = 0;
-        let buffer = RedisModule_LoadStringBuffer.unwrap()(rdb, &mut len);
-        RedisBuffer::new(buffer, len)
+        let buffer = load(rdb, |rdb| {
+            RedisModule_LoadStringBuffer.unwrap()(rdb, &mut len)
+        })?;
+        Ok(RedisBuffer::new(buffer, len))
     }
 }
 
@@ -494,13 +516,13 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn load_double(rdb: *mut RedisModuleIO) -> f64 {
-    unsafe { RedisModule_LoadDouble.unwrap()(rdb) }
+pub fn load_double(rdb: *mut RedisModuleIO) -> Result<f64, Error> {
+    unsafe { load(rdb, |rdb| RedisModule_LoadDouble.unwrap()(rdb)) }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn load_float(rdb: *mut RedisModuleIO) -> f32 {
-    unsafe { RedisModule_LoadFloat.unwrap()(rdb) }
+pub fn load_float(rdb: *mut RedisModuleIO) -> Result<f32, Error> {
+    unsafe { load(rdb, |rdb| RedisModule_LoadFloat.unwrap()(rdb)) }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -601,4 +623,9 @@ impl From<c_int> for Version {
             patch: (ver & 0x0000_00FF),
         }
     }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn is_io_error(rdb: *mut RedisModuleIO) -> bool {
+    unsafe { RedisModule_IsIOError.unwrap()(rdb) != 0 }
 }
