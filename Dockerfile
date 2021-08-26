@@ -1,6 +1,6 @@
 # BUILD redisfab/redismodule-rs:${VERSION}-${ARCH}-${OSNICK}
 
-ARG REDIS_VER=6.2.2
+ARG REDIS_VER=6.2.5
 
 # stretch|bionic|buster
 ARG OSNICK=buster
@@ -28,6 +28,7 @@ WORKDIR /build
 
 RUN ./deps/readies/bin/getpy3
 RUN ./sbin/system-setup.py
+RUN bash -l -c "make info"
 RUN bash -l -c make
 
 RUN set -ex ;\
