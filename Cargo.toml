@@ -14,6 +14,10 @@ name = "hello"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "command_filter"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "keys_pos"
 crate-type = ["cdylib"]
 
