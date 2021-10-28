@@ -113,7 +113,7 @@ macro_rules! redis_module {
             ctx: *mut $crate::raw::RedisModuleInfoCtx,
             for_crash_report: i32,
         ) {
-            $crate::base_info_func(ctx, for_crash_report);
+            $crate::base_info_func(ctx, for_crash_report == 1);
         }
 
         #[no_mangle]

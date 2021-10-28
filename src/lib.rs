@@ -61,14 +61,14 @@ fn from_byte_string(byte_str: *const c_char, length: size_t) -> Result<String, U
     String::from_utf8(vec_str).map_err(|e| e.utf8_error())
 }
 
-pub fn base_info_func(ctx: *mut RedisModuleInfoCtx, for_crash_report: i32) {
-    if for_crash_report != 0 {
-        // add rust trace into the crash report
-        if add_info_section(ctx, Some("trace\0")) == Status::Ok {
-            let mut current_backtrace = Backtrace::new_unresolved();
-            current_backtrace.resolve();
-            let trace = format!("{:?}", current_backtrace);
-            raw::add_info_field_str(ctx, "trace\0", &trace);
-        }
+pub fn base_info_func(ctx: *mut RedisModuleInfoCtx, for_crash_report: bool) {
+    if !for_crash_report {
+        return;
+    }
+    // add rust trace into the crash report
+    if add_info_section(ctx, Some("trace")) == Status::Ok {
+        let current_backtrace = Backtrace::new();
+        let trace = format!("{:?}", current_backtrace);
+        raw::add_info_field_str(ctx, "trace", &trace);
     }
 }
