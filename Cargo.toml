@@ -56,6 +56,7 @@ enum-primitive-derive = "^0.1"
 num-traits = "^0.2"
 strum_macros = "0.22"
 #failure = "0.1"
+backtrace = "0.3"
 
 [dev-dependencies]
 anyhow = "1.0.38"
