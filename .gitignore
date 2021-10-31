@@ -15,3 +15,5 @@ src/redisraw/bindings.rs
 
 # VS Code
 .vscode
+
+lcov.*
