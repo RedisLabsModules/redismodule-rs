@@ -49,6 +49,11 @@ name = "events"
 crate-type = ["cdylib"]
 required-features = ["experimental-api"]
 
+[[example]]
+name = "info"
+crate-type = ["cdylib"]
+required-features = []
+
 [dependencies]
 bitflags = "1.2"
 libc = "0.2"
