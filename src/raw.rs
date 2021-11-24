@@ -572,10 +572,7 @@ pub fn subscribe_to_server_event(
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn register_info_function(
-    ctx: *mut RedisModuleCtx,
-    callback: RedisModuleInfoFunc,
-) -> Status {
+pub fn register_info_function(ctx: *mut RedisModuleCtx, callback: RedisModuleInfoFunc) -> Status {
     unsafe { RedisModule_RegisterInfoFunc.unwrap()(ctx, callback).into() }
 }
 
@@ -584,9 +581,7 @@ pub fn add_info_section(
     ctx: *mut RedisModuleInfoCtx,
     name: Option<&str>, // assume NULL terminated
 ) -> Status {
-    let name = name.map(|n| {
-            CString::new(n).unwrap()
-        });
+    let name = name.map(|n| CString::new(n).unwrap());
     if let Some(n) = name {
         unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr() as *mut c_char).into() }
     } else {
@@ -602,7 +597,10 @@ pub fn add_info_field_str(
 ) -> Status {
     let name = CString::new(name).unwrap();
     let content = RedisString::create(ptr::null_mut(), content);
-    unsafe { RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr() as *mut c_char, content.inner).into() }
+    unsafe {
+        RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr() as *mut c_char, content.inner)
+            .into()
+    }
 }
 
 #[cfg(feature = "experimental-api")]

@@ -129,10 +129,10 @@ mod tests {
 
     #[test]
     fn from_vec() {
-        let v : Vec<u8> = vec![0,3,5,21,255];
+        let v: Vec<u8> = vec![0, 3, 5, 21, 255];
         assert_eq!(
             RedisValue::from(v),
-            RedisValue::StringBuffer(vec![0,3,5,21,255])
+            RedisValue::StringBuffer(vec![0, 3, 5, 21, 255])
         );
     }
 
