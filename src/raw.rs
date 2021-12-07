@@ -6,6 +6,7 @@ extern crate enum_primitive_derive;
 extern crate libc;
 extern crate num_traits;
 
+use std::cmp::Ordering;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
 use std::ptr;
@@ -549,6 +550,11 @@ pub fn save_float(rdb: *mut RedisModuleIO, val: f32) {
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn save_unsigned(rdb: *mut RedisModuleIO, val: u64) {
     unsafe { RedisModule_SaveUnsigned.unwrap()(rdb, val) };
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn string_compare(a: *const RedisModuleString, b: *const RedisModuleString) -> Ordering {
+    unsafe { RedisModule_StringCompare.unwrap()(a, b).cmp(&0) }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
