@@ -144,7 +144,7 @@ impl RedisString {
     pub fn try_as_str<'a>(&self) -> Result<&'a str, RedisError> {
         Self::from_ptr(self.inner).map_err(|_| RedisError::Str("Couldn't parse as UTF-8 string"))
     }
-    
+
     pub fn as_slice<'a>(&self) -> &'a [u8] {
         let mut len: libc::size_t = 0;
         let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(self.inner, &mut len) };
