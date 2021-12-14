@@ -119,10 +119,7 @@ impl RedisString {
 
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn from_ptr<'a>(ptr: *const raw::RedisModuleString) -> Result<&'a str, Utf8Error> {
-        let mut len: libc::size_t = 0;
-        let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(ptr, &mut len) };
-
-        str::from_utf8(unsafe { slice::from_raw_parts(bytes.cast::<u8>(), len) })
+        str::from_utf8(Self::string_as_slice(ptr))
     }
 
     pub fn append(&mut self, s: &str) -> raw::Status {
@@ -146,8 +143,12 @@ impl RedisString {
     }
 
     pub fn as_slice<'a>(&self) -> &[u8] {
+        Self::string_as_slice(self.inner)
+    }
+
+    fn string_as_slice<'a>(ptr: *const raw::RedisModuleString) -> &'a [u8] {
         let mut len: libc::size_t = 0;
-        let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(self.inner, &mut len) };
+        let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(ptr, &mut len) };
 
         unsafe { slice::from_raw_parts(bytes.cast::<u8>(), len) }
     }
