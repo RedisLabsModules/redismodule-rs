@@ -145,7 +145,7 @@ impl RedisString {
         Self::from_ptr(self.inner).map_err(|_| RedisError::Str("Couldn't parse as UTF-8 string"))
     }
 
-    pub fn as_slice<'a>(&self) -> &'a [u8] {
+    pub fn as_slice<'a>(&self) -> &[u8] {
         let mut len: libc::size_t = 0;
         let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(self.inner, &mut len) };
 
@@ -160,10 +160,7 @@ impl RedisString {
     ///
     /// Will panic if `RedisModule_StringPtrLen` is missing in redismodule.h
     pub fn to_string_lossy(&self) -> String {
-        let mut len: libc::size_t = 0;
-        let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(self.inner, &mut len) };
-        let bytes = unsafe { slice::from_raw_parts(bytes.cast::<u8>(), len) };
-        String::from_utf8_lossy(bytes).into_owned()
+        String::from_utf8_lossy(self.as_slice()).into_owned()
     }
 
     pub fn parse_unsigned_integer(&self) -> Result<u64, RedisError> {
