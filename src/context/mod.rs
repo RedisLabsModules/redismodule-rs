@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_long};
 use std::ptr;
 
@@ -280,6 +280,15 @@ impl Context {
         keyname: &RedisString,
     ) -> raw::Status {
         raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
+    }
+
+    #[cfg(feature = "experimental-api")]
+    pub fn current_command_name(&self) -> &str {
+        unsafe {
+            CStr::from_ptr(raw::RedisModule_GetCurrentCommandName.unwrap()(self.ctx))
+                .to_str()
+                .unwrap()
+        }
     }
 
     pub fn set_module_options(&self, options: ModuleOptions) {
