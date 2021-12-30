@@ -80,7 +80,7 @@ pub fn get_redis_connection(port: u64) -> Result<Connection> {
                     // Redis not ready yet, sleep and retry
                     std::thread::sleep(Duration::from_millis(50));
                 } else {
-                    Err(e)?;
+                    return Err(e.into());
                 }
             }
         }

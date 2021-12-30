@@ -142,7 +142,7 @@ impl RedisString {
         Self::from_ptr(self.inner).map_err(|_| RedisError::Str("Couldn't parse as UTF-8 string"))
     }
 
-    pub fn as_slice<'a>(&self) -> &[u8] {
+    pub fn as_slice(&self) -> &[u8] {
         Self::string_as_slice(self.inner)
     }
 
