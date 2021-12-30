@@ -2,8 +2,8 @@
 
 ARG REDIS_VER=6.2.5
 
-# stretch|bionic|buster
-ARG OSNICK=buster
+# bullseye|bionic|xenial|centos8|centos7
+ARG OSNICK=bullseye
 
 # ARCH=x64|arm64v8|arm32v7
 ARG ARCH=x64

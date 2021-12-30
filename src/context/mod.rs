@@ -17,6 +17,8 @@ pub(crate) mod thread_safe;
 #[cfg(feature = "experimental-api")]
 pub(crate) mod blocked;
 
+pub(crate) mod info;
+
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
@@ -135,6 +137,28 @@ impl Context {
         }
     }
 
+    pub fn str_as_legal_resp_string(s: &str) -> CString {
+        CString::new(
+            s.chars()
+                .map(|c| match c {
+                    '\r' | '\n' => ' ' as u8,
+                    _ => c as u8,
+                })
+                .collect::<Vec<_>>(),
+        )
+        .unwrap()
+    }
+
+    pub fn reply_simple_string(&self, s: &str) -> raw::Status {
+        let msg = Context::str_as_legal_resp_string(s);
+        unsafe { raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into() }
+    }
+
+    pub fn reply_error_string(&self, s: &str) -> raw::Status {
+        let msg = Context::str_as_legal_resp_string(s);
+        unsafe { raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into() }
+    }
+
     /// # Panics
     ///
     /// Will panic if methods used are missing in redismodule.h
@@ -209,20 +233,13 @@ impl Context {
                 }
             },
 
-            Err(RedisError::WrongType) => unsafe {
-                let msg = CString::new(RedisError::WrongType.to_string()).unwrap();
-                raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
-            },
+            Err(RedisError::WrongType) => {
+                self.reply_error_string(RedisError::WrongType.to_string().as_str())
+            }
 
-            Err(RedisError::String(s)) => unsafe {
-                let msg = CString::new(s).unwrap();
-                raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
-            },
+            Err(RedisError::String(s)) => self.reply_error_string(s.as_str()),
 
-            Err(RedisError::Str(s)) => unsafe {
-                let msg = CString::new(s).unwrap();
-                raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
-            },
+            Err(RedisError::Str(s)) => self.reply_error_string(s),
         }
     }
 
