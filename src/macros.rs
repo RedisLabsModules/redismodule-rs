@@ -18,10 +18,8 @@ macro_rules! redis_command {
         ) -> c_int {
             let context = $crate::Context::new(ctx);
 
-            let response = $crate::decode_args(argv, argc)
-                .map(|args| $command_handler(&context, args))
-                .unwrap_or_else(|e| Err(e));
-
+            let args = $crate::decode_args(ctx, argv, argc);
+            let response = $command_handler(&context, args);
             context.reply(response) as c_int
         }
         /////////////////////
@@ -111,6 +109,13 @@ macro_rules! redis_module {
             ]),* $(,)*
         ])?
     ) => {
+        extern "C" fn __info_func(
+            ctx: *mut $crate::raw::RedisModuleInfoCtx,
+            for_crash_report: i32,
+        ) {
+            $crate::base_info_func(ctx, for_crash_report == 1);
+        }
+
         #[no_mangle]
         #[allow(non_snake_case)]
         pub extern "C" fn RedisModule_OnLoad(
@@ -146,12 +151,10 @@ macro_rules! redis_module {
             ) } == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
 
             let context = $crate::Context::new(ctx);
-            let args = $crate::decode_args(argv, argc);
-
-            if args.is_err() { return raw::Status::Err as c_int }
+            let args = $crate::decode_args(ctx, argv, argc);
 
             $(
-                if $init_func(&context, &args.unwrap()) == $crate::Status::Err {
+                if $init_func(&context, &args) == $crate::Status::Err {
                     return $crate::Status::Err as c_int;
                 }
             )*
@@ -171,6 +174,8 @@ macro_rules! redis_module {
                     redis_event_handler!(ctx, $(raw::NotifyEvent::$event_type |)+ raw::NotifyEvent::empty(), $event_handler);
                 )*
             )?
+
+            raw::register_info_function(ctx, Some(__info_func));
 
             raw::Status::Ok as c_int
         }

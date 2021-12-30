@@ -1,9 +1,10 @@
-use libc::size_t;
 use std::convert::TryFrom;
 use std::os::raw::c_void;
 use std::ptr;
 use std::str::Utf8Error;
 use std::time::Duration;
+
+use libc::size_t;
 
 use raw::KeyType;
 
@@ -33,25 +34,22 @@ pub enum KeyMode {
 pub struct RedisKey {
     ctx: *mut raw::RedisModuleCtx,
     key_inner: *mut raw::RedisModuleKey,
-    key_str: RedisString,
 }
 
 impl RedisKey {
-    pub fn open(ctx: *mut raw::RedisModuleCtx, key: &str) -> RedisKey {
-        let key_str = RedisString::create(ctx, key);
-        let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::Read));
-        RedisKey {
-            ctx,
-            key_inner,
-            key_str,
-        }
+    pub fn open(ctx: *mut raw::RedisModuleCtx, key: &RedisString) -> RedisKey {
+        let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::Read));
+        RedisKey { ctx, key_inner }
     }
 
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_ModuleTypeGetValue` is missing in redismodule.h
     pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
 
         let value =
-            unsafe { raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner) as *mut T };
+            unsafe { raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner).cast::<T>() };
 
         if value.is_null() {
             return Ok(None);
@@ -62,6 +60,9 @@ impl RedisKey {
         Ok(Some(value))
     }
 
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
     pub fn key_type(&self) -> raw::KeyType {
         unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
     }
@@ -127,24 +128,12 @@ impl Drop for RedisKey {
 pub struct RedisKeyWritable {
     ctx: *mut raw::RedisModuleCtx,
     key_inner: *mut raw::RedisModuleKey,
-
-    // The Redis string
-    //
-    // This field is needed on the struct so that its Drop implementation gets
-    // called when it goes out of scope.
-    #[allow(dead_code)]
-    key_str: RedisString,
 }
 
 impl RedisKeyWritable {
-    pub fn open(ctx: *mut raw::RedisModuleCtx, key: &str) -> RedisKeyWritable {
-        let key_str = RedisString::create(ctx, key);
-        let key_inner = raw::open_key(ctx, key_str.inner, to_raw_mode(KeyMode::ReadWrite));
-        RedisKeyWritable {
-            ctx,
-            key_inner,
-            key_str,
-        }
+    pub fn open(ctx: *mut raw::RedisModuleCtx, key: &RedisString) -> RedisKeyWritable {
+        let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::ReadWrite));
+        RedisKeyWritable { ctx, key_inner }
     }
 
     /// Detects whether the value stored in a Redis key is empty.
@@ -264,11 +253,17 @@ impl RedisKeyWritable {
         }
     }
 
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_DeleteKey` is missing in redismodule.h
     pub fn delete(&self) -> RedisResult {
         unsafe { raw::RedisModule_DeleteKey.unwrap()(self.key_inner) };
         REDIS_OK
     }
 
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
     pub fn key_type(&self) -> raw::KeyType {
         unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
     }
@@ -277,10 +272,24 @@ impl RedisKeyWritable {
         self.key_type() == KeyType::Empty
     }
 
-    pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&mut T>, RedisError> {
+    pub fn open_with_redis_string(
+        ctx: *mut raw::RedisModuleCtx,
+        key: *mut raw::RedisModuleString,
+    ) -> RedisKeyWritable {
+        let key_inner = raw::open_key(ctx, key, to_raw_mode(KeyMode::ReadWrite));
+        RedisKeyWritable { ctx, key_inner }
+    }
+
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_ModuleTypeGetValue` is missing in redismodule.h    
+    pub fn get_value<'a, 'b, T>(
+        &'a self,
+        redis_type: &RedisType,
+    ) -> Result<Option<&'b mut T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
         let value =
-            unsafe { raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner) as *mut T };
+            unsafe { raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner).cast::<T>() };
 
         if value.is_null() {
             return Ok(None);
@@ -290,9 +299,12 @@ impl RedisKeyWritable {
         Ok(Some(value))
     }
 
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_ModuleTypeSetValue` is missing in redismodule.h
     pub fn set_value<T>(&self, redis_type: &RedisType, value: T) -> Result<(), RedisError> {
         verify_type(self.key_inner, redis_type)?;
-        let value = Box::into_raw(Box::new(value)) as *mut c_void;
+        let value = Box::into_raw(Box::new(value)).cast::<c_void>();
         let status: raw::Status = unsafe {
             raw::RedisModule_ModuleTypeSetValue.unwrap()(
                 self.key_inner,
@@ -364,7 +376,7 @@ where
 
     /// Provides an iterator over the multi-get results in the form of (field-name, field-value)
     /// pairs. The type of field-name elements is the same as that passed to the original multi-
-    /// get call, while the field-value elements may be of any type for which a RedisString `Into`
+    /// get call, while the field-value elements may be of any type for which a `RedisString` `Into`
     /// conversion is implemented.  
     ///
     /// # Examples
@@ -400,7 +412,7 @@ where
     /// [`Vec`]: Vec
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter {
-            fields_iter: self.fields.into_iter(),
+            fields_iter: self.fields.iter(),
             values_iter: self.values.into_iter(),
             phantom: std::marker::PhantomData,
         }
@@ -468,7 +480,11 @@ fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
     }
 }
 
-fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> RedisResult {
+/// # Panics
+///
+/// Will panic if `RedisModule_KeyType` or `RedisModule_ModuleTypeGetType` are missing in redismodule.h
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> RedisResult {
     let key_type: KeyType = unsafe { raw::RedisModule_KeyType.unwrap()(key_inner) }.into();
 
     if key_type != KeyType::Empty {

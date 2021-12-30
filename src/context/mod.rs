@@ -4,6 +4,7 @@ use std::ptr;
 
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::raw;
+use crate::raw::ModuleOptions;
 use crate::LogLevel;
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
@@ -16,10 +17,12 @@ pub(crate) mod thread_safe;
 #[cfg(feature = "experimental-api")]
 pub(crate) mod blocked;
 
+pub(crate) mod info;
+
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
-    pub(crate) ctx: *mut raw::RedisModuleCtx,
+    pub ctx: *mut raw::RedisModuleCtx,
 }
 
 impl Context {
@@ -53,12 +56,18 @@ impl Context {
         self.log(LogLevel::Warning, message);
     }
 
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_AutoMemory` is missing in redismodule.h
     pub fn auto_memory(&self) {
         unsafe {
             raw::RedisModule_AutoMemory.unwrap()(self.ctx);
         }
     }
 
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_IsKeysPositionRequest` is missing in redismodule.h
     pub fn is_keys_position_request(&self) -> bool {
         // We want this to be available in tests where we don't have an actual Redis to call
         if cfg!(feature = "test") {
@@ -70,6 +79,9 @@ impl Context {
         result != 0
     }
 
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_KeyAtPos` is missing in redismodule.h
     pub fn key_at_pos(&self, pos: i32) {
         // TODO: This will crash redis if `pos` is out of range.
         // Think of a way to make this safe by checking the range.
@@ -125,6 +137,31 @@ impl Context {
         }
     }
 
+    pub fn str_as_legal_resp_string(s: &str) -> CString {
+        CString::new(
+            s.chars()
+                .map(|c| match c {
+                    '\r' | '\n' => ' ' as u8,
+                    _ => c as u8,
+                })
+                .collect::<Vec<_>>(),
+        )
+        .unwrap()
+    }
+
+    pub fn reply_simple_string(&self, s: &str) -> raw::Status {
+        let msg = Context::str_as_legal_resp_string(s);
+        unsafe { raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into() }
+    }
+
+    pub fn reply_error_string(&self, s: &str) -> raw::Status {
+        let msg = Context::str_as_legal_resp_string(s);
+        unsafe { raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into() }
+    }
+
+    /// # Panics
+    ///
+    /// Will panic if methods used are missing in redismodule.h
     pub fn reply(&self, r: RedisResult) -> raw::Status {
         match r {
             Ok(RedisValue::Integer(v)) => unsafe {
@@ -146,9 +183,23 @@ impl Context {
             },
 
             Ok(RedisValue::BulkString(s)) => unsafe {
-                raw::RedisModule_ReplyWithString.unwrap()(
+                raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
-                    RedisString::create(self.ctx, s.as_ref()).inner,
+                    s.as_ptr() as *const c_char,
+                    s.len() as usize,
+                )
+                .into()
+            },
+
+            Ok(RedisValue::BulkRedisString(s)) => unsafe {
+                raw::RedisModule_ReplyWithString.unwrap()(self.ctx, s.inner).into()
+            },
+
+            Ok(RedisValue::StringBuffer(s)) => unsafe {
+                raw::RedisModule_ReplyWithStringBuffer.unwrap()(
+                    self.ctx,
+                    s.as_ptr() as *const c_char,
+                    s.len() as usize,
                 )
                 .into()
             },
@@ -182,28 +233,21 @@ impl Context {
                 }
             },
 
-            Err(RedisError::WrongType) => unsafe {
-                let msg = CString::new(RedisError::WrongType.to_string()).unwrap();
-                raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
-            },
+            Err(RedisError::WrongType) => {
+                self.reply_error_string(RedisError::WrongType.to_string().as_str())
+            }
 
-            Err(RedisError::String(s)) => unsafe {
-                let msg = CString::new(s).unwrap();
-                raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
-            },
+            Err(RedisError::String(s)) => self.reply_error_string(s.as_str()),
 
-            Err(RedisError::Str(s)) => unsafe {
-                let msg = CString::new(s).unwrap();
-                raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into()
-            },
+            Err(RedisError::Str(s)) => self.reply_error_string(s),
         }
     }
 
-    pub fn open_key(&self, key: &str) -> RedisKey {
+    pub fn open_key(&self, key: &RedisString) -> RedisKey {
         RedisKey::open(self.ctx, key)
     }
 
-    pub fn open_key_writable(&self, key: &str) -> RedisKeyWritable {
+    pub fn open_key_writable(&self, key: &RedisString) -> RedisKeyWritable {
         RedisKeyWritable::open(self.ctx, key)
     }
 
@@ -216,7 +260,16 @@ impl Context {
     }
 
     pub fn get_raw(&self) -> *mut raw::RedisModuleCtx {
-        return self.ctx;
+        self.ctx
+    }
+
+    #[cfg(feature = "experimental-api")]
+    pub fn export_shared_api(
+        &self,
+        func: *const ::std::os::raw::c_void,
+        name: *const ::std::os::raw::c_char,
+    ) {
+        raw::export_shared_api(self.ctx, func, name);
     }
 
     #[cfg(feature = "experimental-api")]
@@ -224,8 +277,12 @@ impl Context {
         &self,
         event_type: raw::NotifyEvent,
         event: &str,
-        keyname: &str,
+        keyname: &RedisString,
     ) -> raw::Status {
         raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
+    }
+
+    pub fn set_module_options(&self, options: ModuleOptions) {
+        unsafe { raw::RedisModule_SetModuleOptions.unwrap()(self.ctx, options.bits()) };
     }
 }

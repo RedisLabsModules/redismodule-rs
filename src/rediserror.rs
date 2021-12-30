@@ -14,6 +14,10 @@ impl RedisError {
     pub fn nonexistent_key() -> Self {
         RedisError::Str("ERR could not perform this operation on a key that doesn't exist")
     }
+
+    pub fn short_read() -> Self {
+        RedisError::Str("ERR short read or OOM loading DB")
+    }
 }
 
 impl<T: std::error::Error> From<T> for RedisError {

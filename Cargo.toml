@@ -1,6 +1,6 @@
 [package]
 name = "redis-module"
-version = "0.13.0"
+version = "99.99.99"
 authors = ["Gavrie Philipson <gavrie@redislabs.com>", "Guy Korland <guy.korland@redislabs.com>"]
 edition = "2018"
 build = "build.rs"
@@ -49,16 +49,26 @@ name = "events"
 crate-type = ["cdylib"]
 required-features = ["experimental-api"]
 
+[[example]]
+name = "info"
+crate-type = ["cdylib"]
+required-features = []
+
 [dependencies]
 bitflags = "1.2"
 libc = "0.2"
 enum-primitive-derive = "^0.2"
 num-traits = "^0.2"
-strum_macros = "0.20"
+strum_macros = "0.23"
 #failure = "0.1"
+backtrace = "0.3"
+
+[dev-dependencies]
+anyhow = "1.0.38"
+redis = "0.21.0"
 
 [build-dependencies]
-bindgen = "0.58"
+bindgen = "0.59"
 cc = "1.0"
 
 [features]

@@ -30,8 +30,9 @@ pub use crate::context::thread_safe::{DetachedFromClient, ThreadSafeContext};
 pub use crate::raw::NotifyEvent;
 
 pub use crate::context::Context;
-pub use crate::raw::Status;
+pub use crate::raw::*;
 pub use crate::redismodule::*;
+use backtrace::Backtrace;
 
 /// Ideally this would be `#[cfg(not(test))]`, but that doesn't work:
 /// https://github.com/rust-lang/rust/issues/59168#issuecomment-472653680
@@ -58,4 +59,16 @@ fn from_byte_string(byte_str: *const c_char, length: size_t) -> Result<String, U
     }
 
     String::from_utf8(vec_str).map_err(|e| e.utf8_error())
+}
+
+pub fn base_info_func(ctx: *mut RedisModuleInfoCtx, for_crash_report: bool) {
+    if !for_crash_report {
+        return;
+    }
+    // add rust trace into the crash report
+    if add_info_section(ctx, Some("trace")) == Status::Ok {
+        let current_backtrace = Backtrace::new();
+        let trace = format!("{:?}", current_backtrace);
+        raw::add_info_field_str(ctx, "trace", &trace);
+    }
 }
