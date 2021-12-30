@@ -6,7 +6,7 @@ extern crate enum_primitive_derive;
 extern crate libc;
 extern crate num_traits;
 
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
 use std::ptr;
 use std::slice;
@@ -18,7 +18,7 @@ use num_traits::FromPrimitive;
 
 use crate::error::Error;
 pub use crate::redisraw::bindings::*;
-use crate::RedisString;
+use crate::{Context, RedisString};
 use crate::{RedisBuffer, RedisError};
 
 bitflags! {
@@ -256,7 +256,8 @@ pub fn reply_with_array(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn reply_with_error(ctx: *mut RedisModuleCtx, err: *const c_char) {
     unsafe {
-        RedisModule_ReplyWithError.unwrap()(ctx, err);
+        let msg = Context::str_as_legal_resp_string(CStr::from_ptr(err).to_str().unwrap());
+        RedisModule_ReplyWithError.unwrap()(ctx, msg.as_ptr());
     }
 }
 
@@ -569,6 +570,38 @@ pub fn subscribe_to_server_event(
     callback: RedisModuleEventCallback,
 ) -> Status {
     unsafe { RedisModule_SubscribeToServerEvent.unwrap()(ctx, event, callback).into() }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn register_info_function(ctx: *mut RedisModuleCtx, callback: RedisModuleInfoFunc) -> Status {
+    unsafe { RedisModule_RegisterInfoFunc.unwrap()(ctx, callback).into() }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_info_section(
+    ctx: *mut RedisModuleInfoCtx,
+    name: Option<&str>, // assume NULL terminated
+) -> Status {
+    let name = name.map(|n| CString::new(n).unwrap());
+    if let Some(n) = name {
+        unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr() as *mut c_char).into() }
+    } else {
+        unsafe { RedisModule_InfoAddSection.unwrap()(ctx, ptr::null_mut()).into() }
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_info_field_str(
+    ctx: *mut RedisModuleInfoCtx,
+    name: &str, // assume NULL terminated
+    content: &str,
+) -> Status {
+    let name = CString::new(name).unwrap();
+    let content = RedisString::create(ptr::null_mut(), content);
+    unsafe {
+        RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr() as *mut c_char, content.inner)
+            .into()
+    }
 }
 
 #[cfg(feature = "experimental-api")]

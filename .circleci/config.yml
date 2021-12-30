@@ -102,9 +102,9 @@ commands:
       - restore_cache:
           keys:
             - v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
-      #- run:
-      #    name: Check formatting
-      #    command: bash -l -c "make lint"
+      - run:
+          name: Check formatting
+          command: bash -l -c "make lint"
       - run:
           name: Build debug
           command: bash -l -c "make build DEBUG=1 <<parameters.build_params>>"
@@ -142,7 +142,7 @@ commands:
 jobs:
   build:
     docker:
-      - image: redisfab/rmbuilder:6.2.5-x64-buster
+      - image: redisfab/rmbuilder:6.2.5-x64-bullseye
     steps:
       - build-steps
 
@@ -151,7 +151,7 @@ jobs:
       platform:
         type: string
     docker:
-      - image: debian:buster
+      - image: debian:bullseye
     steps:
       - platforms-build-steps:
           platform: <<parameters.platform>>
@@ -235,6 +235,6 @@ workflows:
           <<: *on-integ-and-version-tags
           matrix:
             parameters:
-              platform: [focal, bionic, xenial, centos8, centos7, buster]
+              platform: [focal, bionic, xenial, centos8, centos7, bullseye]
       - build-macos:
           <<: *on-any-branch

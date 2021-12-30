@@ -2,7 +2,7 @@ ROOT=.
 MK.pyver:=3
 
 ifeq ($(wildcard $(ROOT)/deps/readies/mk),)
-$(error Submodules not present. Please run 'git submodule update --init --recursive')
+$(shell mkdir -p deps; cd deps; git clone https://github.com/RedisLabsModules/readies.git)
 endif
 include $(ROOT)/deps/readies/mk/main
 
@@ -49,12 +49,6 @@ TARGET_DIR=target/release
 endif
 
 TARGET=$(TARGET_DIR)/$(MODULE_NAME)
-
-#----------------------------------------------------------------------------------------------
-
-all: build
-
-.PHONY: all
 
 #----------------------------------------------------------------------------------------------
 
