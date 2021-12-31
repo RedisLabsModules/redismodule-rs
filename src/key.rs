@@ -459,8 +459,8 @@ where
     let mut values_raw = [std::ptr::null_mut(); BATCH_SIZE];
 
     for chunk_fields in fields.chunks(BATCH_SIZE) {
-        let mut chunk_values = &mut values_raw[..chunk_fields.len()];
-        raw::hash_get_multi(key, chunk_fields, &mut chunk_values)?;
+        let chunk_values = &mut values_raw[..chunk_fields.len()];
+        raw::hash_get_multi(key, chunk_fields, chunk_values)?;
         values.extend(chunk_values.iter().map(|ptr| {
             if ptr.is_null() {
                 None

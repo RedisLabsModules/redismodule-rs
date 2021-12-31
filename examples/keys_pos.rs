@@ -20,7 +20,7 @@ fn keys_pos(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 
     let reply: Vec<_> = args.iter().skip(1).step_by(2).collect();
 
-    return Ok(reply.into());
+    Ok(reply.into())
 }
 
 //////////////////////////////////////////////////////
