@@ -61,9 +61,16 @@ fn from_byte_string(byte_str: *const c_char, length: size_t) -> Result<String, U
     String::from_utf8(vec_str).map_err(|e| e.utf8_error())
 }
 
-pub fn base_info_func(ctx: *mut RedisModuleInfoCtx, for_crash_report: bool) {
+pub fn base_info_func(
+    ctx: *mut RedisModuleInfoCtx,
+    for_crash_report: bool,
+    extended_info_func: Option<fn(*mut crate::raw::RedisModuleInfoCtx, bool)>,
+) {
     if !for_crash_report {
-        return;
+        if let Some(func) = extended_info_func {
+            func(ctx, for_crash_report);
+            return;
+        }
     }
     // add rust trace into the crash report
     if add_info_section(ctx, Some("trace")) == Status::Ok {
