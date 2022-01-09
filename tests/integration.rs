@@ -20,7 +20,7 @@ fn test_hello() -> Result<()> {
 
     let res: Result<Vec<i32>, RedisError> =
         redis::cmd("hello.mul").arg(&["3", "xx"]).query(&mut con);
-    if let Ok(_) = res {
+    if res.is_ok() {
         return Err(anyhow::Error::msg("Should return an error"));
     }
 
@@ -42,7 +42,7 @@ fn test_keys_pos() -> Result<()> {
 
     let res: Result<Vec<String>, RedisError> =
         redis::cmd("keys_pos").arg(&["a", "1", "b"]).query(&mut con);
-    if let Ok(_) = res {
+    if res.is_ok() {
         return Err(anyhow::Error::msg("Shuold return an error"));
     }
 

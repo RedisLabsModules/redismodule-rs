@@ -119,10 +119,7 @@ impl RedisString {
 
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn from_ptr<'a>(ptr: *const raw::RedisModuleString) -> Result<&'a str, Utf8Error> {
-        let mut len: libc::size_t = 0;
-        let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(ptr, &mut len) };
-
-        str::from_utf8(unsafe { slice::from_raw_parts(bytes.cast::<u8>(), len) })
+        str::from_utf8(Self::string_as_slice(ptr))
     }
 
     pub fn append(&mut self, s: &str) -> raw::Status {
@@ -145,6 +142,17 @@ impl RedisString {
         Self::from_ptr(self.inner).map_err(|_| RedisError::Str("Couldn't parse as UTF-8 string"))
     }
 
+    pub fn as_slice(&self) -> &[u8] {
+        Self::string_as_slice(self.inner)
+    }
+
+    fn string_as_slice<'a>(ptr: *const raw::RedisModuleString) -> &'a [u8] {
+        let mut len: libc::size_t = 0;
+        let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(ptr, &mut len) };
+
+        unsafe { slice::from_raw_parts(bytes.cast::<u8>(), len) }
+    }
+
     /// Performs lossy conversion of a `RedisString` into an owned `String. This conversion
     /// will replace any invalid UTF-8 sequences with U+FFFD REPLACEMENT CHARACTER, which
     /// looks like this: �.
@@ -153,10 +161,7 @@ impl RedisString {
     ///
     /// Will panic if `RedisModule_StringPtrLen` is missing in redismodule.h
     pub fn to_string_lossy(&self) -> String {
-        let mut len: libc::size_t = 0;
-        let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(self.inner, &mut len) };
-        let bytes = unsafe { slice::from_raw_parts(bytes.cast::<u8>(), len) };
-        String::from_utf8_lossy(bytes).into_owned()
+        String::from_utf8_lossy(self.as_slice()).into_owned()
     }
 
     pub fn parse_unsigned_integer(&self) -> Result<u64, RedisError> {
