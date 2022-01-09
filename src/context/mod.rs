@@ -1,10 +1,10 @@
 use std::ffi::CString;
-use std::os::raw::{c_char, c_int, c_long};
+use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr;
 
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::raw::ModuleOptions;
-use crate::{add_info_field_str, raw, Status};
+use crate::{add_info_field_long_long, add_info_field_str, raw, Status};
 use crate::{add_info_section, LogLevel};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
@@ -309,5 +309,13 @@ impl InfoContext {
         content: &str,
     ) -> Status {
         add_info_field_str(self.ctx, name, content)
+    }
+
+    pub fn add_info_field_long_long(
+        &self,
+        name: &str, // assume NULL terminated
+        value: c_longlong,
+    ) -> Status {
+        add_info_field_long_long(self.ctx, name, value)
     }
 }

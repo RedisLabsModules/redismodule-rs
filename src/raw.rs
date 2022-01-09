@@ -604,6 +604,18 @@ pub fn add_info_field_str(
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_info_field_long_long(
+    ctx: *mut RedisModuleInfoCtx,
+    name: &str, // assume NULL terminated
+    value: c_longlong,
+) -> Status {
+    let name = CString::new(name).unwrap();
+    unsafe {
+        RedisModule_InfoAddFieldLongLong.unwrap()(ctx, name.as_ptr() as *mut c_char, value).into()
+    }
+}
+
 #[cfg(feature = "experimental-api")]
 pub fn export_shared_api(
     ctx: *mut RedisModuleCtx,
