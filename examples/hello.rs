@@ -1,9 +1,7 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::add_info_field_str;
-use redis_module::add_info_section;
-use redis_module::RedisModuleInfoCtx;
+use redis_module::InfoContext;
 use redis_module::Status;
 
 use redis_module::{Context, RedisError, RedisResult, RedisString};
@@ -26,9 +24,9 @@ fn hello_mul(_: &Context, args: Vec<RedisString>) -> RedisResult {
     return Ok(response.into());
 }
 
-fn add_info(ctx: *mut RedisModuleInfoCtx, _for_crash_report: bool) {
-    if add_info_section(ctx, Some("hello")) == Status::Ok {
-        add_info_field_str(ctx, "field", "hello_value");
+fn add_info(ctx: &InfoContext, _for_crash_report: bool) {
+    if ctx.add_info_section(Some("hello")) == Status::Ok {
+        ctx.add_info_field_str("field", "hello_value");
     }
 }
 
