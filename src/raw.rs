@@ -49,7 +49,7 @@ pub enum KeyType {
 
 impl From<c_int> for KeyType {
     fn from(v: c_int) -> Self {
-        KeyType::from_i32(v).unwrap()
+        Self::from_i32(v).unwrap()
     }
 }
 
@@ -71,7 +71,7 @@ pub enum ReplyType {
 
 impl From<c_int> for ReplyType {
     fn from(v: c_int) -> Self {
-        ReplyType::from_i32(v).unwrap()
+        Self::from_i32(v).unwrap()
     }
 }
 
@@ -89,7 +89,7 @@ pub enum Status {
 
 impl From<c_int> for Status {
     fn from(v: c_int) -> Self {
-        Status::from_i32(v).unwrap()
+        Self::from_i32(v).unwrap()
     }
 }
 
@@ -582,12 +582,10 @@ pub fn add_info_section(
     ctx: *mut RedisModuleInfoCtx,
     name: Option<&str>, // assume NULL terminated
 ) -> Status {
-    let name = name.map(|n| CString::new(n).unwrap());
-    if let Some(n) = name {
-        unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr() as *mut c_char).into() }
-    } else {
-        unsafe { RedisModule_InfoAddSection.unwrap()(ctx, ptr::null_mut()).into() }
-    }
+    name.map(|n| CString::new(n).unwrap()).map_or_else(
+        || unsafe { RedisModule_InfoAddSection.unwrap()(ctx, ptr::null_mut()).into() },
+        |n| unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr() as *mut c_char).into() },
+    )
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
