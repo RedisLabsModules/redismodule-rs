@@ -150,12 +150,12 @@ impl Context {
     }
 
     pub fn reply_simple_string(&self, s: &str) -> raw::Status {
-        let msg = Context::str_as_legal_resp_string(s);
+        let msg = Self::str_as_legal_resp_string(s);
         unsafe { raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into() }
     }
 
     pub fn reply_error_string(&self, s: &str) -> raw::Status {
-        let msg = Context::str_as_legal_resp_string(s);
+        let msg = Self::str_as_legal_resp_string(s);
         unsafe { raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into() }
     }
 

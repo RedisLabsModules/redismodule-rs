@@ -1,13 +1,15 @@
 [package]
 name = "redis-module"
 version = "99.99.99"
-authors = ["Gavrie Philipson <gavrie@redislabs.com>", "Guy Korland <guy.korland@redislabs.com>"]
+authors = ["Gavrie Philipson <gavrie@redis.com>", "Guy Korland <guy.korland@redis.com>"]
 edition = "2018"
 build = "build.rs"
 description = "A toolkit for building Redis modules in Rust"
 license = "BSD-3-Clause"
 repository = "https://github.com/RedisLabsModules/redismodule-rs"
 readme = "README.md"
+keywords = ["redis", "plugin"]
+categories = ["database", "api-bindings"]
 
 [[example]]
 name = "hello"
