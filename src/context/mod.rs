@@ -1,11 +1,11 @@
 use std::ffi::{CStr, CString};
-use std::os::raw::{c_char, c_int, c_long};
+use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr;
 
 use crate::key::{RedisKey, RedisKeyWritable};
-use crate::raw;
 use crate::raw::ModuleOptions;
-use crate::LogLevel;
+use crate::{add_info_field_long_long, add_info_field_str, raw, Status};
+use crate::{add_info_section, LogLevel};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
 #[cfg(feature = "experimental-api")]
@@ -141,7 +141,7 @@ impl Context {
         CString::new(
             s.chars()
                 .map(|c| match c {
-                    '\r' | '\n' => ' ' as u8,
+                    '\r' | '\n' => b' ',
                     _ => c as u8,
                 })
                 .collect::<Vec<_>>(),
@@ -150,12 +150,12 @@ impl Context {
     }
 
     pub fn reply_simple_string(&self, s: &str) -> raw::Status {
-        let msg = Context::str_as_legal_resp_string(s);
+        let msg = Self::str_as_legal_resp_string(s);
         unsafe { raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into() }
     }
 
     pub fn reply_error_string(&self, s: &str) -> raw::Status {
-        let msg = Context::str_as_legal_resp_string(s);
+        let msg = Self::str_as_legal_resp_string(s);
         unsafe { raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into() }
     }
 
@@ -293,5 +293,38 @@ impl Context {
 
     pub fn set_module_options(&self, options: ModuleOptions) {
         unsafe { raw::RedisModule_SetModuleOptions.unwrap()(self.ctx, options.bits()) };
+    }
+}
+
+pub struct InfoContext {
+    pub ctx: *mut raw::RedisModuleInfoCtx,
+}
+
+impl InfoContext {
+    pub fn new(ctx: *mut raw::RedisModuleInfoCtx) -> Self {
+        Self { ctx }
+    }
+
+    pub fn add_info_section(
+        &self,
+        name: Option<&str>, // assume NULL terminated
+    ) -> Status {
+        add_info_section(self.ctx, name)
+    }
+
+    pub fn add_info_field_str(
+        &self,
+        name: &str, // assume NULL terminated
+        content: &str,
+    ) -> Status {
+        add_info_field_str(self.ctx, name, content)
+    }
+
+    pub fn add_info_field_long_long(
+        &self,
+        name: &str, // assume NULL terminated
+        value: c_longlong,
+    ) -> Status {
+        add_info_field_long_long(self.ctx, name, value)
     }
 }

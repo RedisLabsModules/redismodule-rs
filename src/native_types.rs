@@ -21,7 +21,7 @@ impl RedisType {
         version: i32,
         type_methods: raw::RedisModuleTypeMethods,
     ) -> Self {
-        RedisType {
+        Self {
             name,
             version,
             type_methods,
