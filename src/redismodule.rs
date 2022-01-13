@@ -89,32 +89,31 @@ pub fn decode_args(
 ///////////////////////////////////////////////////
 
 #[derive(Debug, PartialEq)]
-
 pub struct RedisString {
     ctx: *mut raw::RedisModuleCtx,
     pub inner: *mut raw::RedisModuleString,
 }
 
 impl RedisString {
-    pub fn new(ctx: *mut raw::RedisModuleCtx, inner: *mut raw::RedisModuleString) -> RedisString {
+    pub fn new(ctx: *mut raw::RedisModuleCtx, inner: *mut raw::RedisModuleString) -> Self {
         raw::string_retain_string(ctx, inner);
-        RedisString { ctx, inner }
+        Self { ctx, inner }
     }
 
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
-    pub fn create(ctx: *mut raw::RedisModuleCtx, s: &str) -> RedisString {
+    pub fn create(ctx: *mut raw::RedisModuleCtx, s: &str) -> Self {
         let str = CString::new(s).unwrap();
         let inner = unsafe { raw::RedisModule_CreateString.unwrap()(ctx, str.as_ptr(), s.len()) };
 
-        RedisString { ctx, inner }
+        Self { ctx, inner }
     }
 
     pub fn from_redis_module_string(
         ctx: *mut raw::RedisModuleCtx,
         inner: *mut raw::RedisModuleString,
-    ) -> RedisString {
+    ) -> Self {
         // Need to avoid string_retain_string
-        RedisString { ctx, inner }
+        Self { ctx, inner }
     }
 
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -126,12 +125,14 @@ impl RedisString {
         raw::string_append_buffer(self.ctx, self.inner, s)
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         let mut len: usize = 0;
         raw::string_ptr_len(self.inner, &mut len);
         len
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         let mut len: usize = 0;
         raw::string_ptr_len(self.inner, &mut len);
@@ -142,6 +143,7 @@ impl RedisString {
         Self::from_ptr(self.inner).map_err(|_| RedisError::Str("Couldn't parse as UTF-8 string"))
     }
 
+    #[must_use]
     pub fn as_slice(&self) -> &[u8] {
         Self::string_as_slice(self.inner)
     }
@@ -160,6 +162,7 @@ impl RedisString {
     /// # Panics
     ///
     /// Will panic if `RedisModule_StringPtrLen` is missing in redismodule.h
+    #[must_use]
     pub fn to_string_lossy(&self) -> String {
         String::from_utf8_lossy(self.as_slice()).into_owned()
     }
@@ -215,10 +218,10 @@ impl Borrow<str> for RedisString {
 }
 
 impl Clone for RedisString {
-    fn clone(&self) -> RedisString {
+    fn clone(&self) -> Self {
         let inner =
             unsafe { raw::RedisModule_CreateStringFromString.unwrap()(self.ctx, self.inner) };
-        RedisString::new(self.ctx, inner)
+        Self::new(self.ctx, inner)
     }
 }
 
@@ -237,8 +240,8 @@ pub struct RedisBuffer {
 }
 
 impl RedisBuffer {
-    pub fn new(buffer: *mut c_char, len: usize) -> RedisBuffer {
-        RedisBuffer { buffer, len }
+    pub fn new(buffer: *mut c_char, len: usize) -> Self {
+        Self { buffer, len }
     }
 
     pub fn to_string(&self) -> Result<String, FromUtf8Error> {

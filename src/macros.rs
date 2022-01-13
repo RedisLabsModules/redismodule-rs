@@ -92,6 +92,7 @@ macro_rules! redis_module {
         ],
         $(init: $init_func:ident,)* $(,)*
         $(deinit: $deinit_func:ident,)* $(,)*
+        $(info: $info_func:ident,)?
         commands: [
             $([
                 $name:expr,
@@ -113,7 +114,10 @@ macro_rules! redis_module {
             ctx: *mut $crate::raw::RedisModuleInfoCtx,
             for_crash_report: i32,
         ) {
-            $crate::base_info_func(ctx, for_crash_report == 1);
+            use $crate::InfoContext;
+            let mut __info_func__cb : Option<fn(&InfoContext, bool)> = None;
+            $( __info_func__cb = Some($info_func); )?
+            $crate::base_info_func(&$crate::InfoContext::new(ctx), for_crash_report == 1, __info_func__cb);
         }
 
         #[no_mangle]
