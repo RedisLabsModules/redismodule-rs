@@ -5,7 +5,7 @@ use redis_module::{Context, LogLevel, RedisString, Status};
 
 static mut GLOBAL_STATE: Option<String> = None;
 
-fn init(ctx: &Context, args: &Vec<RedisString>) -> Status {
+fn init(ctx: &Context, args: &[RedisString]) -> Status {
     let (before, after) = unsafe {
         let before = GLOBAL_STATE.clone();
         GLOBAL_STATE.replace(format!("Args passed: {}", args.join(", ")));

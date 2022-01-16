@@ -27,7 +27,7 @@ fn timer_info(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let (remaining, data): (_, &MyData) = ctx.get_timer_info(timer_id)?;
     let reply = format!("Remaining: {:?}, data: {:?}", remaining, data);
 
-    return Ok(reply.into());
+    Ok(reply.into())
 }
 
 fn timer_stop(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
@@ -37,7 +37,7 @@ fn timer_stop(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let data: MyData = ctx.stop_timer(timer_id)?;
     let reply = format!("Data: {:?}", data);
 
-    return Ok(reply.into());
+    Ok(reply.into())
 }
 
 //////////////////////////////////////////////////////

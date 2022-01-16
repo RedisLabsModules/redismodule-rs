@@ -614,32 +614,27 @@ pub fn add_info_field_long_long(
     }
 }
 
+/// # Safety
 #[cfg(feature = "experimental-api")]
-pub fn export_shared_api(
+pub unsafe fn export_shared_api(
     ctx: *mut RedisModuleCtx,
     func: *const ::std::os::raw::c_void,
     name: *const ::std::os::raw::c_char,
 ) {
-    unsafe { RedisModule_ExportSharedAPI.unwrap()(ctx, name, func as *mut ::std::os::raw::c_void) };
+    RedisModule_ExportSharedAPI.unwrap()(ctx, name, func as *mut ::std::os::raw::c_void);
 }
 
+/// # Safety
 #[cfg(feature = "experimental-api")]
-pub fn notify_keyspace_event(
+pub unsafe fn notify_keyspace_event(
     ctx: *mut RedisModuleCtx,
     event_type: NotifyEvent,
     event: &str,
     keyname: &RedisString,
 ) -> Status {
     let event = CString::new(event).unwrap();
-    unsafe {
-        RedisModule_NotifyKeyspaceEvent.unwrap()(
-            ctx,
-            event_type.bits,
-            event.as_ptr(),
-            keyname.inner,
-        )
+    RedisModule_NotifyKeyspaceEvent.unwrap()(ctx, event_type.bits, event.as_ptr(), keyname.inner)
         .into()
-    }
 }
 
 #[cfg(feature = "experimental-api")]

@@ -18,10 +18,10 @@ fn hello_mul(_: &Context, args: Vec<RedisString>) -> RedisResult {
 
     let product = nums.iter().product();
 
-    let mut response = Vec::from(nums);
+    let mut response = nums;
     response.push(product);
 
-    return Ok(response.into());
+    Ok(response.into())
 }
 
 fn add_info(ctx: &InfoContext, _for_crash_report: bool) {

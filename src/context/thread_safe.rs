@@ -25,7 +25,7 @@ impl Deref for ContextGuard {
 /// A ThreadSafeContext can either be bound to a blocked client, or detached from any client.
 pub struct DetachedFromClient;
 
-pub struct ThreadSafeContext<B> {
+pub struct ThreadSafeContext<B: Send> {
     pub(crate) ctx: *mut raw::RedisModuleCtx,
 
     /// This field is only used implicitly by `Drop`, so avoid a compiler warning
@@ -33,8 +33,8 @@ pub struct ThreadSafeContext<B> {
     blocked_client: B,
 }
 
-unsafe impl<B> Send for ThreadSafeContext<B> {}
-unsafe impl<B> Sync for ThreadSafeContext<B> {}
+unsafe impl<B: Send> Send for ThreadSafeContext<B> {}
+unsafe impl<B: Send> Sync for ThreadSafeContext<B> {}
 
 impl ThreadSafeContext<DetachedFromClient> {
     pub fn new() -> Self {
@@ -69,7 +69,7 @@ impl ThreadSafeContext<BlockedClient> {
     }
 }
 
-impl<B> ThreadSafeContext<B> {
+impl<B: Send> ThreadSafeContext<B> {
     /// All other APIs require locking the context, so we wrap it in a way
     /// similar to `std::sync::Mutex`.
     pub fn lock(&self) -> ContextGuard {
@@ -79,7 +79,7 @@ impl<B> ThreadSafeContext<B> {
     }
 }
 
-impl<B> Drop for ThreadSafeContext<B> {
+impl<B: Send> Drop for ThreadSafeContext<B> {
     fn drop(&mut self) {
         unsafe { raw::RedisModule_FreeThreadSafeContext.unwrap()(self.ctx) };
     }
