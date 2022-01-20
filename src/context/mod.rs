@@ -297,26 +297,15 @@ impl InfoContext {
         Self { ctx }
     }
 
-    pub fn add_info_section(
-        &self,
-        name: Option<&str>, // assume NULL terminated
-    ) -> Status {
+    pub fn add_info_section(&self, name: Option<&str>) -> Status {
         add_info_section(self.ctx, name)
     }
 
-    pub fn add_info_field_str(
-        &self,
-        name: &str, // assume NULL terminated
-        content: &str,
-    ) -> Status {
+    pub fn add_info_field_str(&self, name: &str, content: &str) -> Status {
         add_info_field_str(self.ctx, name, content)
     }
 
-    pub fn add_info_field_long_long(
-        &self,
-        name: &str, // assume NULL terminated
-        value: c_longlong,
-    ) -> Status {
+    pub fn add_info_field_long_long(&self, name: &str, value: c_longlong) -> Status {
         add_info_field_long_long(self.ctx, name, value)
     }
 }

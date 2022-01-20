@@ -578,10 +578,7 @@ pub fn register_info_function(ctx: *mut RedisModuleCtx, callback: RedisModuleInf
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn add_info_section(
-    ctx: *mut RedisModuleInfoCtx,
-    name: Option<&str>, // assume NULL terminated
-) -> Status {
+pub fn add_info_section(ctx: *mut RedisModuleInfoCtx, name: Option<&str>) -> Status {
     name.map(|n| CString::new(n).unwrap()).map_or_else(
         || unsafe { RedisModule_InfoAddSection.unwrap()(ctx, ptr::null_mut()).into() },
         |n| unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr() as *mut c_char).into() },
@@ -589,11 +586,7 @@ pub fn add_info_section(
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn add_info_field_str(
-    ctx: *mut RedisModuleInfoCtx,
-    name: &str, // assume NULL terminated
-    content: &str,
-) -> Status {
+pub fn add_info_field_str(ctx: *mut RedisModuleInfoCtx, name: &str, content: &str) -> Status {
     let name = CString::new(name).unwrap();
     let content = RedisString::create(ptr::null_mut(), content);
     unsafe {
@@ -605,7 +598,7 @@ pub fn add_info_field_str(
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn add_info_field_long_long(
     ctx: *mut RedisModuleInfoCtx,
-    name: &str, // assume NULL terminated
+    name: &str,
     value: c_longlong,
 ) -> Status {
     let name = CString::new(name).unwrap();
