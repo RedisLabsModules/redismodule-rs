@@ -64,3 +64,23 @@ fn test_hello_info() -> Result<()> {
 
     Ok(())
 }
+
+#[allow(unused_must_use)]
+#[test]
+fn test_hello_err() -> Result<()> {
+    let _guards = vec![start_redis_server_with_module("hello", 6482)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(6482).with_context(|| "failed to connect to redis server")?;
+
+    // Make sure embedded nulls do not cause a crash
+    redis::cmd("hello.err")
+        .arg(&["\x00\x00"])
+        .query::<String>(&mut con);
+
+    redis::cmd("hello.err")
+        .arg(&["no crash\x00"])
+        .query::<String>(&mut con);
+
+    Ok(())
+}
