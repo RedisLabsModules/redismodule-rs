@@ -64,8 +64,7 @@ RUST_SOEXT.freebsd=so
 RUST_SOEXT.macos=dylib
 
 build:
-	cargo build --features experimental-api --all --all-targets  $(CARGO_FLAGS)
-	cargo build --features test --example test_helper --all-targets  $(CARGO_FLAGS)
+	cargo build --features experimental-api,test --all --all-targets  $(CARGO_FLAGS)
 	# cp $(TARGET_DIR)/librejson.$(RUST_SOEXT.$(OS)) $(TARGET)
 
 clean:
