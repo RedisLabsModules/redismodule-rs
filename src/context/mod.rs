@@ -141,7 +141,7 @@ impl Context {
         CString::new(
             s.chars()
                 .map(|c| match c {
-                    '\r' | '\n' => b' ',
+                    '\r' | '\n' | '\0' => b' ',
                     _ => c as u8,
                 })
                 .collect::<Vec<_>>(),
