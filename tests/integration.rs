@@ -40,13 +40,13 @@ fn test_keys_pos() -> Result<()> {
     let res: Vec<String> = redis::cmd("keys_pos")
         .arg(&["a", "1", "b", "2"])
         .query(&mut con)
-        .with_context(|| "failed to run hello.mul")?;
+        .with_context(|| "failed to run keys_pos")?;
     assert_eq!(res, vec!["a", "b"]);
 
     let res: Result<Vec<String>, RedisError> =
         redis::cmd("keys_pos").arg(&["a", "1", "b"]).query(&mut con);
     if res.is_ok() {
-        return Err(anyhow::Error::msg("Shold return an error"));
+        return Err(anyhow::Error::msg("Should return an error"));
     }
 
     Ok(())
@@ -70,6 +70,44 @@ fn test_test_helper_version() -> Result<()> {
         .query(&mut con)
         .with_context(|| "failed to run test_helper._version_rm_call")?;
     assert_eq!(res, res2);
+
+    Ok(())
+}
+
+#[test]
+fn test_hello_info() -> Result<()> {
+    let port: u16 = 6482;
+    let _guards = vec![start_redis_server_with_module("hello", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: String = redis::cmd("INFO")
+        .arg("HELLO")
+        .query(&mut con)
+        .with_context(|| "failed to run INFO HELLO")?;
+    assert!(res.contains("hello_field:hello_value"));
+
+    Ok(())
+}
+
+#[allow(unused_must_use)]
+#[test]
+fn test_hello_err() -> Result<()> {
+    let port: u16 = 6483;
+    let _guards = vec![start_redis_server_with_module("hello", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    // Make sure embedded nulls do not cause a crash
+    redis::cmd("hello.err")
+        .arg(&["\x00\x00"])
+        .query::<()>(&mut con);
+
+    redis::cmd("hello.err")
+        .arg(&["no crash\x00"])
+        .query::<()>(&mut con);
 
     Ok(())
 }
