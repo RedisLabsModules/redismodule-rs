@@ -76,11 +76,11 @@ fn test_hello_err() -> Result<()> {
     // Make sure embedded nulls do not cause a crash
     redis::cmd("hello.err")
         .arg(&["\x00\x00"])
-        .query::<String>(&mut con);
+        .query::<()>(&mut con);
 
     redis::cmd("hello.err")
         .arg(&["no crash\x00"])
-        .query::<String>(&mut con);
+        .query::<()>(&mut con);
 
     Ok(())
 }

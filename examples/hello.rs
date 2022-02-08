@@ -2,7 +2,6 @@
 extern crate redis_module;
 
 use redis_module::InfoContext;
-use redis_module::RedisValue;
 use redis_module::Status;
 
 use redis_module::{Context, RedisError, RedisResult, RedisString};
@@ -33,7 +32,7 @@ fn hello_err(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let msg = args.get(1).unwrap();
 
     ctx.reply_error_string(msg.try_as_str().unwrap());
-    Ok(RedisValue::SimpleStringStatic("OK"))
+    Ok(().into())
 }
 
 fn add_info(ctx: &InfoContext, _for_crash_report: bool) {
