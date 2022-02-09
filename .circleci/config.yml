@@ -234,6 +234,6 @@ workflows:
           <<: *on-integ-and-version-tags
           matrix:
             parameters:
-              platform: [focal, bionic, xenial, centos8, centos7, bullseye]
+              platform: [focal, bionic, xenial, ol8, centos7, bullseye]
       - build-macos:
           <<: *on-any-branch
