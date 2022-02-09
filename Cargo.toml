@@ -52,6 +52,11 @@ crate-type = ["cdylib"]
 required-features = ["experimental-api"]
 
 [[example]]
+name = "test_helper"
+crate-type = ["cdylib"]
+required-features = ["test"]
+
+[[example]]
 name = "info"
 crate-type = ["cdylib"]
 required-features = []
@@ -61,6 +66,7 @@ bitflags = "1.2"
 libc = "0.2"
 enum-primitive-derive = "^0.1"
 num-traits = "^0.2"
+regex = "1"
 strum_macros = "0.23"
 #failure = "0.1"
 backtrace = "0.3"

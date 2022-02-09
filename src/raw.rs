@@ -643,6 +643,24 @@ pub fn get_keyspace_events() -> NotifyEvent {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub struct Version {
+    pub major: i32,
+    pub minor: i32,
+    pub patch: i32,
+}
+
+impl From<c_int> for Version {
+    fn from(ver: c_int) -> Self {
+        // Expected format: 0x00MMmmpp for Major, minor, patch
+        Version {
+            major: (ver & 0x00FF_0000) >> 16,
+            minor: (ver & 0x0000_FF00) >> 8,
+            patch: (ver & 0x0000_00FF),
+        }
+    }
+}
+
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn is_io_error(rdb: *mut RedisModuleIO) -> bool {
     unsafe { RedisModule_IsIOError.unwrap()(rdb) != 0 }
