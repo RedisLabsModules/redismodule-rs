@@ -24,6 +24,10 @@ fn hello_mul(_: &Context, args: Vec<RedisString>) -> RedisResult {
     return Ok(response.into());
 }
 
+fn hello_command_name(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+    Ok(ctx.current_command_name()?.into())
+}
+
 fn add_info(ctx: &InfoContext, _for_crash_report: bool) {
     if ctx.add_info_section(Some("hello")) == Status::Ok {
         ctx.add_info_field_str("field", "hello_value");
@@ -39,5 +43,6 @@ redis_module! {
     info: add_info,
     commands: [
         ["hello.mul", hello_mul, "", 0, 0, 0],
+        ["hello.name", hello_command_name, "", 0, 0, 0],
     ],
 }

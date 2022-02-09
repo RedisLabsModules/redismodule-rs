@@ -1,4 +1,4 @@
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr;
 
@@ -7,6 +7,9 @@ use crate::raw::ModuleOptions;
 use crate::{add_info_field_long_long, add_info_field_str, raw, Status};
 use crate::{add_info_section, LogLevel};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
+
+#[cfg(feature = "experimental-api")]
+use std::ffi::CStr;
 
 #[cfg(feature = "experimental-api")]
 mod timer;
@@ -282,13 +285,21 @@ impl Context {
         raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
     }
 
-    #[cfg(feature = "experimental-api")]
-    pub fn current_command_name(&self) -> &str {
+    pub fn current_command_name(&self) -> Result<String, RedisError> {
+        #[cfg(feature = "experimental-api")]
         unsafe {
-            CStr::from_ptr(raw::RedisModule_GetCurrentCommandName.unwrap()(self.ctx))
-                .to_str()
-                .unwrap()
+            match raw::RedisModule_GetCurrentCommandName {
+                Some(cmd) => Ok(CStr::from_ptr(cmd(self.ctx)).to_str().unwrap().to_string()),
+                None => Err(RedisError::Str(
+                    "API RedisModule_GetCurrentCommandName is not available",
+                )),
+            }
         }
+
+        #[cfg(not(feature = "experimental-api"))]
+        Err(RedisError::Str(
+            "API RedisModule_GetCurrentCommandName requires feature 'experimental-api'",
+        ))
     }
 
     pub fn set_module_options(&self, options: ModuleOptions) {

@@ -64,3 +64,18 @@ fn test_hello_info() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(feature = "experimental-api")]
+#[test]
+fn test_command_name() -> Result<()> {
+    let _guards = vec![start_redis_server_with_module("hello", 6482)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(6482).with_context(|| "failed to connect to redis server")?;
+
+    let res: String = redis::cmd("hello.name")
+        .query(&mut con)
+        .with_context(|| "failed to run hello.name")?;
+    assert_eq!(res, String::from("hello.name"));
+    Ok(())
+}
