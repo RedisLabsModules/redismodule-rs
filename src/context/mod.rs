@@ -263,8 +263,9 @@ impl Context {
         self.ctx
     }
 
+    /// # Safety
     #[cfg(feature = "experimental-api")]
-    pub fn export_shared_api(
+    pub unsafe fn export_shared_api(
         &self,
         func: *const ::std::os::raw::c_void,
         name: *const ::std::os::raw::c_char,
@@ -279,7 +280,7 @@ impl Context {
         event: &str,
         keyname: &RedisString,
     ) -> raw::Status {
-        raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
+        unsafe { raw::notify_keyspace_event(self.ctx, event_type, event, keyname) }
     }
 
     /// Returns the redis version either by calling RedisModule_GetServerVersion API,

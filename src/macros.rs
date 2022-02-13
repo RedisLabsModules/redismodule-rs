@@ -122,7 +122,7 @@ macro_rules! redis_module {
 
         #[no_mangle]
         #[allow(non_snake_case)]
-        pub extern "C" fn RedisModule_OnLoad(
+        pub unsafe extern "C" fn RedisModule_OnLoad(
             ctx: *mut $crate::raw::RedisModuleCtx,
             argv: *mut *mut $crate::raw::RedisModuleString,
             argc: std::os::raw::c_int,
