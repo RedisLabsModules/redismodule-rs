@@ -57,11 +57,11 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
         module_path.as_str(),
     ];
 
-    let redis_server = Command::new("redis-server-6.2.5")
+    let redis_server = Command::new("redis-server")
         .args(args)
         .spawn()
         .map(|c| ChildGuard {
-            name: "redis-server-6.2.5",
+            name: "redis-server",
             child: c,
         })?;
 

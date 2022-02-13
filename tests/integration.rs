@@ -78,10 +78,11 @@ fn test_test_helper_version() -> Result<()> {
 fn test_command_name() -> Result<()> {
     use redis_module::{Context, Version};
 
-    let _guards = vec![start_redis_server_with_module("test_helper", 6482)
+    let port: u16 = 6482;
+    let _guards = vec![start_redis_server_with_module("test_helper", port)
         .with_context(|| "failed to start redis server")?];
     let mut con =
-        get_redis_connection(6482).with_context(|| "failed to connect to redis server")?;
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
     let res: String = redis::cmd("test_helper.name")
         .query(&mut con)
@@ -113,7 +114,7 @@ fn test_command_name() -> Result<()> {
 
 #[test]
 fn test_test_helper_info() -> Result<()> {
-    let port: u16 = 6482;
+    let port: u16 = 6483;
     let _guards = vec![start_redis_server_with_module("test_helper", port)
         .with_context(|| "failed to start redis server")?];
     let mut con =
@@ -131,7 +132,7 @@ fn test_test_helper_info() -> Result<()> {
 #[allow(unused_must_use)]
 #[test]
 fn test_test_helper_err() -> Result<()> {
-    let port: u16 = 6483;
+    let port: u16 = 6484;
     let _guards = vec![start_redis_server_with_module("hello", port)
         .with_context(|| "failed to start redis server")?];
     let mut con =
