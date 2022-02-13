@@ -3,8 +3,8 @@ use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr;
 
 use crate::key::{RedisKey, RedisKeyWritable};
-use crate::raw::ModuleOptions;
-use crate::{add_info_field_long_long, add_info_field_str, raw, Status};
+use crate::raw::{ModuleOptions, Version};
+use crate::{add_info_field_long_long, add_info_field_str, raw, utils, Status};
 use crate::{add_info_section, LogLevel};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
@@ -141,7 +141,7 @@ impl Context {
         CString::new(
             s.chars()
                 .map(|c| match c {
-                    '\r' | '\n' => b' ',
+                    '\r' | '\n' | '\0' => b' ',
                     _ => c as u8,
                 })
                 .collect::<Vec<_>>(),
@@ -283,6 +283,45 @@ impl Context {
         unsafe { raw::notify_keyspace_event(self.ctx, event_type, event, keyname) }
     }
 
+    /// Returns the redis version either by calling RedisModule_GetServerVersion API,
+    /// Or if it is not available, by calling "info server" API and parsing the reply
+    pub fn get_redis_version(&self) -> Result<Version, RedisError> {
+        self.get_redis_version_internal(false)
+    }
+
+    /// Returns the redis version by calling "info server" API and parsing the reply
+    #[cfg(feature = "test")]
+    pub fn get_redis_version_rm_call(&self) -> Result<Version, RedisError> {
+        self.get_redis_version_internal(true)
+    }
+
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    fn get_redis_version_internal(&self, force_use_rm_call: bool) -> Result<Version, RedisError> {
+        match unsafe { raw::RedisModule_GetServerVersion } {
+            Some(api) if !force_use_rm_call => {
+                // Call existing API
+                Ok(Version::from(unsafe { api() }))
+            }
+            _ => {
+                // Call "info server"
+                if let Ok(RedisValue::SimpleString(s)) = self.call("info", &["server"]) {
+                    if let Some(ver) = utils::get_regexp_captures(
+                        s.as_str(),
+                        r"(?m)\bredis_version:([0-9]+)\.([0-9]+)\.([0-9]+)\b",
+                    ) {
+                        return Ok(Version {
+                            major: ver[0].parse::<c_int>().unwrap(),
+                            minor: ver[1].parse::<c_int>().unwrap(),
+                            patch: ver[2].parse::<c_int>().unwrap(),
+                        });
+                    }
+                }
+                Err(RedisError::Str(
+                    "Error getting redis_version from \"info server\" call",
+                ))
+            }
+        }
+    }
     pub fn set_module_options(&self, options: ModuleOptions) {
         unsafe { raw::RedisModule_SetModuleOptions.unwrap()(self.ctx, options.bits()) };
     }
