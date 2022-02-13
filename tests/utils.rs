@@ -57,11 +57,11 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
         module_path.as_str(),
     ];
 
-    let redis_server = Command::new("redis-server")
+    let redis_server = Command::new("redis-server-6.2.5")
         .args(args)
         .spawn()
         .map(|c| ChildGuard {
-            name: "redis-server",
+            name: "redis-server-6.2.5",
             child: c,
         })?;
 
@@ -69,7 +69,7 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
 }
 
 // Get connection to Redis
-pub fn get_redis_connection(port: u64) -> Result<Connection> {
+pub fn get_redis_connection(port: u16) -> Result<Connection> {
     let client = redis::Client::open(format!("redis://127.0.0.1:{}/", port))?;
     loop {
         let res = client.get_connection();
