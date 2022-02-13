@@ -648,7 +648,7 @@ pub struct Version {
 impl From<c_int> for Version {
     fn from(ver: c_int) -> Self {
         // Expected format: 0x00MMmmpp for Major, minor, patch
-        Version {
+        Self {
             major: (ver & 0x00FF_0000) >> 16,
             minor: (ver & 0x0000_FF00) >> 8,
             patch: (ver & 0x0000_00FF),

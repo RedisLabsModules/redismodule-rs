@@ -22,7 +22,7 @@ impl Deref for ContextGuard {
     }
 }
 
-/// A ThreadSafeContext can either be bound to a blocked client, or detached from any client.
+/// A ``ThreadSafeContext`` can either be bound to a blocked client, or detached from any client.
 pub struct DetachedFromClient;
 
 pub struct ThreadSafeContext<B: Send> {
@@ -39,7 +39,7 @@ unsafe impl<B: Send> Sync for ThreadSafeContext<B> {}
 impl ThreadSafeContext<DetachedFromClient> {
     pub fn new() -> Self {
         let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(ptr::null_mut()) };
-        ThreadSafeContext {
+        Self {
             ctx,
             blocked_client: DetachedFromClient,
         }
@@ -55,7 +55,7 @@ impl Default for ThreadSafeContext<DetachedFromClient> {
 impl ThreadSafeContext<BlockedClient> {
     pub fn with_blocked_client(blocked_client: BlockedClient) -> Self {
         let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(blocked_client.inner) };
-        ThreadSafeContext {
+        Self {
             ctx,
             blocked_client,
         }

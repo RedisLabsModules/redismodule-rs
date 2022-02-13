@@ -12,12 +12,12 @@ use crate::{RedisError, RedisResult, RedisString, RedisValue};
 mod timer;
 
 #[cfg(feature = "experimental-api")]
-pub(crate) mod thread_safe;
+pub mod thread_safe;
 
 #[cfg(feature = "experimental-api")]
-pub(crate) mod blocked;
+pub mod blocked;
 
-pub(crate) mod info;
+pub mod info;
 
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
@@ -26,11 +26,11 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(ctx: *mut raw::RedisModuleCtx) -> Self {
+    pub const fn new(ctx: *mut raw::RedisModuleCtx) -> Self {
         Self { ctx }
     }
 
-    pub fn dummy() -> Self {
+    pub const fn dummy() -> Self {
         Self {
             ctx: ptr::null_mut(),
         }
@@ -127,7 +127,7 @@ impl Context {
                 for i in 0..length {
                     vec.push(Self::parse_call_reply(raw::call_reply_array_element(
                         reply, i,
-                    ))?)
+                    ))?);
                 }
                 Ok(RedisValue::Array(vec))
             }
@@ -185,7 +185,7 @@ impl Context {
             Ok(RedisValue::BulkString(s)) => unsafe {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
-                    s.as_ptr() as *const c_char,
+                    s.as_ptr().cast::<c_char>(),
                     s.len() as usize,
                 )
                 .into()
@@ -198,7 +198,7 @@ impl Context {
             Ok(RedisValue::StringBuffer(s)) => unsafe {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
-                    s.as_ptr() as *const c_char,
+                    s.as_ptr().cast::<c_char>(),
                     s.len() as usize,
                 )
                 .into()
@@ -259,7 +259,7 @@ impl Context {
         RedisString::create(self.ctx, s)
     }
 
-    pub fn get_raw(&self) -> *mut raw::RedisModuleCtx {
+    pub const fn get_raw(&self) -> *mut raw::RedisModuleCtx {
         self.ctx
     }
 
@@ -283,7 +283,7 @@ impl Context {
         unsafe { raw::notify_keyspace_event(self.ctx, event_type, event, keyname) }
     }
 
-    /// Returns the redis version either by calling RedisModule_GetServerVersion API,
+    /// Returns the redis version either by calling ``RedisModule_GetServerVersion`` API,
     /// Or if it is not available, by calling "info server" API and parsing the reply
     pub fn get_redis_version(&self) -> Result<Version, RedisError> {
         self.get_redis_version_internal(false)
@@ -332,7 +332,7 @@ pub struct InfoContext {
 }
 
 impl InfoContext {
-    pub fn new(ctx: *mut raw::RedisModuleInfoCtx) -> Self {
+    pub const fn new(ctx: *mut raw::RedisModuleInfoCtx) -> Self {
         Self { ctx }
     }
 
