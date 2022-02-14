@@ -11,6 +11,7 @@ pub enum Error {
 }
 
 impl Error {
+    #[must_use]
     pub fn generic(message: &str) -> Self {
         Self::Generic(GenericError::new(message))
     }
@@ -66,6 +67,7 @@ pub struct GenericError {
 }
 
 impl GenericError {
+    #[must_use]
     pub fn new(message: &str) -> Self {
         Self {
             message: String::from(message),

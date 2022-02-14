@@ -631,6 +631,7 @@ pub unsafe fn notify_keyspace_event(
 }
 
 #[cfg(feature = "experimental-api")]
+#[must_use]
 pub fn get_keyspace_events() -> NotifyEvent {
     unsafe {
         let events = RedisModule_GetNotifyKeyspaceEvents.unwrap()();
@@ -648,7 +649,7 @@ pub struct Version {
 impl From<c_int> for Version {
     fn from(ver: c_int) -> Self {
         // Expected format: 0x00MMmmpp for Major, minor, patch
-        Version {
+        Self {
             major: (ver & 0x00FF_0000) >> 16,
             minor: (ver & 0x0000_FF00) >> 8,
             patch: (ver & 0x0000_00FF),

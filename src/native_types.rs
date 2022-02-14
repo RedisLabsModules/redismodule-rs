@@ -16,6 +16,7 @@ pub struct RedisType {
 unsafe impl Sync for RedisType {}
 
 impl RedisType {
+    #[must_use]
     pub const fn new(
         name: &'static str,
         version: i32,

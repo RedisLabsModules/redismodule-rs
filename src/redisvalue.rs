@@ -58,7 +58,7 @@ impl From<Vec<u8>> for RedisValue {
 
 impl From<&RedisString> for RedisValue {
     fn from(s: &RedisString) -> Self {
-        s.to_owned().into()
+        s.clone().into()
     }
 }
 
@@ -70,7 +70,7 @@ impl From<&str> for RedisValue {
 
 impl From<&String> for RedisValue {
     fn from(s: &String) -> Self {
-        s.to_owned().into()
+        s.clone().into()
     }
 }
 

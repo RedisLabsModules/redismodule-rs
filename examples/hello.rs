@@ -25,7 +25,7 @@ fn hello_mul(_: &Context, args: Vec<RedisString>) -> RedisResult {
 }
 
 fn hello_err(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
-    if args.len() < 1 {
+    if args.is_empty() {
         return Err(RedisError::WrongArity);
     }
 
