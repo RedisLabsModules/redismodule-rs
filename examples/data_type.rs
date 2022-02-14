@@ -49,19 +49,15 @@ fn alloc_set(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 
     let key = ctx.open_key_writable(&key);
 
-    match key.get_value::<MyType>(&MY_REDIS_TYPE)? {
-        Some(value) => {
-            value.data = "B".repeat(size as usize);
-        }
-        None => {
-            let value = MyType {
-                data: "A".repeat(size as usize),
-            };
+    if let Some(value) = key.get_value::<MyType>(&MY_REDIS_TYPE)? {
+        value.data = "B".repeat(size as usize);
+    } else {
+        let value = MyType {
+            data: "A".repeat(size as usize),
+        };
 
-            key.set_value(&MY_REDIS_TYPE, value)?;
-        }
+        key.set_value(&MY_REDIS_TYPE, value)?;
     }
-
     Ok(size.into())
 }
 

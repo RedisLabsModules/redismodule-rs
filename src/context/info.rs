@@ -29,6 +29,8 @@ impl ServerInfo {
 }
 
 impl Context {
+
+    #[must_use]
     pub fn server_info(&self, section: &str) -> ServerInfo {
         let section = CString::new(section).unwrap();
         let server_info = unsafe {

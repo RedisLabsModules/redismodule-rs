@@ -30,6 +30,7 @@ impl Context {
         Self { ctx }
     }
 
+    #[must_use]
     pub const fn dummy() -> Self {
         Self {
             ctx: ptr::null_mut(),
@@ -68,6 +69,7 @@ impl Context {
     /// # Panics
     ///
     /// Will panic if `RedisModule_IsKeysPositionRequest` is missing in redismodule.h
+    #[must_use]
     pub fn is_keys_position_request(&self) -> bool {
         // We want this to be available in tests where we don't have an actual Redis to call
         if cfg!(feature = "test") {
@@ -137,6 +139,7 @@ impl Context {
         }
     }
 
+    #[must_use]
     pub fn str_as_legal_resp_string(s: &str) -> CString {
         CString::new(
             s.chars()
@@ -149,11 +152,13 @@ impl Context {
         .unwrap()
     }
 
+    #[allow(clippy::must_use_candidate)]
     pub fn reply_simple_string(&self, s: &str) -> raw::Status {
         let msg = Self::str_as_legal_resp_string(s);
         unsafe { raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into() }
     }
 
+    #[allow(clippy::must_use_candidate)]
     pub fn reply_error_string(&self, s: &str) -> raw::Status {
         let msg = Self::str_as_legal_resp_string(s);
         unsafe { raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into() }
@@ -162,6 +167,7 @@ impl Context {
     /// # Panics
     ///
     /// Will panic if methods used are missing in redismodule.h
+    #[allow(clippy::must_use_candidate)]
     pub fn reply(&self, r: RedisResult) -> raw::Status {
         match r {
             Ok(RedisValue::Integer(v)) => unsafe {
@@ -243,10 +249,12 @@ impl Context {
         }
     }
 
+    #[must_use]
     pub fn open_key(&self, key: &RedisString) -> RedisKey {
         RedisKey::open(self.ctx, key)
     }
 
+    #[must_use]
     pub fn open_key_writable(&self, key: &RedisString) -> RedisKeyWritable {
         RedisKeyWritable::open(self.ctx, key)
     }
@@ -255,10 +263,12 @@ impl Context {
         raw::replicate_verbatim(self.ctx);
     }
 
+    #[must_use]
     pub fn create_string(&self, s: &str) -> RedisString {
         RedisString::create(self.ctx, s)
     }
 
+    #[must_use]
     pub const fn get_raw(&self) -> *mut raw::RedisModuleCtx {
         self.ctx
     }
@@ -274,6 +284,7 @@ impl Context {
     }
 
     #[cfg(feature = "experimental-api")]
+    #[allow(clippy::must_use_candidate)]
     pub fn notify_keyspace_event(
         &self,
         event_type: raw::NotifyEvent,
@@ -336,14 +347,17 @@ impl InfoContext {
         Self { ctx }
     }
 
+    #[allow(clippy::must_use_candidate)]
     pub fn add_info_section(&self, name: Option<&str>) -> Status {
         add_info_section(self.ctx, name)
     }
 
+    #[allow(clippy::must_use_candidate)]
     pub fn add_info_field_str(&self, name: &str, content: &str) -> Status {
         add_info_field_str(self.ctx, name, content)
     }
 
+    #[allow(clippy::must_use_candidate)]
     pub fn add_info_field_long_long(&self, name: &str, value: c_longlong) -> Status {
         add_info_field_long_long(self.ctx, name, value)
     }

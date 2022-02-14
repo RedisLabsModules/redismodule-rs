@@ -37,6 +37,7 @@ unsafe impl<B: Send> Send for ThreadSafeContext<B> {}
 unsafe impl<B: Send> Sync for ThreadSafeContext<B> {}
 
 impl ThreadSafeContext<DetachedFromClient> {
+    #[must_use]
     pub fn new() -> Self {
         let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(ptr::null_mut()) };
         Self {
@@ -53,6 +54,7 @@ impl Default for ThreadSafeContext<DetachedFromClient> {
 }
 
 impl ThreadSafeContext<BlockedClient> {
+    #[must_use]
     pub fn with_blocked_client(blocked_client: BlockedClient) -> Self {
         let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(blocked_client.inner) };
         Self {
@@ -63,6 +65,7 @@ impl ThreadSafeContext<BlockedClient> {
 
     /// The Redis modules API does not require locking for `Reply` functions,
     /// so we pass through its functionality directly.
+    #[allow(clippy::must_use_candidate)]
     pub fn reply(&self, r: RedisResult) -> raw::Status {
         let ctx = Context::new(self.ctx);
         ctx.reply(r)

@@ -631,6 +631,7 @@ pub unsafe fn notify_keyspace_event(
 }
 
 #[cfg(feature = "experimental-api")]
+#[must_use]
 pub fn get_keyspace_events() -> NotifyEvent {
     unsafe {
         let events = RedisModule_GetNotifyKeyspaceEvents.unwrap()();
