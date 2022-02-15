@@ -27,7 +27,7 @@ impl Context {
         data: T,
     ) -> RedisModuleTimerID
     where
-        F: FnOnce(&Context, T),
+        F: FnOnce(&Self, T),
     {
         let cb_data = CallbackData { data, callback };
 
@@ -46,7 +46,7 @@ impl Context {
                     .try_into()
                     .expect("Value must fit in 64 bits"),
                 Some(raw_callback::<F, T>),
-                data as *mut c_void,
+                data.cast::<c_void>(),
             )
         }
     }
@@ -98,7 +98,7 @@ impl Context {
         }
 
         // Cast the *mut c_void supplied by the Redis API to a raw pointer of our custom type.
-        let data = data as *mut T;
+        let data = data.cast::<T>();
 
         // Dereference the raw pointer (we know this is safe, since Redis should return our
         // original pointer which we know to be good) and turn it into a safe reference
@@ -110,7 +110,7 @@ impl Context {
 
 fn take_data<T>(data: *mut c_void) -> T {
     // Cast the *mut c_void supplied by the Redis API to a raw pointer of our custom type.
-    let data = data as *mut T;
+    let data = data.cast::<T>();
 
     // Take back ownership of the original boxed data, so we can unbox it safely.
     // If we don't do this, the data's memory will be leaked.

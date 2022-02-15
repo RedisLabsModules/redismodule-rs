@@ -36,7 +36,7 @@ pub use crate::redismodule::*;
 use backtrace::Backtrace;
 
 /// Ideally this would be `#[cfg(not(test))]`, but that doesn't work:
-/// https://github.com/rust-lang/rust/issues/59168#issuecomment-472653680
+/// [59168#issuecomment-472653680](https://github.com/rust-lang/rust/issues/59168#issuecomment-472653680)
 /// The workaround is to use the `test` feature instead.
 #[cfg(not(feature = "test"))]
 #[global_allocator]

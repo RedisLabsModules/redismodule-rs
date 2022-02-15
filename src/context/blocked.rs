@@ -17,6 +17,7 @@ impl Drop for BlockedClient {
 }
 
 impl Context {
+    #[must_use]
     pub fn block_client(&self) -> BlockedClient {
         let blocked_client = unsafe {
             raw::RedisModule_BlockClient.unwrap()(

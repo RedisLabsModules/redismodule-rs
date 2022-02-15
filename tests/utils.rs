@@ -15,10 +15,10 @@ pub struct ChildGuard {
 impl Drop for ChildGuard {
     fn drop(&mut self) {
         if let Err(e) = self.child.kill() {
-            println!("Could not kill {}: {}", self.name, e)
+            println!("Could not kill {}: {}", self.name, e);
         }
         if let Err(e) = self.child.wait() {
-            println!("Could not wait for {}: {}", self.name, e)
+            println!("Could not wait for {}: {}", self.name, e);
         }
     }
 }
@@ -30,10 +30,12 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
         "so"
     };
 
-    let mut profile = "debug";
-    if cfg!(not(debug_assertions)) {
-        profile = "release";
-    }
+    let profile = if cfg!(not(debug_assertions)) {
+        "release"
+    } else {
+        "debug"
+    };
+
     let module_path: PathBuf = [
         std::env::current_dir()?,
         PathBuf::from(format!(

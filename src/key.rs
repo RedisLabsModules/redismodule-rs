@@ -160,10 +160,12 @@ impl RedisKeyWritable {
         Ok(Some(read_key(self.key_inner)?))
     }
 
+    #[allow(clippy::must_use_candidate)]
     pub fn hash_set(&self, field: &str, value: RedisString) -> raw::Status {
         raw::hash_set(self.key_inner, field, value.inner)
     }
 
+    #[allow(clippy::must_use_candidate)]
     pub fn hash_del(&self, field: &str) -> raw::Status {
         raw::hash_del(self.key_inner, field)
     }
@@ -191,11 +193,13 @@ impl RedisKeyWritable {
     }
 
     // `list_push_head` inserts the specified element at the head of the list stored at this key.
+    #[allow(clippy::must_use_candidate)]
     pub fn list_push_head(&self, element: RedisString) -> raw::Status {
         raw::list_push(self.key_inner, raw::Where::ListHead, element.inner)
     }
 
     // `list_push_tail` inserts the specified element at the tail of the list stored at this key.
+    #[allow(clippy::must_use_candidate)]
     pub fn list_push_tail(&self, element: RedisString) -> raw::Status {
         raw::list_push(self.key_inner, raw::Where::ListTail, element.inner)
     }
@@ -204,6 +208,7 @@ impl RedisKeyWritable {
     //  Returns None when:
     //     1. The list is empty.
     //     2. The key is not a list.
+    #[allow(clippy::must_use_candidate)]
     pub fn list_pop_head(&self) -> Option<RedisString> {
         let ptr = raw::list_pop(self.key_inner, raw::Where::ListHead);
 
@@ -267,6 +272,7 @@ impl RedisKeyWritable {
     /// # Panics
     ///
     /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
+    #[must_use]
     pub fn key_type(&self) -> raw::KeyType {
         unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
     }
