@@ -309,6 +309,22 @@ impl Context {
         self.get_redis_version_internal(true)
     }
 
+    pub fn version_from_info(info: RedisValue) -> Result<Version, RedisError> {
+        if let RedisValue::SimpleString(info_str) = info {
+            if let Some(ver) = utils::get_regexp_captures(
+                info_str.as_str(),
+                r"(?m)\bredis_version:([0-9]+)\.([0-9]+)\.([0-9]+)\b",
+            ) {
+                return Ok(Version {
+                    major: ver[0].parse::<c_int>().unwrap(),
+                    minor: ver[1].parse::<c_int>().unwrap(),
+                    patch: ver[2].parse::<c_int>().unwrap(),
+                });
+            }
+        }
+        Err(RedisError::Str("Error getting redis_version"))
+    }
+
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     fn get_redis_version_internal(&self, force_use_rm_call: bool) -> Result<Version, RedisError> {
         match unsafe { raw::RedisModule_GetServerVersion } {
@@ -318,21 +334,11 @@ impl Context {
             }
             _ => {
                 // Call "info server"
-                if let Ok(RedisValue::SimpleString(s)) = self.call("info", &["server"]) {
-                    if let Some(ver) = utils::get_regexp_captures(
-                        s.as_str(),
-                        r"(?m)\bredis_version:([0-9]+)\.([0-9]+)\.([0-9]+)\b",
-                    ) {
-                        return Ok(Version {
-                            major: ver[0].parse::<c_int>().unwrap(),
-                            minor: ver[1].parse::<c_int>().unwrap(),
-                            patch: ver[2].parse::<c_int>().unwrap(),
-                        });
-                    }
+                if let Ok(info) = self.call("info", &["server"]) {
+                    Context::version_from_info(info)
+                } else {
+                    Err(RedisError::Str("Error calling \"info server\""))
                 }
-                Err(RedisError::Str(
-                    "Error getting redis_version from \"info server\" call",
-                ))
             }
         }
     }

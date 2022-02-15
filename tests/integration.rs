@@ -1,7 +1,7 @@
+use crate::utils::{get_redis_connection, start_redis_server_with_module};
 use anyhow::Context;
 use anyhow::Result;
 use redis::RedisError;
-use utils::{get_redis_connection, start_redis_server_with_module};
 
 mod utils;
 
@@ -76,7 +76,7 @@ fn test_test_helper_version() -> Result<()> {
 #[cfg(feature = "experimental-api")]
 #[test]
 fn test_command_name() -> Result<()> {
-    use redis_module::{Context, Version};
+    use redis_module::RedisValue;
 
     let port: u16 = 6482;
     let _guards = vec![start_redis_server_with_module("test_helper", port)
@@ -84,30 +84,29 @@ fn test_command_name() -> Result<()> {
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
-    let res: String = redis::cmd("test_helper.name")
+    // Call the tested command
+    let res: Result<String, RedisError> = redis::cmd("test_helper.name").query(&mut con);
+
+    // The expected result is according to redis version
+    let info: String = redis::cmd("info")
+        .arg(&["server"])
         .query(&mut con)
         .with_context(|| "failed to run test_helper.name")?;
 
-    let ctx = Context::dummy().ctx;
-    //let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(ptr::null_mut()) };
-
-    match redis_module::Context::new(ctx).get_redis_version() {
-        Ok(Version {
-            major,
-            minor,
-            patch,
-        }) => {
-            if major > 6 || (major == 6 && minor > 2) || (major == 6 && minor == 2 && patch >= 5) {
-                assert_eq!(res, String::from("test_helper.name"));
-            } else {
-                assert_eq!(
-                    res,
-                    String::from("API RedisModule_GetCurrentCommandName is not available")
-                );
-            }
+    if let Ok(ver) = redis_module::Context::version_from_info(RedisValue::SimpleString(info)) {
+        if ver.major > 6
+            || (ver.major == 6 && ver.minor > 2)
+            || (ver.major == 6 && ver.minor == 2 && ver.patch >= 5)
+        {
+            assert_eq!(res.unwrap(), String::from("test_helper.name"));
+        } else {
+            assert!(res
+                .err()
+                .unwrap()
+                .to_string()
+                .contains("RedisModule_GetCurrentCommandName is not available"));
         }
-        Err(e) => panic!("get_redis_version failed: {}", e.to_string()),
-    };
+    }
 
     Ok(())
 }
