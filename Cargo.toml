@@ -54,7 +54,7 @@ required-features = ["experimental-api"]
 [[example]]
 name = "test_helper"
 crate-type = ["cdylib"]
-required-features = ["test"]
+required-features = ["test","experimental-api"]
 
 [[example]]
 name = "info"

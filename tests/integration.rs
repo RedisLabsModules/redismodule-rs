@@ -1,8 +1,7 @@
+use crate::utils::{get_redis_connection, start_redis_server_with_module};
 use anyhow::Context;
 use anyhow::Result;
 use redis::RedisError;
-
-use utils::{get_redis_connection, start_redis_server_with_module};
 
 mod utils;
 
@@ -74,38 +73,76 @@ fn test_test_helper_version() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "experimental-api")]
 #[test]
-fn test_hello_info() -> Result<()> {
+fn test_command_name() -> Result<()> {
+    use redis_module::RedisValue;
+
     let port: u16 = 6482;
-    let _guards = vec![start_redis_server_with_module("hello", port)
+    let _guards = vec![start_redis_server_with_module("test_helper", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    // Call the tested command
+    let res: Result<String, RedisError> = redis::cmd("test_helper.name").query(&mut con);
+
+    // The expected result is according to redis version
+    let info: String = redis::cmd("info")
+        .arg(&["server"])
+        .query(&mut con)
+        .with_context(|| "failed to run test_helper.name")?;
+
+    if let Ok(ver) = redis_module::Context::version_from_info(RedisValue::SimpleString(info)) {
+        if ver.major > 6
+            || (ver.major == 6 && ver.minor > 2)
+            || (ver.major == 6 && ver.minor == 2 && ver.patch >= 5)
+        {
+            assert_eq!(res.unwrap(), String::from("test_helper.name"));
+        } else {
+            assert!(res
+                .err()
+                .unwrap()
+                .to_string()
+                .contains("RedisModule_GetCurrentCommandName is not available"));
+        }
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_test_helper_info() -> Result<()> {
+    let port: u16 = 6483;
+    let _guards = vec![start_redis_server_with_module("test_helper", port)
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
     let res: String = redis::cmd("INFO")
-        .arg("HELLO")
+        .arg("TEST_HELPER")
         .query(&mut con)
-        .with_context(|| "failed to run INFO HELLO")?;
-    assert!(res.contains("hello_field:hello_value"));
+        .with_context(|| "failed to run INFO TEST_HELPER")?;
+    assert!(res.contains("test_helper_field:test_helper_value"));
 
     Ok(())
 }
 
 #[allow(unused_must_use)]
 #[test]
-fn test_hello_err() -> Result<()> {
-    let port: u16 = 6483;
+fn test_test_helper_err() -> Result<()> {
+    let port: u16 = 6484;
     let _guards = vec![start_redis_server_with_module("hello", port)
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
     // Make sure embedded nulls do not cause a crash
-    redis::cmd("hello.err")
+    redis::cmd("test_helper.err")
         .arg(&["\x00\x00"])
         .query::<()>(&mut con);
 
-    redis::cmd("hello.err")
+    redis::cmd("test_helper.err")
         .arg(&["no crash\x00"])
         .query::<()>(&mut con);
 

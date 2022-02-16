@@ -9,6 +9,9 @@ use crate::{add_info_section, LogLevel};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
 #[cfg(feature = "experimental-api")]
+use std::ffi::CStr;
+
+#[cfg(feature = "experimental-api")]
 mod timer;
 
 #[cfg(feature = "experimental-api")]
@@ -294,7 +297,19 @@ impl Context {
         unsafe { raw::notify_keyspace_event(self.ctx, event_type, event, keyname) }
     }
 
-    /// Returns the redis version either by calling ``RedisModule_GetServerVersion`` API,
+    #[cfg(feature = "experimental-api")]
+    pub fn current_command_name(&self) -> Result<String, RedisError> {
+        unsafe {
+            match raw::RedisModule_GetCurrentCommandName {
+                Some(cmd) => Ok(CStr::from_ptr(cmd(self.ctx)).to_str().unwrap().to_string()),
+                None => Err(RedisError::Str(
+                    "API RedisModule_GetCurrentCommandName is not available",
+                )),
+            }
+        }
+    }
+
+    /// Returns the redis version either by calling RedisModule_GetServerVersion API,
     /// Or if it is not available, by calling "info server" API and parsing the reply
     pub fn get_redis_version(&self) -> Result<Version, RedisError> {
         self.get_redis_version_internal(false)
@@ -306,6 +321,22 @@ impl Context {
         self.get_redis_version_internal(true)
     }
 
+    pub fn version_from_info(info: RedisValue) -> Result<Version, RedisError> {
+        if let RedisValue::SimpleString(info_str) = info {
+            if let Some(ver) = utils::get_regexp_captures(
+                info_str.as_str(),
+                r"(?m)\bredis_version:([0-9]+)\.([0-9]+)\.([0-9]+)\b",
+            ) {
+                return Ok(Version {
+                    major: ver[0].parse::<c_int>().unwrap(),
+                    minor: ver[1].parse::<c_int>().unwrap(),
+                    patch: ver[2].parse::<c_int>().unwrap(),
+                });
+            }
+        }
+        Err(RedisError::Str("Error getting redis_version"))
+    }
+
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     fn get_redis_version_internal(&self, force_use_rm_call: bool) -> Result<Version, RedisError> {
         match unsafe { raw::RedisModule_GetServerVersion } {
@@ -315,21 +346,11 @@ impl Context {
             }
             _ => {
                 // Call "info server"
-                if let Ok(RedisValue::SimpleString(s)) = self.call("info", &["server"]) {
-                    if let Some(ver) = utils::get_regexp_captures(
-                        s.as_str(),
-                        r"(?m)\bredis_version:([0-9]+)\.([0-9]+)\.([0-9]+)\b",
-                    ) {
-                        return Ok(Version {
-                            major: ver[0].parse::<c_int>().unwrap(),
-                            minor: ver[1].parse::<c_int>().unwrap(),
-                            patch: ver[2].parse::<c_int>().unwrap(),
-                        });
-                    }
+                if let Ok(info) = self.call("info", &["server"]) {
+                    Context::version_from_info(info)
+                } else {
+                    Err(RedisError::Str("Error calling \"info server\""))
                 }
-                Err(RedisError::Str(
-                    "Error getting redis_version from \"info server\" call",
-                ))
             }
         }
     }
