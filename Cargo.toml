@@ -67,7 +67,7 @@ libc = "0.2"
 enum-primitive-derive = "^0.1"
 num-traits = "^0.2"
 regex = "1"
-strum_macros = "0.23"
+strum_macros = "0.24"
 #failure = "0.1"
 backtrace = "0.3"
 
