@@ -19,6 +19,12 @@ fn test_hello() -> Result<()> {
         .with_context(|| "failed to run hello.mul")?;
     assert_eq!(res, vec![3, 4, 12]);
 
+    let res: i32 = redis::cmd("hello.encode")
+        .arg(&["abc"])
+        .query(&mut con)
+        .with_context(|| "failed to run hello.encode")?;
+    assert_eq!(res, 294);
+
     let res: Result<Vec<i32>, RedisError> =
         redis::cmd("hello.mul").arg(&["3", "xx"]).query(&mut con);
     if res.is_ok() {

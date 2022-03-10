@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 use std::convert::TryFrom;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::fmt;
 use std::fmt::Display;
 use std::os::raw::{c_char, c_int, c_void};
@@ -189,11 +189,22 @@ impl RedisString {
         }
     }
 
-    // TODO: Redis allows storing and retrieving any arbitrary bytes.
-    // However rust's String and str can only store valid UTF-8.
-    // Implement these to allow non-utf8 bytes to be consumed:
-    // pub fn into_bytes(self) -> Vec<u8> {}
-    // pub fn as_bytes(&self) -> &[u8] {}
+    fn as_cstr(&self) -> &CStr {
+        let mut len: usize = 0;
+        let ptr = raw::string_ptr_len(self.inner, &mut len);
+        unsafe {
+            CStr::from_bytes_with_nul_unchecked(slice::from_raw_parts(ptr as *const u8, len + 1))
+        }
+    }
+
+    pub fn into_bytes(self) -> Vec<u8> {
+        let owned_buff : CString = self.as_cstr().into();
+        owned_buff.into_bytes()
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        self.as_cstr().to_bytes()
+    }
 }
 
 impl Drop for RedisString {
