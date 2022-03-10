@@ -26,7 +26,7 @@ fn encode(_: &Context, args: Vec<RedisString>) -> RedisResult {
         return Err(RedisError::WrongArity);
     }
 
-    let buffer= &args[1];
+    let buffer = &args[1];
     let mut val: u64 = 0;
     for byte in buffer.as_bytes().iter() {
         val += (*byte) as u64;

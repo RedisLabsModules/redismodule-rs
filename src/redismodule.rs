@@ -198,7 +198,7 @@ impl RedisString {
     }
 
     pub fn into_bytes(self) -> Vec<u8> {
-        let owned_buff : CString = self.as_cstr().into();
+        let owned_buff: CString = self.as_cstr().into();
         owned_buff.into_bytes()
     }
 
