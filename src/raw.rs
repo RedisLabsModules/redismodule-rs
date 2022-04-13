@@ -224,13 +224,7 @@ pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
         let mut len: size_t = 0;
         let reply_string: *mut u8 =
             RedisModule_CallReplyStringPtr.unwrap()(reply, &mut len) as *mut u8;
-        String::from_utf8(
-            slice::from_raw_parts(reply_string, len)
-                .iter()
-                .copied()
-                .collect(),
-        )
-        .unwrap()
+        String::from_utf8(slice::from_raw_parts(reply_string, len).to_vec()).unwrap()
     }
 }
 
