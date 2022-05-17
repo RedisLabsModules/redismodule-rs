@@ -109,6 +109,12 @@ macro_rules! redis_module {
                 $event_handler:expr
             ]),* $(,)*
         ])?
+        $(, server_events: [
+            $([
+                @$server_event_type:ident:
+                $server_event_handler:expr
+            ]),* $(,)*
+        ])?
     ) => {
         extern "C" fn __info_func(
             ctx: *mut $crate::raw::RedisModuleInfoCtx,
@@ -176,6 +182,18 @@ macro_rules! redis_module {
             $(
                 $(
                     redis_event_handler!(ctx, $(raw::NotifyEvent::$event_type |)+ raw::NotifyEvent::empty(), $event_handler);
+                )*
+            )?
+
+            $(
+                $(
+                    if let Err(err) = (crate::redis_module::context::server_events::subscribe_to_server_event(
+                        &context,
+                        crate::redis_module::context::server_events::ServerEvents::$server_event_type,
+                        Box::new($server_event_handler))) {
+                            context.log_warning(&format!("Failed register server event, {}", err));
+                            return $crate::Status::Err as c_int;
+                        }
                 )*
             )?
 

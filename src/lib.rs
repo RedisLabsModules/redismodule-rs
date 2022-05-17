@@ -17,9 +17,10 @@ mod redismodule;
 pub mod redisraw;
 pub mod redisvalue;
 
-mod context;
+pub mod context;
 pub mod key;
 pub mod logging;
+pub mod stream;
 mod macros;
 mod utils;
 
@@ -40,7 +41,7 @@ use backtrace::Backtrace;
 /// The workaround is to use the `test` feature instead.
 #[cfg(not(feature = "test"))]
 #[global_allocator]
-static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc;
+pub static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc;
 
 /// `LogLevel` is a level of logging to be specified with a Redis log directive.
 #[derive(Clone, Copy, Debug, AsRefStr)]

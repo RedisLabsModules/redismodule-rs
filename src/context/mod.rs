@@ -22,6 +22,10 @@ pub mod blocked;
 
 pub mod info;
 
+pub mod keys_cursor;
+
+pub mod server_events;
+
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
@@ -159,6 +163,26 @@ impl Context {
     pub fn reply_simple_string(&self, s: &str) -> raw::Status {
         let msg = Self::str_as_legal_resp_string(s);
         unsafe { raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into() }
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn reply_bulk_string(&self, s: &str) -> raw::Status {
+        unsafe { raw::RedisModule_ReplyWithStringBuffer.unwrap()(self.ctx, s.as_ptr() as *mut c_char, s.len()).into() }
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn reply_array(&self, size: usize) -> raw::Status {
+        unsafe { raw::RedisModule_ReplyWithArray.unwrap()(self.ctx, size as c_long).into() }
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn reply_long(&self, l: i64) -> raw::Status {
+        unsafe { raw::RedisModule_ReplyWithLongLong.unwrap()(self.ctx, l as c_long).into() }
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn reply_double(&self, d: f64) -> raw::Status {
+        unsafe { raw::RedisModule_ReplyWithDouble.unwrap()(self.ctx, d).into() }
     }
 
     #[allow(clippy::must_use_candidate)]
@@ -354,8 +378,18 @@ impl Context {
             }
         }
     }
+
     pub fn set_module_options(&self, options: ModuleOptions) {
         unsafe { raw::RedisModule_SetModuleOptions.unwrap()(self.ctx, options.bits()) };
+    }
+
+    pub fn is_primary(&self) -> bool {
+        let flags = unsafe { raw::RedisModule_GetContextFlags.unwrap()(self.ctx) };
+        if flags as u32 & raw::REDISMODULE_CTX_FLAGS_MASTER != 0 {
+            return true
+        } else {
+            return false
+        }
     }
 }
 
