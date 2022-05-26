@@ -167,7 +167,14 @@ impl Context {
 
     #[allow(clippy::must_use_candidate)]
     pub fn reply_bulk_string(&self, s: &str) -> raw::Status {
-        unsafe { raw::RedisModule_ReplyWithStringBuffer.unwrap()(self.ctx, s.as_ptr() as *mut c_char, s.len()).into() }
+        unsafe {
+            raw::RedisModule_ReplyWithStringBuffer.unwrap()(
+                self.ctx,
+                s.as_ptr() as *mut c_char,
+                s.len(),
+            )
+            .into()
+        }
     }
 
     #[allow(clippy::must_use_candidate)]
@@ -386,9 +393,9 @@ impl Context {
     pub fn is_primary(&self) -> bool {
         let flags = unsafe { raw::RedisModule_GetContextFlags.unwrap()(self.ctx) };
         if flags as u32 & raw::REDISMODULE_CTX_FLAGS_MASTER != 0 {
-            return true
+            return true;
         } else {
-            return false
+            return false;
         }
     }
 }

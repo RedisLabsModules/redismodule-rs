@@ -166,7 +166,7 @@ fn test_stream_reader() -> Result<()> {
         .arg(&["s", "1-2", "foo", "bar"])
         .query(&mut con)
         .with_context(|| "failed to add data to the stream")?;
-    
+
     let res: String = redis::cmd("STREAM_POP")
         .arg(&["s"])
         .query(&mut con)
@@ -196,8 +196,8 @@ fn test_flush_events() -> Result<()> {
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
-    
-    let _:String = redis::cmd("FLUSHALL")
+
+    let _: String = redis::cmd("FLUSHALL")
         .query(&mut con)
         .with_context(|| "failed to run keys_pos")?;
 
@@ -206,7 +206,7 @@ fn test_flush_events() -> Result<()> {
         .with_context(|| "failed to run keys_pos")?;
     assert_eq!(res, 2); // 2 is because we have flush start and end events
 
-    let _:String = redis::cmd("FLUSHALL")
+    let _: String = redis::cmd("FLUSHALL")
         .query(&mut con)
         .with_context(|| "failed to run keys_pos")?;
 
@@ -214,7 +214,7 @@ fn test_flush_events() -> Result<()> {
         .query(&mut con)
         .with_context(|| "failed to run keys_pos")?;
     assert_eq!(res, 4);
-    
+
     Ok(())
 }
 
@@ -225,8 +225,8 @@ fn test_role_changed_events() -> Result<()> {
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
-    
-    let _:String = redis::cmd("replicaof")
+
+    let _: String = redis::cmd("replicaof")
         .arg(&["127.0.0.1", "33333"])
         .query(&mut con)
         .with_context(|| "failed to run keys_pos")?;
@@ -236,7 +236,7 @@ fn test_role_changed_events() -> Result<()> {
         .with_context(|| "failed to run keys_pos")?;
     assert_eq!(res, 1);
 
-    let _:String = redis::cmd("replicaof")
+    let _: String = redis::cmd("replicaof")
         .arg(&["no", "one"])
         .query(&mut con)
         .with_context(|| "failed to run keys_pos")?;
@@ -245,7 +245,7 @@ fn test_role_changed_events() -> Result<()> {
         .query(&mut con)
         .with_context(|| "failed to run keys_pos")?;
     assert_eq!(res, 2);
-    
+
     Ok(())
 }
 
@@ -256,13 +256,13 @@ fn test_loading_events() -> Result<()> {
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
-    
+
     // initial load
     let initial_num_loading: usize = redis::cmd("NUM_LOADING")
         .query(&mut con)
         .with_context(|| "failed to run keys_pos")?;
 
-    let _:String = redis::cmd("debug")
+    let _: String = redis::cmd("debug")
         .arg(&["reload"])
         .query(&mut con)
         .with_context(|| "failed to run keys_pos")?;
@@ -272,7 +272,7 @@ fn test_loading_events() -> Result<()> {
         .with_context(|| "failed to run keys_pos")?;
     assert_eq!(res, initial_num_loading + 2); // 2 is because we have loading start and end events
 
-    let _:String = redis::cmd("debug")
+    let _: String = redis::cmd("debug")
         .arg(&["reload"])
         .query(&mut con)
         .with_context(|| "failed to run keys_pos")?;
@@ -293,22 +293,22 @@ fn test_key_scan() -> Result<()> {
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
-    let _:String = redis::cmd("set")
+    let _: String = redis::cmd("set")
         .arg(&["x", "1"])
         .query(&mut con)
         .with_context(|| "failed to run keys_pos")?;
 
-    let res:Vec<String> = redis::cmd("SCAN_KEYS")
+    let res: Vec<String> = redis::cmd("SCAN_KEYS")
         .query(&mut con)
         .with_context(|| "failed to run keys_pos")?;
     assert_eq!(res.len(), 1);
 
-    let _:String = redis::cmd("set")
+    let _: String = redis::cmd("set")
         .arg(&["y", "1"])
         .query(&mut con)
         .with_context(|| "failed to run keys_pos")?;
 
-    let res:Vec<String> = redis::cmd("SCAN_KEYS")
+    let res: Vec<String> = redis::cmd("SCAN_KEYS")
         .query(&mut con)
         .with_context(|| "failed to run keys_pos")?;
     assert_eq!(res.len(), 2);

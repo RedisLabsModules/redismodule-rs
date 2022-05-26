@@ -1,16 +1,18 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{Context, RedisResult, RedisString, RedisValue, context::keys_cursor::KeysCursor};
+use redis_module::{
+    context::keys_cursor::KeysCursor, Context, RedisResult, RedisString, RedisValue,
+};
 
 fn scan_keys(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     let mut keys = Vec::new();
     let cursor = KeysCursor::new();
-    while cursor.scan(ctx, &|_ctx, key_name, _key|{
-        keys.push(RedisValue::BulkString(key_name.try_as_str().unwrap().to_string()));
-    }){
-
-    }
+    while cursor.scan(ctx, &|_ctx, key_name, _key| {
+        keys.push(RedisValue::BulkString(
+            key_name.try_as_str().unwrap().to_string(),
+        ));
+    }) {}
     Ok(RedisValue::Array(keys))
 }
 

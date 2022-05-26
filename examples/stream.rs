@@ -19,8 +19,14 @@ fn stream_read_from(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 
     let mut iter = stream.get_stream_iterator()?;
     let element = iter.next();
-    let id_to_keep = iter.next().as_ref().map_or(RedisModuleStreamID{ms:u64::MAX, seq:u64::MAX}, |e| e.id);
-    
+    let id_to_keep = iter.next().as_ref().map_or(
+        RedisModuleStreamID {
+            ms: u64::MAX,
+            seq: u64::MAX,
+        },
+        |e| e.id,
+    );
+
     let stream = ctx.open_key_writable(&stream_key);
     stream.trim_stream_by_id(id_to_keep, false)?;
 

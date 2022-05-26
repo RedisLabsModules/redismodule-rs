@@ -20,8 +20,8 @@ pub mod redisvalue;
 pub mod context;
 pub mod key;
 pub mod logging;
-pub mod stream;
 mod macros;
+pub mod stream;
 mod utils;
 
 #[cfg(feature = "experimental-api")]

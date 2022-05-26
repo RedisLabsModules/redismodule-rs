@@ -2,8 +2,7 @@
 extern crate redis_module;
 
 use redis_module::{
-    Context, RedisResult, RedisString, RedisValue,
-    context::server_events::ServerEventData
+    context::server_events::ServerEventData, Context, RedisResult, RedisString, RedisValue,
 };
 
 static mut NUM_FLUSHES: usize = 0;
@@ -11,29 +10,29 @@ static mut NUM_ROLED_CHANGED: usize = 0;
 static mut NUM_LOADINGS: usize = 0;
 
 fn num_flushed(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
-    Ok(RedisValue::Integer(unsafe{NUM_FLUSHES} as i64))
+    Ok(RedisValue::Integer(unsafe { NUM_FLUSHES } as i64))
 }
 
 fn num_roled_changed(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
-    Ok(RedisValue::Integer(unsafe{NUM_ROLED_CHANGED} as i64))
+    Ok(RedisValue::Integer(unsafe { NUM_ROLED_CHANGED } as i64))
 }
 
 fn num_loading(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
-    Ok(RedisValue::Integer(unsafe{NUM_LOADINGS} as i64))
+    Ok(RedisValue::Integer(unsafe { NUM_LOADINGS } as i64))
 }
 
 fn on_role_changed(_ctx: &Context, _event_data: ServerEventData) {
-    let num_roled_changed = unsafe{&mut NUM_ROLED_CHANGED};
+    let num_roled_changed = unsafe { &mut NUM_ROLED_CHANGED };
     *num_roled_changed = *num_roled_changed + 1;
 }
 
 fn on_loading_event(_ctx: &Context, _event_data: ServerEventData) {
-    let num_loading = unsafe{&mut NUM_LOADINGS};
+    let num_loading = unsafe { &mut NUM_LOADINGS };
     *num_loading = *num_loading + 1;
 }
 
 fn on_flush_event(_ctx: &Context, _event_data: ServerEventData) {
-    let num_flushed = unsafe{&mut NUM_FLUSHES};
+    let num_flushed = unsafe { &mut NUM_FLUSHES };
     *num_flushed = *num_flushed + 1;
 }
 
