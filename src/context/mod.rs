@@ -177,7 +177,7 @@ impl Context {
 
     #[allow(clippy::must_use_candidate)]
     pub fn reply_long(&self, l: i64) -> raw::Status {
-        unsafe { raw::RedisModule_ReplyWithLongLong.unwrap()(self.ctx, l as c_long).into() }
+        unsafe { raw::RedisModule_ReplyWithLongLong.unwrap()(self.ctx, l as c_longlong).into() }
     }
 
     #[allow(clippy::must_use_candidate)]
