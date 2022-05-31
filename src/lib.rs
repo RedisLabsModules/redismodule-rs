@@ -79,6 +79,5 @@ pub fn base_info_func(
     if let Some(func) = extended_info_func {
         // Add module info
         func(ctx, for_crash_report);
-        return;
     }
 }
