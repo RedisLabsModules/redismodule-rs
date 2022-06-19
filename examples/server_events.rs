@@ -43,9 +43,9 @@ redis_module! {
     version: 1,
     data_types: [],
     commands: [
-        ["NUM_FLUSHED", num_flushed, "fast deny-oom", 0, 0, 0],
-        ["NUM_ROLED_CHANGED", num_roled_changed, "fast deny-oom", 0, 0, 0],
-        ["NUM_LOADING", num_loading, "fast deny-oom", 0, 0, 0],
+        ["NUM_FLUSHED", num_flushed, "fast deny-oom readonly", 0, 0, 0],
+        ["NUM_ROLED_CHANGED", num_roled_changed, "fast deny-oom readonly", 0, 0, 0],
+        ["NUM_LOADING", num_loading, "fast deny-oom readonly", 0, 0, 0],
     ],
     server_events: [
         [@RuleChanged: on_role_changed],
