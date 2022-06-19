@@ -23,6 +23,6 @@ redis_module! {
     version: 1,
     data_types: [],
     commands: [
-        ["SCAN_KEYS", scan_keys, "fast deny-oom", 0, 0, 0],
+        ["SCAN_KEYS", scan_keys, "fast deny-oom readonly", 0, 0, 0],
     ],
 }
