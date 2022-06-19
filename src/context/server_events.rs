@@ -47,6 +47,7 @@ pub struct Subscribers {
     list: Option<Vec<ServerEventCallback>>,
     event_callback: raw::RedisModuleEventCallback,
     event: raw::RedisModuleEvent,
+    event_str_rep: &'static str,
 }
 
 impl Subscribers {
@@ -66,9 +67,10 @@ impl Subscribers {
                     self.event_callback,
                 ) != raw::REDISMODULE_OK as i32
                 {
-                    return Err(RedisError::Str(
-                        "Failed subscribing to server role changed event",
-                    ));
+                    return Err(RedisError::String(format!(
+                        "Failed subscribing to server event: '{}'",
+                        self.event_str_rep
+                    )));
                 }
                 self.list = Some(Vec::new());
             }
@@ -98,6 +100,7 @@ static mut ROLE_CHANGED_SUBSCRIBERS: Subscribers = Subscribers {
         id: raw::REDISMODULE_EVENT_REPLICATION_ROLE_CHANGED,
         dataver: 1,
     },
+    event_str_rep: "role_changed",
 };
 
 extern "C" fn role_changed_callback(
@@ -136,6 +139,7 @@ static mut LOADING_SUBSCRIBERS: Subscribers = Subscribers {
         id: raw::REDISMODULE_EVENT_LOADING,
         dataver: 1,
     },
+    event_str_rep: "loading",
 };
 
 extern "C" fn loading_event_callback(
@@ -144,16 +148,11 @@ extern "C" fn loading_event_callback(
     subevent: u64,
     _data: *mut ::std::os::raw::c_void,
 ) {
-    let loading_sub_event = if subevent == raw::REDISMODULE_SUBEVENT_LOADING_RDB_START {
-        LoadingSubevent::RdbStarted
-    } else if subevent == raw::REDISMODULE_SUBEVENT_LOADING_AOF_START {
-        LoadingSubevent::AofStarted
-    } else if subevent == raw::REDISMODULE_SUBEVENT_LOADING_REPL_START {
-        LoadingSubevent::ReplStarted
-    } else if subevent == raw::REDISMODULE_SUBEVENT_LOADING_ENDED {
-        LoadingSubevent::Ended
-    } else {
-        LoadingSubevent::Failed
+    let loading_sub_event = match subevent {
+        raw::REDISMODULE_SUBEVENT_LOADING_RDB_START => LoadingSubevent::RdbStarted,
+        raw::REDISMODULE_SUBEVENT_LOADING_REPL_START => LoadingSubevent::ReplStarted,
+        raw::REDISMODULE_SUBEVENT_LOADING_ENDED => LoadingSubevent::Ended,
+        _ => LoadingSubevent::Failed,
     };
     let ctx = Context::new(ctx);
     for callback in unsafe { &LOADING_SUBSCRIBERS }.get_subscribers() {
@@ -178,6 +177,7 @@ static mut FLUSH_SUBSCRIBERS: Subscribers = Subscribers {
         id: raw::REDISMODULE_EVENT_FLUSHDB,
         dataver: 1,
     },
+    event_str_rep: "flush",
 };
 
 extern "C" fn flush_event_callback(
