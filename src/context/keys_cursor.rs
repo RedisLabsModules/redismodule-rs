@@ -52,11 +52,7 @@ impl KeysCursor {
                 callback as *const C as *mut c_void,
             )
         };
-        if res != 0 {
-            true
-        } else {
-            false
-        }
+        res != 0
     }
 }
 

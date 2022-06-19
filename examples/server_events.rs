@@ -39,7 +39,7 @@ fn on_flush_event(_ctx: &Context, _event_data: ServerEventData) {
 //////////////////////////////////////////////////////
 
 redis_module! {
-    name: "server_evemts",
+    name: "server_events",
     version: 1,
     data_types: [],
     commands: [

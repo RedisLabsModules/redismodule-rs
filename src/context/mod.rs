@@ -392,12 +392,7 @@ impl Context {
 
     pub fn is_primary(&self) -> bool {
         let flags = unsafe { raw::RedisModule_GetContextFlags.unwrap()(self.ctx) };
-        if flags as u32 & raw::REDISMODULE_CTX_FLAGS_MASTER != 0 {
-            return true;
-        } else {
-            return false;
-        }
-    }
+        flags as u32 & raw::REDISMODULE_CTX_FLAGS_MASTER != 0
 }
 
 pub struct InfoContext {

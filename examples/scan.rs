@@ -13,7 +13,7 @@ fn scan_keys(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
             key_name.try_as_str().unwrap().to_string(),
         ));
     }) {}
-    Ok(RedisValue::Array(keys))
+    Ok(keys.into())
 }
 
 //////////////////////////////////////////////////////

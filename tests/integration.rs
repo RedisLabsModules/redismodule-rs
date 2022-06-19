@@ -260,7 +260,7 @@ fn test_loading_events() -> Result<()> {
     // initial load
     let initial_num_loading: usize = redis::cmd("NUM_LOADING")
         .query(&mut con)
-        .with_context(|| "failed to run keys_pos")?;
+        .with_context(|| "failed to run NUM_LOADING")?;
 
     let _: String = redis::cmd("debug")
         .arg(&["reload"])
