@@ -26,6 +26,60 @@ pub mod keys_cursor;
 
 pub mod server_events;
 
+pub struct CallOptions {
+    options: String
+}
+
+pub struct CallOptionsBuilder {
+    options: String
+}
+
+impl CallOptionsBuilder {
+    pub fn new() -> CallOptionsBuilder {
+        CallOptionsBuilder{options: "v".to_string()}
+    }
+
+    fn add_flag(&mut self, flag: &str) {
+        self.options.push_str(flag);
+    }
+
+    pub fn read_only(mut self) -> CallOptionsBuilder {
+        self.add_flag("W");
+        self
+    }
+
+    pub fn safe(mut self) -> CallOptionsBuilder {
+        self.add_flag("S");
+        self
+    }
+
+    pub fn verify_acl(mut self) -> CallOptionsBuilder {
+        self.add_flag("C");
+        self
+    }
+
+    pub fn verify_oom(mut self) -> CallOptionsBuilder {
+        self.add_flag("M");
+        self
+    }
+
+    pub fn errors_as_replies(mut self) -> CallOptionsBuilder {
+        self.add_flag("E");
+        self
+    }
+
+    pub fn replicate(mut self) -> CallOptionsBuilder {
+        self.add_flag("!");
+        self
+    }
+
+    pub fn constract(&self) -> CallOptions {
+        let mut res = CallOptions{options: self.options.to_string()};
+        res.options.push_str("\0"); /* make it C string */
+        res
+    }
+}
+
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
@@ -99,7 +153,7 @@ impl Context {
         }
     }
 
-    pub fn call(&self, command: &str, args: &[&str]) -> RedisResult {
+    pub fn call_internal(&self, command: &str, options: *const c_char, args: &[&str]) -> RedisResult {
         let terminated_args: Vec<RedisString> = args
             .iter()
             .map(|s| RedisString::create(self.ctx, s))
@@ -114,7 +168,7 @@ impl Context {
             p_call(
                 self.ctx,
                 cmd.as_ptr(),
-                raw::FMT,
+                options,
                 inner_args.as_ptr() as *mut c_char,
                 terminated_args.len(),
             )
@@ -124,6 +178,15 @@ impl Context {
             raw::free_call_reply(reply);
         }
         result
+    }
+
+
+    pub fn call_ext(&self, command: &str, options: &CallOptions, args: &[&str]) -> RedisResult {
+        self.call_internal(command, options.options.as_ptr() as *const c_char, args)
+    }
+
+    pub fn call(&self, command: &str, args: &[&str]) -> RedisResult {
+        self.call_internal(command, raw::FMT, args)
     }
 
     fn parse_call_reply(reply: *mut raw::RedisModuleCallReply) -> RedisResult {
