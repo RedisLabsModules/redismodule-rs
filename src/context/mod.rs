@@ -467,6 +467,11 @@ impl Context {
         flags as u32 & raw::REDISMODULE_CTX_FLAGS_MASTER != 0
     }
 
+    pub fn is_oom(&self) -> bool {
+        let flags = unsafe { raw::RedisModule_GetContextFlags.unwrap()(self.ctx) };
+        flags as u32 & raw::REDISMODULE_CTX_FLAGS_OOM != 0
+    }
+
     pub fn get_current_user(&self) -> Result<String, RedisError> {
         let user = unsafe { raw::RedisModule_GetCurrentUserName.unwrap()(self.ctx) };
         let user = RedisString::from_redis_module_string(ptr::null_mut(), user);
