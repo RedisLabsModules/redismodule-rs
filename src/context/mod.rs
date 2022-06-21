@@ -457,6 +457,20 @@ impl Context {
         let flags = unsafe { raw::RedisModule_GetContextFlags.unwrap()(self.ctx) };
         flags as u32 & raw::REDISMODULE_CTX_FLAGS_MASTER != 0
     }
+
+    pub fn get_current_user(&self) -> Result<String, RedisError> {
+        let user = unsafe{raw::RedisModule_GetCurrentUserName.unwrap()(self.ctx)};
+        let user = RedisString::from_redis_module_string(ptr::null_mut(), user);
+        Ok(user.try_as_str()?.to_string())
+    }
+
+    pub fn autenticate_user(&self, user_name: &str) -> raw::Status {
+        if unsafe{raw::RedisModule_AuthenticateClientWithACLUser.unwrap()(self.ctx, user_name.as_ptr() as *const c_char, user_name.len(), None, ptr::null_mut(), ptr::null_mut())} == raw::REDISMODULE_OK as i32 {
+            raw::Status::Ok
+        } else {
+            raw::Status::Err
+        }
+    }
 }
 
 pub struct InfoContext {
