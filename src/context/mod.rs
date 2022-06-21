@@ -27,16 +27,18 @@ pub mod keys_cursor;
 pub mod server_events;
 
 pub struct CallOptions {
-    options: String
+    options: String,
 }
 
 pub struct CallOptionsBuilder {
-    options: String
+    options: String,
 }
 
 impl CallOptionsBuilder {
     pub fn new() -> CallOptionsBuilder {
-        CallOptionsBuilder{options: "v".to_string()}
+        CallOptionsBuilder {
+            options: "v".to_string(),
+        }
     }
 
     fn add_flag(&mut self, flag: &str) {
@@ -74,7 +76,9 @@ impl CallOptionsBuilder {
     }
 
     pub fn constract(&self) -> CallOptions {
-        let mut res = CallOptions{options: self.options.to_string()};
+        let mut res = CallOptions {
+            options: self.options.to_string(),
+        };
         res.options.push_str("\0"); /* make it C string */
         res
     }
@@ -153,7 +157,12 @@ impl Context {
         }
     }
 
-    pub fn call_internal(&self, command: &str, options: *const c_char, args: &[&str]) -> RedisResult {
+    pub fn call_internal(
+        &self,
+        command: &str,
+        options: *const c_char,
+        args: &[&str],
+    ) -> RedisResult {
         let terminated_args: Vec<RedisString> = args
             .iter()
             .map(|s| RedisString::create(self.ctx, s))
@@ -179,7 +188,6 @@ impl Context {
         }
         result
     }
-
 
     pub fn call_ext(&self, command: &str, options: &CallOptions, args: &[&str]) -> RedisResult {
         self.call_internal(command, options.options.as_ptr() as *const c_char, args)
@@ -459,13 +467,23 @@ impl Context {
     }
 
     pub fn get_current_user(&self) -> Result<String, RedisError> {
-        let user = unsafe{raw::RedisModule_GetCurrentUserName.unwrap()(self.ctx)};
+        let user = unsafe { raw::RedisModule_GetCurrentUserName.unwrap()(self.ctx) };
         let user = RedisString::from_redis_module_string(ptr::null_mut(), user);
         Ok(user.try_as_str()?.to_string())
     }
 
     pub fn autenticate_user(&self, user_name: &str) -> raw::Status {
-        if unsafe{raw::RedisModule_AuthenticateClientWithACLUser.unwrap()(self.ctx, user_name.as_ptr() as *const c_char, user_name.len(), None, ptr::null_mut(), ptr::null_mut())} == raw::REDISMODULE_OK as i32 {
+        if unsafe {
+            raw::RedisModule_AuthenticateClientWithACLUser.unwrap()(
+                self.ctx,
+                user_name.as_ptr() as *const c_char,
+                user_name.len(),
+                None,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        } == raw::REDISMODULE_OK as i32
+        {
             raw::Status::Ok
         } else {
             raw::Status::Err
