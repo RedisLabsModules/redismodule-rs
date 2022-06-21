@@ -26,6 +26,7 @@ pub mod keys_cursor;
 
 pub mod server_events;
 
+#[derive(Clone)]
 pub struct CallOptions {
     options: String,
 }
