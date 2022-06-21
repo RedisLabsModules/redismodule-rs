@@ -43,12 +43,12 @@ impl CallOptionsBuilder {
         self.options.push_str(flag);
     }
 
-    pub fn read_only(mut self) -> CallOptionsBuilder {
+    pub fn no_writes(mut self) -> CallOptionsBuilder {
         self.add_flag("W");
         self
     }
 
-    pub fn safe(mut self) -> CallOptionsBuilder {
+    pub fn script_mode(mut self) -> CallOptionsBuilder {
         self.add_flag("S");
         self
     }
