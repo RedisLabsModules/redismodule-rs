@@ -85,6 +85,39 @@ impl CallOptionsBuilder {
     }
 }
 
+pub struct AclPermissions {
+    flags: u32,
+}
+
+impl AclPermissions {
+    pub fn new() -> AclPermissions {
+        AclPermissions { flags: 0 }
+    }
+
+    pub fn add_access_permission(&mut self) {
+        self.flags |= raw::REDISMODULE_CMD_KEY_ACCESS;
+    }
+
+    pub fn add_insert_permission(&mut self) {
+        self.flags |= raw::REDISMODULE_CMD_KEY_INSERT;
+    }
+
+    pub fn add_delete_permission(&mut self) {
+        self.flags |= raw::REDISMODULE_CMD_KEY_DELETE;
+    }
+
+    pub fn add_update_permission(&mut self) {
+        self.flags |= raw::REDISMODULE_CMD_KEY_UPDATE;
+    }
+
+    pub fn add_full_permission(&mut self) {
+        self.add_access_permission();
+        self.add_insert_permission();
+        self.add_delete_permission();
+        self.add_update_permission();
+    }
+}
+
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
@@ -493,6 +526,19 @@ impl Context {
             raw::Status::Ok
         } else {
             raw::Status::Err
+        }
+    }
+
+    pub fn acl_check_key_permission(&self, user_name: &str, key_name: &RedisString, permissions: &AclPermissions) -> Result<(), RedisError> {
+        let user_name = RedisString::create(self.ctx, user_name);
+        let user = unsafe{ raw::RedisModule_GetModuleUserFromUserName.unwrap()(user_name.inner) };
+        if user.is_null() {
+            return Err(RedisError::Str("User does not exists or disabled"));
+        }
+        if unsafe{ raw::RedisModule_ACLCheckKeyPermissions.unwrap()(user, key_name.inner, permissions.flags as i32) } == raw::REDISMODULE_OK as i32 {
+            Ok(())
+        } else {
+            Err(RedisError::Str("User does not have permissions on key"))
         }
     }
 }
