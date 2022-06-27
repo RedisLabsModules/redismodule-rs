@@ -26,6 +26,8 @@ pub mod keys_cursor;
 
 pub mod server_events;
 
+pub mod configuration;
+
 #[derive(Clone)]
 pub struct CallOptions {
     options: String,
@@ -529,13 +531,25 @@ impl Context {
         }
     }
 
-    pub fn acl_check_key_permission(&self, user_name: &str, key_name: &RedisString, permissions: &AclPermissions) -> Result<(), RedisError> {
+    pub fn acl_check_key_permission(
+        &self,
+        user_name: &str,
+        key_name: &RedisString,
+        permissions: &AclPermissions,
+    ) -> Result<(), RedisError> {
         let user_name = RedisString::create(self.ctx, user_name);
-        let user = unsafe{ raw::RedisModule_GetModuleUserFromUserName.unwrap()(user_name.inner) };
+        let user = unsafe { raw::RedisModule_GetModuleUserFromUserName.unwrap()(user_name.inner) };
         if user.is_null() {
             return Err(RedisError::Str("User does not exists or disabled"));
         }
-        if unsafe{ raw::RedisModule_ACLCheckKeyPermissions.unwrap()(user, key_name.inner, permissions.flags as i32) } == raw::REDISMODULE_OK as i32 {
+        if unsafe {
+            raw::RedisModule_ACLCheckKeyPermissions.unwrap()(
+                user,
+                key_name.inner,
+                permissions.flags as i32,
+            )
+        } == raw::REDISMODULE_OK as i32
+        {
             Ok(())
         } else {
             Err(RedisError::Str("User does not have permissions on key"))

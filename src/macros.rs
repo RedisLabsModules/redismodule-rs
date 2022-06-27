@@ -91,6 +91,7 @@ macro_rules! redis_module {
             $($data_type:ident),* $(,)*
         ],
         $(init: $init_func:ident,)* $(,)*
+        $(post_init: $post_init_func:ident,)* $(,)*
         $(deinit: $deinit_func:ident,)* $(,)*
         $(info: $info_func:ident,)?
         commands: [
@@ -115,6 +116,15 @@ macro_rules! redis_module {
                 $server_event_handler:expr
             ]),* $(,)*
         ])?
+        $(, string_configurations: [
+            $($string_config_ctx:expr),* $(,)*
+        ])?
+        $(, bool_configurations: [
+            $($bool_config_ctx:expr),* $(,)*
+        ])?
+        $(, numeric_configurations: [
+            $($numeric_config_ctx:expr),* $(,)*
+        ])?
     ) => {
         extern "C" fn __info_func(
             ctx: *mut $crate::raw::RedisModuleInfoCtx,
@@ -138,6 +148,7 @@ macro_rules! redis_module {
 
             use $crate::raw;
             use $crate::RedisString;
+            use $crate::context::configuration;
 
             // We use a statically sized buffer to avoid allocating.
             // This is needed since we use a custom allocator that relies on the Redis allocator,
@@ -197,7 +208,46 @@ macro_rules! redis_module {
                 )*
             )?
 
+            if let Some(load_config) = raw::RedisModule_LoadConfigs.as_ref() {
+                // configuration api only available on Redis 7.0, if its not available
+                // ignore it. User will have to find another way to read configuration.
+                $(
+                    $(
+                        if let Err(err) = configuration::register_string_configuration(&context, $string_config_ctx) {
+                            context.log_warning(&format!("Failed register string configuration, {}", err));
+                            return $crate::Status::Err as c_int;
+                        }
+                    )*
+                )?
+
+                $(
+                    $(
+                        if let Err(err) = configuration::register_bool_configuration(&context, $bool_config_ctx) {
+                            context.log_warning(&format!("Failed register string configuration, {}", err));
+                            return $crate::Status::Err as c_int;
+                        }
+                    )*
+                )?
+
+                $(
+                    $(
+                        if let Err(err) = configuration::register_numeric_configuration(&context, $numeric_config_ctx) {
+                            context.log_warning(&format!("Failed register string configuration, {}", err));
+                            return $crate::Status::Err as c_int;
+                        }
+                    )*
+                )?
+
+                load_config(ctx);
+            }
+
             raw::register_info_function(ctx, Some(__info_func));
+
+            $(
+                if $post_init_func(&context) == $crate::Status::Err {
+                    return $crate::Status::Err as c_int;
+                }
+            )*
 
             raw::Status::Ok as c_int
         }
