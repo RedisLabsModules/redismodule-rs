@@ -125,6 +125,9 @@ macro_rules! redis_module {
         $(, numeric_configurations: [
             $($numeric_config_ctx:expr),* $(,)*
         ])?
+        $(, enum_configurations: [
+            $($enum_config_ctx:expr),* $(,)*
+        ])?
     ) => {
         extern "C" fn __info_func(
             ctx: *mut $crate::raw::RedisModuleInfoCtx,
@@ -232,6 +235,15 @@ macro_rules! redis_module {
                 $(
                     $(
                         if let Err(err) = configuration::register_numeric_configuration(&context, $numeric_config_ctx) {
+                            context.log_warning(&format!("Failed register string configuration, {}", err));
+                            return $crate::Status::Err as c_int;
+                        }
+                    )*
+                )?
+
+                $(
+                    $(
+                        if let Err(err) = configuration::register_enum_configuration(&context, $enum_config_ctx) {
                             context.log_warning(&format!("Failed register string configuration, {}", err));
                             return $crate::Status::Err as c_int;
                         }
