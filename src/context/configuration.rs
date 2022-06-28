@@ -58,7 +58,7 @@ pub trait RedisConfigCtx {
 }
 
 pub trait RedisStringConfigCtx: RedisConfigCtx {
-    fn default(&self) -> Option<&'static str>;
+    fn default(&self) -> Option<String>;
     fn get(&self, name: &str) -> RedisString;
     fn set(&mut self, name: &str, value: RedisString) -> Result<(), RedisError>;
 }
@@ -91,6 +91,7 @@ extern "C" fn internal_string_get<C: RedisStringConfigCtx>(
     let redis_config_ctx = unsafe { &*(privdata as *mut C) };
     let name = unsafe { CStr::from_ptr(name) }.to_str().unwrap();
     let res = redis_config_ctx.get(name);
+    raw::string_retain_string(std::ptr::null_mut(), res.inner);
     res.inner
 }
 
@@ -256,7 +257,7 @@ pub fn register_string_configuration<C: RedisStringConfigCtx>(
         },
         None => None,
     };
-    let default_val_ptr = match default_val {
+    let default_val_ptr = match &default_val {
         Some(d_v) => d_v.as_ptr(),
         None => std::ptr::null_mut(),
     };
