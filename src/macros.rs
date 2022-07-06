@@ -256,7 +256,7 @@ macro_rules! redis_module {
             raw::register_info_function(ctx, Some(__info_func));
 
             $(
-                if $post_init_func(&context) == $crate::Status::Err {
+                if $post_init_func(&context, &args) == $crate::Status::Err {
                     return $crate::Status::Err as c_int;
                 }
             )*

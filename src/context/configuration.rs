@@ -20,9 +20,17 @@ impl ConfigFlags {
         self
     }
 
+    pub fn is_emmutable(&self) -> bool {
+        self.flags & raw::REDISMODULE_CONFIG_IMMUTABLE != 0
+    }
+
     pub fn sensitive(mut self) -> Self {
         self.flags |= raw::REDISMODULE_CONFIG_SENSITIVE;
         self
+    }
+
+    pub fn is_sensitive(&self) -> bool {
+        self.flags & raw::REDISMODULE_CONFIG_SENSITIVE != 0
     }
 
     pub fn hidden(mut self) -> Self {
@@ -30,9 +38,17 @@ impl ConfigFlags {
         self
     }
 
+    pub fn is_hidden(&self) -> bool {
+        self.flags & raw::REDISMODULE_CONFIG_HIDDEN != 0
+    }
+
     pub fn protected(mut self) -> Self {
         self.flags |= raw::REDISMODULE_CONFIG_PROTECTED;
         self
+    }
+
+    pub fn is_protected(&self) -> bool {
+        self.flags & raw::REDISMODULE_CONFIG_PROTECTED != 0
     }
 
     pub fn deny_loading(mut self) -> Self {
@@ -40,14 +56,26 @@ impl ConfigFlags {
         self
     }
 
+    pub fn is_deny_loading(&self) -> bool {
+        self.flags & raw::REDISMODULE_CONFIG_DENY_LOADING != 0
+    }
+
     pub fn memory(mut self) -> Self {
         self.flags |= raw::REDISMODULE_CONFIG_MEMORY;
         self
     }
 
+    pub fn is_memoryg(&self) -> bool {
+        self.flags & raw::REDISMODULE_CONFIG_MEMORY != 0
+    }
+
     pub fn bit_flags(mut self) -> Self {
         self.flags |= raw::REDISMODULE_CONFIG_BITFLAGS;
         self
+    }
+
+    pub fn is_bit_flags(&self) -> bool {
+        self.flags & raw::REDISMODULE_CONFIG_BITFLAGS != 0
     }
 }
 
