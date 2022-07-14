@@ -36,7 +36,7 @@ bitflags! {
     }
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum KeyType {
     Empty = REDISMODULE_KEYTYPE_EMPTY,
     String = REDISMODULE_KEYTYPE_STRING,
@@ -54,13 +54,13 @@ impl From<c_int> for KeyType {
     }
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Where {
     ListHead = REDISMODULE_LIST_HEAD,
     ListTail = REDISMODULE_LIST_TAIL,
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum ReplyType {
     Unknown = REDISMODULE_REPLY_UNKNOWN,
     String = REDISMODULE_REPLY_STRING,
@@ -76,13 +76,13 @@ impl From<c_int> for ReplyType {
     }
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Aux {
     Before = REDISMODULE_AUX_BEFORE_RDB,
     After = REDISMODULE_AUX_AFTER_RDB,
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Status {
     Ok = REDISMODULE_OK,
     Err = REDISMODULE_ERR,
@@ -225,13 +225,7 @@ pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
         let mut len: size_t = 0;
         let reply_string: *mut u8 =
             RedisModule_CallReplyStringPtr.unwrap()(reply, &mut len) as *mut u8;
-        String::from_utf8(
-            slice::from_raw_parts(reply_string, len)
-                .iter()
-                .copied()
-                .collect(),
-        )
-        .unwrap()
+        String::from_utf8(slice::from_raw_parts(reply_string, len).to_vec()).unwrap()
     }
 }
 
@@ -645,7 +639,7 @@ pub fn get_keyspace_events() -> NotifyEvent {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Version {
     pub major: i32,
     pub minor: i32,

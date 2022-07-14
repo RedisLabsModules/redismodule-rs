@@ -68,12 +68,10 @@ pub fn base_info_func(
     extended_info_func: Option<fn(&InfoContext, bool)>,
 ) {
     // If needed, add rust trace into the crash report (before module info)
-    if for_crash_report {
-        if ctx.add_info_section(Some("trace")) == Status::Ok {
-            let current_backtrace = Backtrace::new();
-            let trace = format!("{:?}", current_backtrace);
-            ctx.add_info_field_str("trace", &trace);
-        }
+    if for_crash_report && ctx.add_info_section(Some("trace")) == Status::Ok {
+        let current_backtrace = Backtrace::new();
+        let trace = format!("{:?}", current_backtrace);
+        ctx.add_info_field_str("trace", &trace);
     }
 
     if let Some(func) = extended_info_func {
