@@ -550,8 +550,10 @@ impl Context {
             )
         } == raw::REDISMODULE_OK as i32
         {
+            unsafe{raw::RedisModule_FreeModuleUser.unwrap()(user)};
             Ok(())
         } else {
+            unsafe{raw::RedisModule_FreeModuleUser.unwrap()(user)};
             Err(RedisError::Str("User does not have permissions on key"))
         }
     }
