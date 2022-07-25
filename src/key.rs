@@ -25,7 +25,7 @@ use crate::RedisString;
 /// by explicitly freeing them when you're done. This can be a risky prospect,
 /// especially with mechanics like Rust's `?` operator, so we ensure fault-free
 /// operation through the use of the Drop trait.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KeyMode {
     Read,
     ReadWrite,

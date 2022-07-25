@@ -88,7 +88,7 @@ pub fn decode_args(
 
 ///////////////////////////////////////////////////
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct RedisString {
     ctx: *mut raw::RedisModuleCtx,
     pub inner: *mut raw::RedisModuleString,
@@ -201,6 +201,32 @@ impl Drop for RedisString {
         unsafe {
             raw::RedisModule_FreeString.unwrap()(self.ctx, self.inner);
         }
+    }
+}
+
+impl PartialEq for RedisString {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other).is_eq()
+    }
+}
+
+impl Eq for RedisString {}
+
+impl PartialOrd for RedisString {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for RedisString {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        raw::string_compare(self.inner, other.inner)
+    }
+}
+
+impl core::hash::Hash for RedisString {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.as_slice().hash(state);
     }
 }
 
