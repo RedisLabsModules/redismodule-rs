@@ -255,7 +255,11 @@ impl Context {
                 Ok(RedisValue::Array(vec))
             }
             raw::ReplyType::Integer => Ok(RedisValue::Integer(raw::call_reply_integer(reply))),
-            raw::ReplyType::String => Ok(RedisValue::SimpleString(raw::call_reply_string(reply))),
+            raw::ReplyType::String => Ok(RedisValue::StringBuffer({
+                let mut len: usize = 0;
+                let buff = raw::call_reply_string_ptr(reply, &mut len);
+                unsafe { std::slice::from_raw_parts(buff as *mut u8, len) }.to_vec()
+            })),
             raw::ReplyType::Null => Ok(RedisValue::Null),
             raw::ReplyType::Map => {
                 let length = raw::call_reply_length(reply);
