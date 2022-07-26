@@ -8,6 +8,8 @@ use crate::{add_info_field_long_long, add_info_field_str, raw, utils, Status};
 use crate::{add_info_section, LogLevel};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
+use std::collections::{HashMap, HashSet};
+
 #[cfg(feature = "experimental-api")]
 use std::ffi::CStr;
 
@@ -75,6 +77,11 @@ impl CallOptionsBuilder {
 
     pub fn replicate(mut self) -> CallOptionsBuilder {
         self.add_flag("!");
+        self
+    }
+
+    pub fn resp_3(mut self) -> CallOptionsBuilder {
+        self.add_flag("3");
         self
     }
 
@@ -250,6 +257,49 @@ impl Context {
             raw::ReplyType::Integer => Ok(RedisValue::Integer(raw::call_reply_integer(reply))),
             raw::ReplyType::String => Ok(RedisValue::SimpleString(raw::call_reply_string(reply))),
             raw::ReplyType::Null => Ok(RedisValue::Null),
+            raw::ReplyType::Map => {
+                let length = raw::call_reply_length(reply);
+                let mut map = HashMap::new();
+                for i in 0..length {
+                    let (key, val) = raw::call_reply_map_element(reply, i);
+                    let key = Self::parse_call_reply(key)?;
+                    let val = Self::parse_call_reply(val)?;
+                    let key = match key {
+                        RedisValue::SimpleString(s) => s.to_string(),
+                        RedisValue::SimpleStringStatic(s) => s.to_string(),
+                        RedisValue::BulkString(s) => s,
+                        RedisValue::BulkRedisString(s) => s.try_as_str().map_err(|_| RedisError::Str("Failed pars map key as string"))?.to_string(),
+                        RedisValue::Integer(i) => i.to_string(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::Float(f) => f.to_string(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        _ => return Err(RedisError::Str("type is not supported as map key")),
+                    };
+                    map.insert(key, val);
+                }
+                Ok(RedisValue::Map(map))
+            },
+            raw::ReplyType::Set => {
+                let length = raw::call_reply_length(reply);
+                let mut set = HashSet::new();
+                for i in 0..length {
+                    let val = raw::call_reply_set_element(reply, i);
+                    let val = Self::parse_call_reply(val)?;
+                    let val = match val {
+                        RedisValue::SimpleString(s) => s.to_string(),
+                        RedisValue::SimpleStringStatic(s) => s.to_string(),
+                        RedisValue::BulkString(s) => s,
+                        RedisValue::BulkRedisString(s) => s.try_as_str().map_err(|_| RedisError::Str("Failed pars map key as string"))?.to_string(),
+                        RedisValue::Integer(i) => i.to_string(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::Float(f) => f.to_string(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        _ => return Err(RedisError::Str("type is not supported on set")),
+                    };
+                    set.insert(val);
+                }
+                Ok(RedisValue::Set(set))
+            }
+            raw::ReplyType::Bool => Ok(RedisValue::Bool(raw::call_reply_bool(reply) != 0)),
+            raw::ReplyType::Double => Ok(RedisValue::Double(raw::call_reply_double(reply))),
+            raw::ReplyType::BigNumber => Ok(RedisValue::BigNumber(raw::call_reply_big_numebr(reply))),
+            raw::ReplyType::VerbatimString => Ok(RedisValue::VerbatimString(raw::call_reply_verbatim_string(reply))),
         }
     }
 
@@ -364,6 +414,59 @@ impl Context {
 
                 raw::Status::Ok
             }
+
+            Ok(RedisValue::Map(map)) => {
+                unsafe {
+                    raw::RedisModule_ReplyWithMap.unwrap()(self.ctx, map.len() as c_long);
+                }
+
+                for (key, val) in map {
+                    unsafe{
+                        raw::RedisModule_ReplyWithStringBuffer.unwrap()(
+                            self.ctx,
+                            key.as_ptr().cast::<c_char>(),
+                            key.len() as usize,
+                        );
+                    };
+                    self.reply(Ok(val));
+                }
+
+                raw::Status::Ok
+            }
+
+            Ok(RedisValue::Set(set)) => {
+                unsafe {
+                    raw::RedisModule_ReplyWithSet.unwrap()(self.ctx, set.len() as c_long);
+                }
+
+                for val in set {
+                    unsafe{
+                        raw::RedisModule_ReplyWithStringBuffer.unwrap()(
+                            self.ctx,
+                            val.as_ptr().cast::<c_char>(),
+                            val.len() as usize,
+                        );
+                    };
+                }
+
+                raw::Status::Ok
+            }
+
+            Ok(RedisValue::Bool(b)) => unsafe {
+                raw::RedisModule_ReplyWithBool.unwrap()(self.ctx, b as c_int).into()
+            },
+
+            Ok(RedisValue::Double(d)) => unsafe {
+                raw::RedisModule_ReplyWithDouble.unwrap()(self.ctx, d).into()
+            },
+
+            Ok(RedisValue::BigNumber(s)) => unsafe {
+                raw::RedisModule_ReplyWithBigNumber.unwrap()(self.ctx, s.as_ptr() as *mut c_char, s.len()).into()
+            },
+
+            Ok(RedisValue::VerbatimString((t, s))) => unsafe {
+                raw::RedisModule_ReplyWithVerbatimStringType.unwrap()(self.ctx, s.as_ptr() as *mut c_char, s.len(), t.as_ptr() as *mut c_char).into()
+            },
 
             Ok(RedisValue::Null) => unsafe {
                 raw::RedisModule_ReplyWithNull.unwrap()(self.ctx).into()

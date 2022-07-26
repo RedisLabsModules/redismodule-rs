@@ -1,4 +1,5 @@
 use crate::RedisString;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, PartialEq)]
 pub enum RedisValue {
@@ -11,6 +12,12 @@ pub enum RedisValue {
     Float(f64),
     Array(Vec<RedisValue>),
     Null,
+    Map(HashMap<String, RedisValue>),
+    Set(HashSet<String>),
+    Bool(bool),
+    Double(f64),
+    BigNumber(String),
+    VerbatimString((String, String)),
     NoReply, // No reply at all (as opposed to a Null reply)
 }
 
