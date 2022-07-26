@@ -148,7 +148,7 @@ impl RedisString {
         Self::string_as_slice(self.inner)
     }
 
-    fn string_as_slice<'a>(ptr: *const raw::RedisModuleString) -> &'a [u8] {
+    pub fn string_as_slice<'a>(ptr: *const raw::RedisModuleString) -> &'a [u8] {
         let mut len: libc::size_t = 0;
         let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(ptr, &mut len) };
 

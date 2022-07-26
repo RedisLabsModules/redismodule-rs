@@ -57,7 +57,7 @@ macro_rules! redis_event_handler {
         ) -> c_int {
             let context = $crate::Context::new(ctx);
 
-            let redis_key = $crate::RedisString::from_ptr(key).unwrap();
+            let redis_key = $crate::RedisString::string_as_slice(key);
             let event_str = unsafe { CStr::from_ptr(event) };
             $event_handler(
                 &context,
