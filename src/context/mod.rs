@@ -268,7 +268,10 @@ impl Context {
                         RedisValue::SimpleString(s) => s.to_string(),
                         RedisValue::SimpleStringStatic(s) => s.to_string(),
                         RedisValue::BulkString(s) => s,
-                        RedisValue::BulkRedisString(s) => s.try_as_str().map_err(|_| RedisError::Str("Failed pars map key as string"))?.to_string(),
+                        RedisValue::BulkRedisString(s) => s
+                            .try_as_str()
+                            .map_err(|_| RedisError::Str("Failed pars map key as string"))?
+                            .to_string(),
                         RedisValue::Integer(i) => i.to_string(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
                         RedisValue::Float(f) => f.to_string(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
                         _ => return Err(RedisError::Str("type is not supported as map key")),
@@ -276,7 +279,7 @@ impl Context {
                     map.insert(key, val);
                 }
                 Ok(RedisValue::Map(map))
-            },
+            }
             raw::ReplyType::Set => {
                 let length = raw::call_reply_length(reply);
                 let mut set = HashSet::new();
@@ -287,7 +290,10 @@ impl Context {
                         RedisValue::SimpleString(s) => s.to_string(),
                         RedisValue::SimpleStringStatic(s) => s.to_string(),
                         RedisValue::BulkString(s) => s,
-                        RedisValue::BulkRedisString(s) => s.try_as_str().map_err(|_| RedisError::Str("Failed pars map key as string"))?.to_string(),
+                        RedisValue::BulkRedisString(s) => s
+                            .try_as_str()
+                            .map_err(|_| RedisError::Str("Failed pars map key as string"))?
+                            .to_string(),
                         RedisValue::Integer(i) => i.to_string(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
                         RedisValue::Float(f) => f.to_string(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
                         _ => return Err(RedisError::Str("type is not supported on set")),
@@ -298,8 +304,12 @@ impl Context {
             }
             raw::ReplyType::Bool => Ok(RedisValue::Bool(raw::call_reply_bool(reply) != 0)),
             raw::ReplyType::Double => Ok(RedisValue::Double(raw::call_reply_double(reply))),
-            raw::ReplyType::BigNumber => Ok(RedisValue::BigNumber(raw::call_reply_big_numebr(reply))),
-            raw::ReplyType::VerbatimString => Ok(RedisValue::VerbatimString(raw::call_reply_verbatim_string(reply))),
+            raw::ReplyType::BigNumber => {
+                Ok(RedisValue::BigNumber(raw::call_reply_big_numebr(reply)))
+            }
+            raw::ReplyType::VerbatimString => Ok(RedisValue::VerbatimString(
+                raw::call_reply_verbatim_string(reply),
+            )),
         }
     }
 
@@ -421,7 +431,7 @@ impl Context {
                 }
 
                 for (key, val) in map {
-                    unsafe{
+                    unsafe {
                         raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                             self.ctx,
                             key.as_ptr().cast::<c_char>(),
@@ -440,7 +450,7 @@ impl Context {
                 }
 
                 for val in set {
-                    unsafe{
+                    unsafe {
                         raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                             self.ctx,
                             val.as_ptr().cast::<c_char>(),
@@ -461,11 +471,22 @@ impl Context {
             },
 
             Ok(RedisValue::BigNumber(s)) => unsafe {
-                raw::RedisModule_ReplyWithBigNumber.unwrap()(self.ctx, s.as_ptr() as *mut c_char, s.len()).into()
+                raw::RedisModule_ReplyWithBigNumber.unwrap()(
+                    self.ctx,
+                    s.as_ptr() as *mut c_char,
+                    s.len(),
+                )
+                .into()
             },
 
             Ok(RedisValue::VerbatimString((t, s))) => unsafe {
-                raw::RedisModule_ReplyWithVerbatimStringType.unwrap()(self.ctx, s.as_ptr() as *mut c_char, s.len(), t.as_ptr() as *mut c_char).into()
+                raw::RedisModule_ReplyWithVerbatimStringType.unwrap()(
+                    self.ctx,
+                    s.as_ptr() as *mut c_char,
+                    s.len(),
+                    t.as_ptr() as *mut c_char,
+                )
+                .into()
             },
 
             Ok(RedisValue::Null) => unsafe {

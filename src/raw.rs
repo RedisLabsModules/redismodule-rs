@@ -220,21 +220,24 @@ pub fn call_reply_double(reply: *mut RedisModuleCallReply) -> f64 {
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_big_numebr(reply: *mut RedisModuleCallReply) -> String {
-    unsafe { 
+    unsafe {
         let mut len: size_t = 0;
-        let reply_string: *mut u8 = RedisModule_CallReplyBigNumber.unwrap()(reply, &mut len) as *mut u8;
+        let reply_string: *mut u8 =
+            RedisModule_CallReplyBigNumber.unwrap()(reply, &mut len) as *mut u8;
         String::from_utf8(slice::from_raw_parts(reply_string, len).to_vec()).unwrap()
     }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_verbatim_string(reply: *mut RedisModuleCallReply) -> (String, String) {
-    unsafe { 
+    unsafe {
         let mut len: size_t = 0;
         let mut format: *const c_char = ptr::null_mut();
-        let reply_string: *mut u8 = RedisModule_CallReplyVerbatim.unwrap()(reply, &mut len, &mut format) as *mut u8;
+        let reply_string: *mut u8 =
+            RedisModule_CallReplyVerbatim.unwrap()(reply, &mut len, &mut format) as *mut u8;
         let res = String::from_utf8(slice::from_raw_parts(reply_string, len).to_vec()).unwrap();
-        let format = String::from_utf8(slice::from_raw_parts(format as *mut u8, 3).to_vec()).unwrap();
+        let format =
+            String::from_utf8(slice::from_raw_parts(format as *mut u8, 3).to_vec()).unwrap();
         (format, res)
     }
 }
