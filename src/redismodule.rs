@@ -108,6 +108,15 @@ impl RedisString {
         Self { ctx, inner }
     }
 
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    pub fn create_from_slice(ctx: *mut raw::RedisModuleCtx, s: &[u8]) -> Self {
+        let inner = unsafe {
+            raw::RedisModule_CreateString.unwrap()(ctx, s.as_ptr() as *const i8, s.len())
+        };
+
+        Self { ctx, inner }
+    }
+
     pub fn from_redis_module_string(
         ctx: *mut raw::RedisModuleCtx,
         inner: *mut raw::RedisModuleString,

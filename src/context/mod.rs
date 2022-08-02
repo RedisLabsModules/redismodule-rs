@@ -204,11 +204,11 @@ impl Context {
         &self,
         command: &str,
         options: *const c_char,
-        args: &[&str],
+        args: &[&[u8]],
     ) -> RedisResult {
         let terminated_args: Vec<RedisString> = args
             .iter()
-            .map(|s| RedisString::create(self.ctx, s))
+            .map(|s| RedisString::create_from_slice(self.ctx, s))
             .collect();
 
         let inner_args: Vec<*mut raw::RedisModuleString> =
@@ -232,12 +232,16 @@ impl Context {
         result
     }
 
-    pub fn call_ext(&self, command: &str, options: &CallOptions, args: &[&str]) -> RedisResult {
+    pub fn call_ext(&self, command: &str, options: &CallOptions, args: &[&[u8]]) -> RedisResult {
         self.call_internal(command, options.options.as_ptr() as *const c_char, args)
     }
 
     pub fn call(&self, command: &str, args: &[&str]) -> RedisResult {
-        self.call_internal(command, raw::FMT, args)
+        self.call_internal(
+            command,
+            raw::FMT,
+            &args.iter().map(|v| v.as_bytes()).collect::<Vec<&[u8]>>(),
+        )
     }
 
     fn parse_call_reply(reply: *mut raw::RedisModuleCallReply) -> RedisResult {
@@ -338,6 +342,18 @@ impl Context {
 
     #[allow(clippy::must_use_candidate)]
     pub fn reply_bulk_string(&self, s: &str) -> raw::Status {
+        unsafe {
+            raw::RedisModule_ReplyWithStringBuffer.unwrap()(
+                self.ctx,
+                s.as_ptr() as *mut c_char,
+                s.len(),
+            )
+            .into()
+        }
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn reply_bulk_slice(&self, s: &[u8]) -> raw::Status {
         unsafe {
             raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                 self.ctx,
