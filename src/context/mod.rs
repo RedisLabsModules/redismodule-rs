@@ -609,17 +609,24 @@ impl Context {
     }
 
     pub fn version_from_info(info: RedisValue) -> Result<Version, RedisError> {
-        if let RedisValue::SimpleString(info_str) = info {
-            if let Some(ver) = utils::get_regexp_captures(
-                info_str.as_str(),
-                r"(?m)\bredis_version:([0-9]+)\.([0-9]+)\.([0-9]+)\b",
-            ) {
-                return Ok(Version {
-                    major: ver[0].parse::<c_int>().unwrap(),
-                    minor: ver[1].parse::<c_int>().unwrap(),
-                    patch: ver[2].parse::<c_int>().unwrap(),
-                });
+        let info_str = match info {
+            RedisValue::SimpleString(info_str) => {
+                info_str
             }
+            RedisValue::StringBuffer(b) => {
+                std::str::from_utf8(&b).unwrap().to_string()
+            }
+            _ => return Err(RedisError::Str("Error getting redis_version")),
+        };
+        if let Some(ver) = utils::get_regexp_captures(
+            info_str.as_str(),
+            r"(?m)\bredis_version:([0-9]+)\.([0-9]+)\.([0-9]+)\b",
+        ) {
+            return Ok(Version {
+                major: ver[0].parse::<c_int>().unwrap(),
+                minor: ver[1].parse::<c_int>().unwrap(),
+                patch: ver[2].parse::<c_int>().unwrap(),
+            });
         }
         Err(RedisError::Str("Error getting redis_version"))
     }
