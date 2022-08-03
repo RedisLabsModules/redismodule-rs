@@ -610,12 +610,8 @@ impl Context {
 
     pub fn version_from_info(info: RedisValue) -> Result<Version, RedisError> {
         let info_str = match info {
-            RedisValue::SimpleString(info_str) => {
-                info_str
-            }
-            RedisValue::StringBuffer(b) => {
-                std::str::from_utf8(&b).unwrap().to_string()
-            }
+            RedisValue::SimpleString(info_str) => info_str,
+            RedisValue::StringBuffer(b) => std::str::from_utf8(&b).unwrap().to_string(),
             _ => return Err(RedisError::Str("Error getting redis_version")),
         };
         if let Some(ver) = utils::get_regexp_captures(
