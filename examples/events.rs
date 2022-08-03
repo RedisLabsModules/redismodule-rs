@@ -3,15 +3,15 @@ extern crate redis_module;
 
 use redis_module::{Context, NotifyEvent, RedisError, RedisResult, RedisString, Status};
 
-fn on_event(ctx: &Context, event_type: NotifyEvent, event: &str, key: &str) {
+fn on_event(ctx: &Context, event_type: NotifyEvent, event: &str, key: &[u8]) {
     let msg = format!(
         "Received event: {:?} on key: {} via event: {}",
-        event_type, key, event
+        event_type, std::str::from_utf8(key).unwrap(), event
     );
     ctx.log_debug(msg.as_str());
 }
 
-fn on_stream(ctx: &Context, _event_type: NotifyEvent, _event: &str, _key: &str) {
+fn on_stream(ctx: &Context, _event_type: NotifyEvent, _event: &str, _key: &[u8]) {
     ctx.log_debug("Stream event received!");
 }
 
