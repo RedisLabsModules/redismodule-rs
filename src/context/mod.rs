@@ -559,6 +559,11 @@ impl Context {
     }
 
     #[must_use]
+    pub fn create_string_from_slice(&self, s: &[u8]) -> RedisString {
+        RedisString::create_from_slice(self.ctx, s)
+    }
+
+    #[must_use]
     pub const fn get_raw(&self) -> *mut raw::RedisModuleCtx {
         self.ctx
     }

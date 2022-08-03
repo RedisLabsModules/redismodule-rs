@@ -555,7 +555,24 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
     let terminated_args: Vec<RedisString> =
         args.iter().map(|s| RedisString::create(ctx, s)).collect();
 
-    let inner_args: Vec<*mut RedisModuleString> = terminated_args.iter().map(|s| s.inner).collect();
+    replicate_redis_strings(ctx, command, &terminated_args)
+}
+
+pub fn replicate_slices(ctx: *mut RedisModuleCtx, command: &str, args: &[&[u8]]) -> Status {
+    let terminated_args: Vec<RedisString> = args
+        .iter()
+        .map(|s| RedisString::create_from_slice(ctx, s))
+        .collect();
+
+    replicate_redis_strings(ctx, command, &terminated_args)
+}
+
+pub fn replicate_redis_strings(
+    ctx: *mut RedisModuleCtx,
+    command: &str,
+    args: &[RedisString],
+) -> Status {
+    let inner_args: Vec<*mut RedisModuleString> = args.iter().map(|s| s.inner).collect();
 
     let cmd = CString::new(command).unwrap();
 
@@ -565,7 +582,7 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
             cmd.as_ptr(),
             FMT,
             inner_args.as_ptr() as *mut c_char,
-            terminated_args.len(),
+            args.len(),
         )
         .into()
     }
@@ -583,6 +600,11 @@ pub fn load_float(rdb: *mut RedisModuleIO) -> Result<f32, Error> {
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn save_string(rdb: *mut RedisModuleIO, buf: &str) {
+    unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr().cast::<c_char>(), buf.len()) };
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn save_slice(rdb: *mut RedisModuleIO, buf: &[u8]) {
     unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr().cast::<c_char>(), buf.len()) };
 }
 
