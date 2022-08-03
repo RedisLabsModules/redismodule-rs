@@ -335,6 +335,11 @@ impl Context {
     }
 
     #[allow(clippy::must_use_candidate)]
+    pub fn reply_null(&self) -> raw::Status {
+        unsafe { raw::RedisModule_ReplyWithNull.unwrap()(self.ctx).into() }
+    }
+
+    #[allow(clippy::must_use_candidate)]
     pub fn reply_simple_string(&self, s: &str) -> raw::Status {
         let msg = Self::str_as_legal_resp_string(s);
         unsafe { raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into() }
