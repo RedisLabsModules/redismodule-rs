@@ -6,7 +6,9 @@ use redis_module::{Context, NotifyEvent, RedisError, RedisResult, RedisString, S
 fn on_event(ctx: &Context, event_type: NotifyEvent, event: &str, key: &[u8]) {
     let msg = format!(
         "Received event: {:?} on key: {} via event: {}",
-        event_type, std::str::from_utf8(key).unwrap(), event
+        event_type,
+        std::str::from_utf8(key).unwrap(),
+        event
     );
     ctx.log_debug(msg.as_str());
 }
