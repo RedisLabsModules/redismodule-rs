@@ -273,15 +273,31 @@ impl Context {
                     let key = Self::parse_call_reply(key)?;
                     let val = Self::parse_call_reply(val)?;
                     let key = match key {
-                        RedisValue::SimpleString(s) => s.to_string(),
-                        RedisValue::SimpleStringStatic(s) => s.to_string(),
-                        RedisValue::BulkString(s) => s,
-                        RedisValue::BulkRedisString(s) => s
-                            .try_as_str()
-                            .map_err(|_| RedisError::Str("Failed pars map key as string"))?
-                            .to_string(),
-                        RedisValue::Integer(i) => i.to_string(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
-                        RedisValue::Float(f) => f.to_string(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::SimpleString(s) => {
+                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::SimpleStringStatic(s) => {
+                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::BulkString(s) => {
+                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::BulkRedisString(s) => {
+                            s.as_slice().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::Integer(i) => i
+                            .to_string()
+                            .as_bytes()
+                            .into_iter()
+                            .map(|v| *v)
+                            .collect::<Vec<u8>>(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::Float(f) => f
+                            .to_string()
+                            .as_bytes()
+                            .into_iter()
+                            .map(|v| *v)
+                            .collect::<Vec<u8>>(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::StringBuffer(b) => b,
                         _ => return Err(RedisError::Str("type is not supported as map key")),
                     };
                     map.insert(key, val);
@@ -295,15 +311,31 @@ impl Context {
                     let val = raw::call_reply_set_element(reply, i);
                     let val = Self::parse_call_reply(val)?;
                     let val = match val {
-                        RedisValue::SimpleString(s) => s.to_string(),
-                        RedisValue::SimpleStringStatic(s) => s.to_string(),
-                        RedisValue::BulkString(s) => s,
-                        RedisValue::BulkRedisString(s) => s
-                            .try_as_str()
-                            .map_err(|_| RedisError::Str("Failed pars map key as string"))?
-                            .to_string(),
-                        RedisValue::Integer(i) => i.to_string(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
-                        RedisValue::Float(f) => f.to_string(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::SimpleString(s) => {
+                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::SimpleStringStatic(s) => {
+                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::BulkString(s) => {
+                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::BulkRedisString(s) => {
+                            s.as_slice().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::Integer(i) => i
+                            .to_string()
+                            .as_bytes()
+                            .into_iter()
+                            .map(|v| *v)
+                            .collect::<Vec<u8>>(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::Float(f) => f
+                            .to_string()
+                            .as_bytes()
+                            .into_iter()
+                            .map(|v| *v)
+                            .collect::<Vec<u8>>(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::StringBuffer(b) => b,
                         _ => return Err(RedisError::Str("type is not supported on set")),
                     };
                     set.insert(val);
