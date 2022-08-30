@@ -271,6 +271,14 @@ impl RedisKeyWritable {
 
     /// # Panics
     ///
+    /// Will panic if `RedisModule_UnlinkKey` is missing in redismodule.h
+    pub fn unlink(&self) -> RedisResult {
+        unsafe { raw::RedisModule_UnlinkKey.unwrap()(self.key_inner) };
+        REDIS_OK
+    } 
+
+    /// # Panics
+    ///
     /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
     #[must_use]
     pub fn key_type(&self) -> raw::KeyType {
