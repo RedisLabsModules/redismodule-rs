@@ -275,7 +275,7 @@ impl RedisKeyWritable {
     pub fn unlink(&self) -> RedisResult {
         unsafe { raw::RedisModule_UnlinkKey.unwrap()(self.key_inner) };
         REDIS_OK
-    } 
+    }
 
     /// # Panics
     ///
