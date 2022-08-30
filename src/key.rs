@@ -271,6 +271,14 @@ impl RedisKeyWritable {
 
     /// # Panics
     ///
+    /// Will panic if `RedisModule_UnlinkKey` is missing in redismodule.h
+    pub fn unlink(&self) -> RedisResult {
+        unsafe { raw::RedisModule_UnlinkKey.unwrap()(self.key_inner) };
+        REDIS_OK
+    } 
+
+    /// # Panics
+    ///
     /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
     #[must_use]
     pub fn key_type(&self) -> raw::KeyType {
@@ -502,7 +510,7 @@ pub fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) 
         let raw_type = unsafe { raw::RedisModule_ModuleTypeGetType.unwrap()(key_inner) };
 
         if raw_type != *redis_type.raw_type.borrow() {
-            return Err(RedisError::Str("Existing key has wrong Redis type"));
+            return Err(RedisError::Str("ERR Existing key has wrong Redis type"));
         }
     }
 
