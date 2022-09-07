@@ -2,7 +2,7 @@
 name = "redis-module"
 version = "99.99.99"
 authors = ["Gavrie Philipson <gavrie@redis.com>", "Guy Korland <guy.korland@redis.com>"]
-edition = "2018"
+edition = "2021"
 build = "build.rs"
 description = "A toolkit for building Redis modules in Rust"
 license = "BSD-3-Clause"
