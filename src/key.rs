@@ -24,7 +24,7 @@ use crate::RedisString;
 /// by explicitly freeing them when you're done. This can be a risky prospect,
 /// especially with mechanics like Rust's `?` operator, so we ensure fault-free
 /// operation through the use of the Drop trait.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KeyMode {
     Read,
     ReadWrite,
@@ -37,9 +37,9 @@ pub struct RedisKey {
 }
 
 impl RedisKey {
-    pub fn open(ctx: *mut raw::RedisModuleCtx, key: &RedisString) -> RedisKey {
+    pub fn open(ctx: *mut raw::RedisModuleCtx, key: &RedisString) -> Self {
         let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::Read));
-        RedisKey { ctx, key_inner }
+        Self { ctx, key_inner }
     }
 
     /// # Panics
@@ -63,11 +63,13 @@ impl RedisKey {
     /// # Panics
     ///
     /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
+    #[must_use]
     pub fn key_type(&self) -> raw::KeyType {
         unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
     }
 
     /// Detects whether the key pointer given to us by Redis is null.
+    #[must_use]
     pub fn is_null(&self) -> bool {
         let null_key: *mut raw::RedisModuleKey = ptr::null_mut();
         self.key_inner == null_key
@@ -131,9 +133,9 @@ pub struct RedisKeyWritable {
 }
 
 impl RedisKeyWritable {
-    pub fn open(ctx: *mut raw::RedisModuleCtx, key: &RedisString) -> RedisKeyWritable {
+    pub fn open(ctx: *mut raw::RedisModuleCtx, key: &RedisString) -> Self {
         let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::ReadWrite));
-        RedisKeyWritable { ctx, key_inner }
+        Self { ctx, key_inner }
     }
 
     /// Detects whether the value stored in a Redis key is empty.
@@ -158,10 +160,12 @@ impl RedisKeyWritable {
         Ok(Some(read_key(self.key_inner)?))
     }
 
+    #[allow(clippy::must_use_candidate)]
     pub fn hash_set(&self, field: &str, value: RedisString) -> raw::Status {
         raw::hash_set(self.key_inner, field, value.inner)
     }
 
+    #[allow(clippy::must_use_candidate)]
     pub fn hash_del(&self, field: &str) -> raw::Status {
         raw::hash_del(self.key_inner, field)
     }
@@ -189,11 +193,13 @@ impl RedisKeyWritable {
     }
 
     // `list_push_head` inserts the specified element at the head of the list stored at this key.
+    #[allow(clippy::must_use_candidate)]
     pub fn list_push_head(&self, element: RedisString) -> raw::Status {
         raw::list_push(self.key_inner, raw::Where::ListHead, element.inner)
     }
 
     // `list_push_tail` inserts the specified element at the tail of the list stored at this key.
+    #[allow(clippy::must_use_candidate)]
     pub fn list_push_tail(&self, element: RedisString) -> raw::Status {
         raw::list_push(self.key_inner, raw::Where::ListTail, element.inner)
     }
@@ -202,6 +208,7 @@ impl RedisKeyWritable {
     //  Returns None when:
     //     1. The list is empty.
     //     2. The key is not a list.
+    #[allow(clippy::must_use_candidate)]
     pub fn list_pop_head(&self) -> Option<RedisString> {
         let ptr = raw::list_pop(self.key_inner, raw::Where::ListHead);
 
@@ -216,6 +223,7 @@ impl RedisKeyWritable {
     //  Returns None when:
     //     1. The list is empty.
     //     2. The key is not a list.
+    #[must_use]
     pub fn list_pop_tail(&self) -> Option<RedisString> {
         let ptr = raw::list_pop(self.key_inner, raw::Where::ListTail);
 
@@ -263,11 +271,21 @@ impl RedisKeyWritable {
 
     /// # Panics
     ///
+    /// Will panic if `RedisModule_UnlinkKey` is missing in redismodule.h
+    pub fn unlink(&self) -> RedisResult {
+        unsafe { raw::RedisModule_UnlinkKey.unwrap()(self.key_inner) };
+        REDIS_OK
+    }
+
+    /// # Panics
+    ///
     /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
+    #[must_use]
     pub fn key_type(&self) -> raw::KeyType {
         unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.key_type() == KeyType::Empty
     }
@@ -275,9 +293,9 @@ impl RedisKeyWritable {
     pub fn open_with_redis_string(
         ctx: *mut raw::RedisModuleCtx,
         key: *mut raw::RedisModuleString,
-    ) -> RedisKeyWritable {
+    ) -> Self {
         let key_inner = raw::open_key(ctx, key, to_raw_mode(KeyMode::ReadWrite));
-        RedisKeyWritable { ctx, key_inner }
+        Self { ctx, key_inner }
     }
 
     /// # Panics
@@ -459,8 +477,8 @@ where
     let mut values_raw = [std::ptr::null_mut(); BATCH_SIZE];
 
     for chunk_fields in fields.chunks(BATCH_SIZE) {
-        let mut chunk_values = &mut values_raw[..chunk_fields.len()];
-        raw::hash_get_multi(key, chunk_fields, &mut chunk_values)?;
+        let chunk_values = &mut values_raw[..chunk_fields.len()];
+        raw::hash_get_multi(key, chunk_fields, chunk_values)?;
         values.extend(chunk_values.iter().map(|ptr| {
             if ptr.is_null() {
                 None

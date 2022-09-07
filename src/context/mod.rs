@@ -1,23 +1,26 @@
 use std::ffi::CString;
-use std::os::raw::{c_char, c_int, c_long};
+use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr;
 
 use crate::key::{RedisKey, RedisKeyWritable};
-use crate::raw;
-use crate::raw::ModuleOptions;
-use crate::LogLevel;
+use crate::raw::{ModuleOptions, Version};
+use crate::{add_info_field_long_long, add_info_field_str, raw, utils, Status};
+use crate::{add_info_section, LogLevel};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
+
+#[cfg(feature = "experimental-api")]
+use std::ffi::CStr;
 
 #[cfg(feature = "experimental-api")]
 mod timer;
 
 #[cfg(feature = "experimental-api")]
-pub(crate) mod thread_safe;
+pub mod thread_safe;
 
 #[cfg(feature = "experimental-api")]
-pub(crate) mod blocked;
+pub mod blocked;
 
-pub(crate) mod info;
+pub mod info;
 
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
@@ -26,11 +29,12 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(ctx: *mut raw::RedisModuleCtx) -> Self {
+    pub const fn new(ctx: *mut raw::RedisModuleCtx) -> Self {
         Self { ctx }
     }
 
-    pub fn dummy() -> Self {
+    #[must_use]
+    pub const fn dummy() -> Self {
         Self {
             ctx: ptr::null_mut(),
         }
@@ -68,6 +72,7 @@ impl Context {
     /// # Panics
     ///
     /// Will panic if `RedisModule_IsKeysPositionRequest` is missing in redismodule.h
+    #[must_use]
     pub fn is_keys_position_request(&self) -> bool {
         // We want this to be available in tests where we don't have an actual Redis to call
         if cfg!(feature = "test") {
@@ -127,7 +132,7 @@ impl Context {
                 for i in 0..length {
                     vec.push(Self::parse_call_reply(raw::call_reply_array_element(
                         reply, i,
-                    ))?)
+                    ))?);
                 }
                 Ok(RedisValue::Array(vec))
             }
@@ -137,11 +142,12 @@ impl Context {
         }
     }
 
+    #[must_use]
     pub fn str_as_legal_resp_string(s: &str) -> CString {
         CString::new(
             s.chars()
                 .map(|c| match c {
-                    '\r' | '\n' => ' ' as u8,
+                    '\r' | '\n' | '\0' => b' ',
                     _ => c as u8,
                 })
                 .collect::<Vec<_>>(),
@@ -149,19 +155,22 @@ impl Context {
         .unwrap()
     }
 
+    #[allow(clippy::must_use_candidate)]
     pub fn reply_simple_string(&self, s: &str) -> raw::Status {
-        let msg = Context::str_as_legal_resp_string(s);
+        let msg = Self::str_as_legal_resp_string(s);
         unsafe { raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into() }
     }
 
+    #[allow(clippy::must_use_candidate)]
     pub fn reply_error_string(&self, s: &str) -> raw::Status {
-        let msg = Context::str_as_legal_resp_string(s);
+        let msg = Self::str_as_legal_resp_string(s);
         unsafe { raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into() }
     }
 
     /// # Panics
     ///
     /// Will panic if methods used are missing in redismodule.h
+    #[allow(clippy::must_use_candidate)]
     pub fn reply(&self, r: RedisResult) -> raw::Status {
         match r {
             Ok(RedisValue::Integer(v)) => unsafe {
@@ -185,7 +194,7 @@ impl Context {
             Ok(RedisValue::BulkString(s)) => unsafe {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
-                    s.as_ptr() as *const c_char,
+                    s.as_ptr().cast::<c_char>(),
                     s.len() as usize,
                 )
                 .into()
@@ -198,7 +207,7 @@ impl Context {
             Ok(RedisValue::StringBuffer(s)) => unsafe {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
-                    s.as_ptr() as *const c_char,
+                    s.as_ptr().cast::<c_char>(),
                     s.len() as usize,
                 )
                 .into()
@@ -243,10 +252,12 @@ impl Context {
         }
     }
 
+    #[must_use]
     pub fn open_key(&self, key: &RedisString) -> RedisKey {
         RedisKey::open(self.ctx, key)
     }
 
+    #[must_use]
     pub fn open_key_writable(&self, key: &RedisString) -> RedisKeyWritable {
         RedisKeyWritable::open(self.ctx, key)
     }
@@ -255,16 +266,19 @@ impl Context {
         raw::replicate_verbatim(self.ctx);
     }
 
+    #[must_use]
     pub fn create_string(&self, s: &str) -> RedisString {
         RedisString::create(self.ctx, s)
     }
 
-    pub fn get_raw(&self) -> *mut raw::RedisModuleCtx {
+    #[must_use]
+    pub const fn get_raw(&self) -> *mut raw::RedisModuleCtx {
         self.ctx
     }
 
+    /// # Safety
     #[cfg(feature = "experimental-api")]
-    pub fn export_shared_api(
+    pub unsafe fn export_shared_api(
         &self,
         func: *const ::std::os::raw::c_void,
         name: *const ::std::os::raw::c_char,
@@ -273,16 +287,99 @@ impl Context {
     }
 
     #[cfg(feature = "experimental-api")]
+    #[allow(clippy::must_use_candidate)]
     pub fn notify_keyspace_event(
         &self,
         event_type: raw::NotifyEvent,
         event: &str,
         keyname: &RedisString,
     ) -> raw::Status {
-        raw::notify_keyspace_event(self.ctx, event_type, event, keyname)
+        unsafe { raw::notify_keyspace_event(self.ctx, event_type, event, keyname) }
     }
 
+    #[cfg(feature = "experimental-api")]
+    pub fn current_command_name(&self) -> Result<String, RedisError> {
+        unsafe {
+            match raw::RedisModule_GetCurrentCommandName {
+                Some(cmd) => Ok(CStr::from_ptr(cmd(self.ctx)).to_str().unwrap().to_string()),
+                None => Err(RedisError::Str(
+                    "API RedisModule_GetCurrentCommandName is not available",
+                )),
+            }
+        }
+    }
+
+    /// Returns the redis version either by calling RedisModule_GetServerVersion API,
+    /// Or if it is not available, by calling "info server" API and parsing the reply
+    pub fn get_redis_version(&self) -> Result<Version, RedisError> {
+        self.get_redis_version_internal(false)
+    }
+
+    /// Returns the redis version by calling "info server" API and parsing the reply
+    #[cfg(feature = "test")]
+    pub fn get_redis_version_rm_call(&self) -> Result<Version, RedisError> {
+        self.get_redis_version_internal(true)
+    }
+
+    pub fn version_from_info(info: RedisValue) -> Result<Version, RedisError> {
+        if let RedisValue::SimpleString(info_str) = info {
+            if let Some(ver) = utils::get_regexp_captures(
+                info_str.as_str(),
+                r"(?m)\bredis_version:([0-9]+)\.([0-9]+)\.([0-9]+)\b",
+            ) {
+                return Ok(Version {
+                    major: ver[0].parse::<c_int>().unwrap(),
+                    minor: ver[1].parse::<c_int>().unwrap(),
+                    patch: ver[2].parse::<c_int>().unwrap(),
+                });
+            }
+        }
+        Err(RedisError::Str("Error getting redis_version"))
+    }
+
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    fn get_redis_version_internal(&self, force_use_rm_call: bool) -> Result<Version, RedisError> {
+        match unsafe { raw::RedisModule_GetServerVersion } {
+            Some(api) if !force_use_rm_call => {
+                // Call existing API
+                Ok(Version::from(unsafe { api() }))
+            }
+            _ => {
+                // Call "info server"
+                if let Ok(info) = self.call("info", &["server"]) {
+                    Context::version_from_info(info)
+                } else {
+                    Err(RedisError::Str("Error calling \"info server\""))
+                }
+            }
+        }
+    }
     pub fn set_module_options(&self, options: ModuleOptions) {
         unsafe { raw::RedisModule_SetModuleOptions.unwrap()(self.ctx, options.bits()) };
+    }
+}
+
+pub struct InfoContext {
+    pub ctx: *mut raw::RedisModuleInfoCtx,
+}
+
+impl InfoContext {
+    pub const fn new(ctx: *mut raw::RedisModuleInfoCtx) -> Self {
+        Self { ctx }
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn add_info_section(&self, name: Option<&str>) -> Status {
+        add_info_section(self.ctx, name)
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn add_info_field_str(&self, name: &str, content: &str) -> Status {
+        add_info_field_str(self.ctx, name, content)
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn add_info_field_long_long(&self, name: &str, value: c_longlong) -> Status {
+        add_info_field_long_long(self.ctx, name, value)
     }
 }

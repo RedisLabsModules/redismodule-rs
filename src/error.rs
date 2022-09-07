@@ -11,26 +11,27 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn generic(message: &str) -> Error {
-        Error::Generic(GenericError::new(message))
+    #[must_use]
+    pub fn generic(message: &str) -> Self {
+        Self::Generic(GenericError::new(message))
     }
 }
 
 impl From<RedisError> for Error {
-    fn from(err: RedisError) -> Error {
-        Error::generic(err.to_string().as_str())
+    fn from(err: RedisError) -> Self {
+        Self::generic(err.to_string().as_str())
     }
 }
 
 impl From<std::string::FromUtf8Error> for Error {
-    fn from(err: std::string::FromUtf8Error) -> Error {
-        Error::FromUtf8(err)
+    fn from(err: std::string::FromUtf8Error) -> Self {
+        Self::FromUtf8(err)
     }
 }
 
 impl From<std::num::ParseIntError> for Error {
-    fn from(err: std::num::ParseIntError) -> Error {
-        Error::ParseInt(err)
+    fn from(err: std::num::ParseIntError) -> Self {
+        Self::ParseInt(err)
     }
 }
 
@@ -66,20 +67,21 @@ pub struct GenericError {
 }
 
 impl GenericError {
-    pub fn new(message: &str) -> GenericError {
-        GenericError {
+    #[must_use]
+    pub fn new(message: &str) -> Self {
+        Self {
             message: String::from(message),
         }
     }
 }
 
-impl<'a> Display for GenericError {
+impl Display for GenericError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Store error: {}", self.message)
     }
 }
 
-impl<'a> error::Error for GenericError {
+impl error::Error for GenericError {
     fn description(&self) -> &str {
         self.message.as_str()
     }

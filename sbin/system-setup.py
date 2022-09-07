@@ -28,6 +28,8 @@ class RedisModuleRSSetup(paella.Setup):
         self.run("%s/bin/getclang --modern" % READIES)
         if not self.has_command("rustc"):
             self.run("%s/bin/getrust" % READIES)
+        if self.osnick == 'ol8':
+            self.install('tar')
         self.run("%s/bin/getcmake" % READIES)
 
     def debian_compat(self):

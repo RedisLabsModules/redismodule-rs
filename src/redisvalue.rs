@@ -16,13 +16,13 @@ pub enum RedisValue {
 
 impl From<()> for RedisValue {
     fn from(_: ()) -> Self {
-        RedisValue::Null
+        Self::Null
     }
 }
 
 impl From<i64> for RedisValue {
     fn from(i: i64) -> Self {
-        RedisValue::Integer(i)
+        Self::Integer(i)
     }
 }
 
@@ -34,31 +34,31 @@ impl From<usize> for RedisValue {
 
 impl From<f64> for RedisValue {
     fn from(f: f64) -> Self {
-        RedisValue::Float(f)
+        Self::Float(f)
     }
 }
 
 impl From<String> for RedisValue {
     fn from(s: String) -> Self {
-        RedisValue::BulkString(s)
+        Self::BulkString(s)
     }
 }
 
 impl From<RedisString> for RedisValue {
     fn from(s: RedisString) -> Self {
-        RedisValue::BulkRedisString(s)
+        Self::BulkRedisString(s)
     }
 }
 
 impl From<Vec<u8>> for RedisValue {
     fn from(s: Vec<u8>) -> Self {
-        RedisValue::StringBuffer(s)
+        Self::StringBuffer(s)
     }
 }
 
 impl From<&RedisString> for RedisValue {
     fn from(s: &RedisString) -> Self {
-        s.to_owned().into()
+        s.clone().into()
     }
 }
 
@@ -70,22 +70,22 @@ impl From<&str> for RedisValue {
 
 impl From<&String> for RedisValue {
     fn from(s: &String) -> Self {
-        s.to_owned().into()
+        s.clone().into()
     }
 }
 
-impl<T: Into<RedisValue>> From<Option<T>> for RedisValue {
+impl<T: Into<Self>> From<Option<T>> for RedisValue {
     fn from(s: Option<T>) -> Self {
         match s {
             Some(v) => v.into(),
-            None => RedisValue::Null,
+            None => Self::Null,
         }
     }
 }
 
-impl<T: Into<RedisValue>> From<Vec<T>> for RedisValue {
+impl<T: Into<Self>> From<Vec<T>> for RedisValue {
     fn from(items: Vec<T>) -> Self {
-        RedisValue::Array(items.into_iter().map(Into::into).collect())
+        Self::Array(items.into_iter().map(Into::into).collect())
     }
 }
 

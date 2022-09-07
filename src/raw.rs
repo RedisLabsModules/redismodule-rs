@@ -6,6 +6,7 @@ extern crate enum_primitive_derive;
 extern crate libc;
 extern crate num_traits;
 
+use std::cmp::Ordering;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
 use std::ptr;
@@ -35,7 +36,7 @@ bitflags! {
     }
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum KeyType {
     Empty = REDISMODULE_KEYTYPE_EMPTY,
     String = REDISMODULE_KEYTYPE_STRING,
@@ -49,17 +50,17 @@ pub enum KeyType {
 
 impl From<c_int> for KeyType {
     fn from(v: c_int) -> Self {
-        KeyType::from_i32(v).unwrap()
+        Self::from_i32(v).unwrap()
     }
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Where {
     ListHead = REDISMODULE_LIST_HEAD,
     ListTail = REDISMODULE_LIST_TAIL,
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum ReplyType {
     Unknown = REDISMODULE_REPLY_UNKNOWN,
     String = REDISMODULE_REPLY_STRING,
@@ -71,17 +72,17 @@ pub enum ReplyType {
 
 impl From<c_int> for ReplyType {
     fn from(v: c_int) -> Self {
-        ReplyType::from_i32(v).unwrap()
+        Self::from_i32(v).unwrap()
     }
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Aux {
     Before = REDISMODULE_AUX_BEFORE_RDB,
     After = REDISMODULE_AUX_AFTER_RDB,
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Status {
     Ok = REDISMODULE_OK,
     Err = REDISMODULE_ERR,
@@ -89,7 +90,7 @@ pub enum Status {
 
 impl From<c_int> for Status {
     fn from(v: c_int) -> Self {
-        Status::from_i32(v).unwrap()
+        Self::from_i32(v).unwrap()
     }
 }
 
@@ -224,13 +225,7 @@ pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
         let mut len: size_t = 0;
         let reply_string: *mut u8 =
             RedisModule_CallReplyStringPtr.unwrap()(reply, &mut len) as *mut u8;
-        String::from_utf8(
-            slice::from_raw_parts(reply_string, len)
-                .iter()
-                .copied()
-                .collect(),
-        )
-        .unwrap()
+        String::from_utf8(slice::from_raw_parts(reply_string, len).to_vec()).unwrap()
     }
 }
 
@@ -552,6 +547,11 @@ pub fn save_unsigned(rdb: *mut RedisModuleIO, val: u64) {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn string_compare(a: *const RedisModuleString, b: *const RedisModuleString) -> Ordering {
+    unsafe { RedisModule_StringCompare.unwrap()(a, b).cmp(&0) }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn string_append_buffer(
     ctx: *mut RedisModuleCtx,
     s: *mut RedisModuleString,
@@ -578,24 +578,15 @@ pub fn register_info_function(ctx: *mut RedisModuleCtx, callback: RedisModuleInf
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn add_info_section(
-    ctx: *mut RedisModuleInfoCtx,
-    name: Option<&str>, // assume NULL terminated
-) -> Status {
-    let name = name.map(|n| CString::new(n).unwrap());
-    if let Some(n) = name {
-        unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr() as *mut c_char).into() }
-    } else {
-        unsafe { RedisModule_InfoAddSection.unwrap()(ctx, ptr::null_mut()).into() }
-    }
+pub fn add_info_section(ctx: *mut RedisModuleInfoCtx, name: Option<&str>) -> Status {
+    name.map(|n| CString::new(n).unwrap()).map_or_else(
+        || unsafe { RedisModule_InfoAddSection.unwrap()(ctx, ptr::null_mut()).into() },
+        |n| unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr() as *mut c_char).into() },
+    )
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn add_info_field_str(
-    ctx: *mut RedisModuleInfoCtx,
-    name: &str, // assume NULL terminated
-    content: &str,
-) -> Status {
+pub fn add_info_field_str(ctx: *mut RedisModuleInfoCtx, name: &str, content: &str) -> Status {
     let name = CString::new(name).unwrap();
     let content = RedisString::create(ptr::null_mut(), content);
     unsafe {
@@ -604,39 +595,65 @@ pub fn add_info_field_str(
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_info_field_long_long(
+    ctx: *mut RedisModuleInfoCtx,
+    name: &str,
+    value: c_longlong,
+) -> Status {
+    let name = CString::new(name).unwrap();
+    unsafe {
+        RedisModule_InfoAddFieldLongLong.unwrap()(ctx, name.as_ptr() as *mut c_char, value).into()
+    }
+}
+
+/// # Safety
 #[cfg(feature = "experimental-api")]
-pub fn export_shared_api(
+pub unsafe fn export_shared_api(
     ctx: *mut RedisModuleCtx,
     func: *const ::std::os::raw::c_void,
     name: *const ::std::os::raw::c_char,
 ) {
-    unsafe { RedisModule_ExportSharedAPI.unwrap()(ctx, name, func as *mut ::std::os::raw::c_void) };
+    RedisModule_ExportSharedAPI.unwrap()(ctx, name, func as *mut ::std::os::raw::c_void);
 }
 
+/// # Safety
 #[cfg(feature = "experimental-api")]
-pub fn notify_keyspace_event(
+pub unsafe fn notify_keyspace_event(
     ctx: *mut RedisModuleCtx,
     event_type: NotifyEvent,
     event: &str,
     keyname: &RedisString,
 ) -> Status {
     let event = CString::new(event).unwrap();
-    unsafe {
-        RedisModule_NotifyKeyspaceEvent.unwrap()(
-            ctx,
-            event_type.bits,
-            event.as_ptr(),
-            keyname.inner,
-        )
+    RedisModule_NotifyKeyspaceEvent.unwrap()(ctx, event_type.bits, event.as_ptr(), keyname.inner)
         .into()
-    }
 }
 
 #[cfg(feature = "experimental-api")]
+#[must_use]
 pub fn get_keyspace_events() -> NotifyEvent {
     unsafe {
         let events = RedisModule_GetNotifyKeyspaceEvents.unwrap()();
         NotifyEvent::from_bits_truncate(events)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Version {
+    pub major: i32,
+    pub minor: i32,
+    pub patch: i32,
+}
+
+impl From<c_int> for Version {
+    fn from(ver: c_int) -> Self {
+        // Expected format: 0x00MMmmpp for Major, minor, patch
+        Self {
+            major: (ver & 0x00FF_0000) >> 16,
+            minor: (ver & 0x0000_FF00) >> 8,
+            patch: (ver & 0x0000_00FF),
+        }
     }
 }
 

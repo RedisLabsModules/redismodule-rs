@@ -1,13 +1,15 @@
 [package]
 name = "redis-module"
 version = "99.99.99"
-authors = ["Gavrie Philipson <gavrie@redislabs.com>", "Guy Korland <guy.korland@redislabs.com>"]
-edition = "2018"
+authors = ["Gavrie Philipson <gavrie@redis.com>", "Guy Korland <guy.korland@redis.com>"]
+edition = "2021"
 build = "build.rs"
 description = "A toolkit for building Redis modules in Rust"
 license = "BSD-3-Clause"
 repository = "https://github.com/RedisLabsModules/redismodule-rs"
 readme = "README.md"
+keywords = ["redis", "plugin"]
+categories = ["database", "api-bindings"]
 
 [[example]]
 name = "hello"
@@ -50,6 +52,11 @@ crate-type = ["cdylib"]
 required-features = ["experimental-api"]
 
 [[example]]
+name = "test_helper"
+crate-type = ["cdylib"]
+required-features = ["test","experimental-api"]
+
+[[example]]
 name = "info"
 crate-type = ["cdylib"]
 required-features = []
@@ -59,7 +66,8 @@ bitflags = "1.2"
 libc = "0.2"
 enum-primitive-derive = "^0.2"
 num-traits = "^0.2"
-strum_macros = "0.23"
+regex = "1"
+strum_macros = "0.24"
 #failure = "0.1"
 backtrace = "0.3"
 
@@ -68,7 +76,7 @@ anyhow = "1.0.38"
 redis = "0.21.0"
 
 [build-dependencies]
-bindgen = "0.59"
+bindgen = "0.60"
 cc = "1.0"
 
 [features]

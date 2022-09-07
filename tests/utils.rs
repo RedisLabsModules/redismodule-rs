@@ -15,10 +15,10 @@ pub struct ChildGuard {
 impl Drop for ChildGuard {
     fn drop(&mut self) {
         if let Err(e) = self.child.kill() {
-            println!("Could not kill {}: {}", self.name, e)
+            println!("Could not kill {}: {}", self.name, e);
         }
         if let Err(e) = self.child.wait() {
-            println!("Could not wait for {}: {}", self.name, e)
+            println!("Could not wait for {}: {}", self.name, e);
         }
     }
 }
@@ -30,10 +30,12 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
         "so"
     };
 
-    let mut profile = "debug";
-    if cfg!(not(debug_assertions)) {
-        profile = "release";
-    }
+    let profile = if cfg!(not(debug_assertions)) {
+        "release"
+    } else {
+        "debug"
+    };
+
     let module_path: PathBuf = [
         std::env::current_dir()?,
         PathBuf::from(format!(
@@ -69,7 +71,7 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
 }
 
 // Get connection to Redis
-pub fn get_redis_connection(port: u64) -> Result<Connection> {
+pub fn get_redis_connection(port: u16) -> Result<Connection> {
     let client = redis::Client::open(format!("redis://127.0.0.1:{}/", port))?;
     loop {
         let res = client.get_connection();
@@ -80,7 +82,7 @@ pub fn get_redis_connection(port: u64) -> Result<Connection> {
                     // Redis not ready yet, sleep and retry
                     std::thread::sleep(Duration::from_millis(50));
                 } else {
-                    Err(e)?;
+                    return Err(e.into());
                 }
             }
         }

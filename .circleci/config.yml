@@ -55,7 +55,6 @@ commands:
       - run:
           name: Setup automation
           command: |
-            (mkdir -p deps; cd deps; git clone https://github.com/RedisLabsModules/readies.git)
             ./deps/readies/bin/getpy3
 
   install-prerequisites:
@@ -158,7 +157,7 @@ jobs:
 
   build-macos:
     macos:
-      xcode: 11.6.0
+      xcode: 11.7.0
     steps:
       - build-steps
 
@@ -235,6 +234,6 @@ workflows:
           <<: *on-integ-and-version-tags
           matrix:
             parameters:
-              platform: [focal, bionic, xenial, centos8, centos7, bullseye]
+              platform: [focal, bionic, xenial, ol8, centos7, bullseye]
       - build-macos:
           <<: *on-any-branch

@@ -2,7 +2,6 @@
 extern crate redis_module;
 
 use redis_module::{Context, RedisError, RedisResult, RedisString};
-
 fn hello_mul(_: &Context, args: Vec<RedisString>) -> RedisResult {
     if args.len() < 2 {
         return Err(RedisError::WrongArity);
@@ -16,10 +15,10 @@ fn hello_mul(_: &Context, args: Vec<RedisString>) -> RedisResult {
 
     let product = nums.iter().product();
 
-    let mut response = Vec::from(nums);
+    let mut response = nums;
     response.push(product);
 
-    return Ok(response.into());
+    Ok(response.into())
 }
 
 //////////////////////////////////////////////////////

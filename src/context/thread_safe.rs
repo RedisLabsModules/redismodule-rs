@@ -22,10 +22,10 @@ impl Deref for ContextGuard {
     }
 }
 
-/// A ThreadSafeContext can either be bound to a blocked client, or detached from any client.
+/// A ``ThreadSafeContext`` can either be bound to a blocked client, or detached from any client.
 pub struct DetachedFromClient;
 
-pub struct ThreadSafeContext<B> {
+pub struct ThreadSafeContext<B: Send> {
     pub(crate) ctx: *mut raw::RedisModuleCtx,
 
     /// This field is only used implicitly by `Drop`, so avoid a compiler warning
@@ -33,13 +33,14 @@ pub struct ThreadSafeContext<B> {
     blocked_client: B,
 }
 
-unsafe impl<B> Send for ThreadSafeContext<B> {}
-unsafe impl<B> Sync for ThreadSafeContext<B> {}
+unsafe impl<B: Send> Send for ThreadSafeContext<B> {}
+unsafe impl<B: Send> Sync for ThreadSafeContext<B> {}
 
 impl ThreadSafeContext<DetachedFromClient> {
+    #[must_use]
     pub fn new() -> Self {
         let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(ptr::null_mut()) };
-        ThreadSafeContext {
+        Self {
             ctx,
             blocked_client: DetachedFromClient,
         }
@@ -53,9 +54,10 @@ impl Default for ThreadSafeContext<DetachedFromClient> {
 }
 
 impl ThreadSafeContext<BlockedClient> {
+    #[must_use]
     pub fn with_blocked_client(blocked_client: BlockedClient) -> Self {
         let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(blocked_client.inner) };
-        ThreadSafeContext {
+        Self {
             ctx,
             blocked_client,
         }
@@ -63,13 +65,14 @@ impl ThreadSafeContext<BlockedClient> {
 
     /// The Redis modules API does not require locking for `Reply` functions,
     /// so we pass through its functionality directly.
+    #[allow(clippy::must_use_candidate)]
     pub fn reply(&self, r: RedisResult) -> raw::Status {
         let ctx = Context::new(self.ctx);
         ctx.reply(r)
     }
 }
 
-impl<B> ThreadSafeContext<B> {
+impl<B: Send> ThreadSafeContext<B> {
     /// All other APIs require locking the context, so we wrap it in a way
     /// similar to `std::sync::Mutex`.
     pub fn lock(&self) -> ContextGuard {
@@ -79,7 +82,7 @@ impl<B> ThreadSafeContext<B> {
     }
 }
 
-impl<B> Drop for ThreadSafeContext<B> {
+impl<B: Send> Drop for ThreadSafeContext<B> {
     fn drop(&mut self) {
         unsafe { raw::RedisModule_FreeThreadSafeContext.unwrap()(self.ctx) };
     }
