@@ -73,7 +73,7 @@ backtrace = "0.3"
 
 [dev-dependencies]
 anyhow = "1.0.38"
-redis = "0.21.0"
+redis = "0.22.0"
 
 [build-dependencies]
 bindgen = "0.60"
