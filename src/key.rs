@@ -33,7 +33,7 @@ pub enum KeyMode {
 #[derive(Debug)]
 pub struct RedisKey {
     ctx: *mut raw::RedisModuleCtx,
-    key_inner: *mut raw::RedisModuleKey,
+    pub key_inner: *mut raw::RedisModuleKey,
 }
 
 impl RedisKey {

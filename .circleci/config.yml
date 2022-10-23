@@ -40,7 +40,7 @@ commands:
             apt-get -q install -y git openssh-client curl ca-certificates make tar gzip
             bash <(curl -fsSL https://raw.githubusercontent.com/docker/docker-install/master/install.sh)
       - setup_remote_docker:
-          version: 20.10.2
+          version: 20.10.14
           docker_layer_caching: true
 
   checkout-all:
@@ -56,6 +56,8 @@ commands:
           name: Setup automation
           command: |
             ./deps/readies/bin/getpy3
+            python3 --version
+            python3 -m pip list
 
   install-prerequisites:
     parameters:
@@ -72,10 +74,12 @@ commands:
           command: |
             ./sbin/system-setup.py
             bash -l -c "make info"
+            python3 -m pip list
       - run:
           name: Install Redis
+          shell: /bin/bash -l -eo pipefail
           command: |
-            bash -l -c "./deps/readies/bin/getredis -v \"<<parameters.redis_version>>\" --force <<parameters.getredis_params>>"
+            ./deps/readies/bin/getredis -v <<parameters.redis_version>> --force <<parameters.getredis_params>>
             redis-server --version
 
   build-steps:
@@ -103,13 +107,16 @@ commands:
             - v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
       - run:
           name: Check formatting
-          command: bash -l -c "make lint"
+          shell: /bin/bash -l -eo pipefail
+          command: make lint
       - run:
           name: Build debug
-          command: bash -l -c "make build DEBUG=1 <<parameters.build_params>>"
+          shell: /bin/bash -l -eo pipefail
+          command: make build DEBUG=1 <<parameters.build_params>>
       - run:
           name: Build release
-          command: bash -l -c "make build <<parameters.build_params>>"
+          shell: /bin/bash -l -eo pipefail
+          command: make build <<parameters.build_params>>
       - save_cache:
           key: v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
           paths:
@@ -117,7 +124,8 @@ commands:
             - "./target"
       - run:
           name: Run all tests
-          command: bash -l -c "make test"
+          shell: /bin/bash -l -eo pipefail
+          command: make test
 
   platforms-build-steps:
     parameters:
@@ -130,18 +138,17 @@ commands:
       - setup-automation
       - run:
           name: Build for platform
+          shell: /bin/bash -l -eo pipefail
           command: |
             cd build/platforms
             make build OSNICK="<<parameters.platform>>" VERSION="$CIRCLE_TAG" BRANCH="$CIRCLE_BRANCH" TEST=1 SHOW=1
 
 #----------------------------------------------------------------------------------------------------------------------------------
 
-#----------------------------------------------------------------------------------------------------------------------------------
-
 jobs:
   build:
     docker:
-      - image: redisfab/rmbuilder:6.2.5-x64-bullseye
+      - image: redisfab/rmbuilder:6.2.7-x64-bullseye
     steps:
       - build-steps
 
@@ -149,8 +156,12 @@ jobs:
     parameters:
       platform:
         type: string
-    docker:
-      - image: debian:bullseye
+    # docker:
+    #   - image: debian:bullseye
+    machine:
+      enabled: true
+      image: ubuntu-2004:202010-01
+      resource_class: large
     steps:
       - platforms-build-steps:
           platform: <<parameters.platform>>
@@ -234,6 +245,6 @@ workflows:
           <<: *on-integ-and-version-tags
           matrix:
             parameters:
-              platform: [focal, bionic, xenial, ol8, centos7, bullseye]
+              platform: [jammy, focal, bionic, xenial, ol8, centos7, bullseye]
       - build-macos:
           <<: *on-any-branch
