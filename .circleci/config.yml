@@ -125,9 +125,7 @@ commands:
       - run:
           name: Run all tests
           shell: /bin/bash -l -eo pipefail
-          command: |
-            python3 -m RLTest --version
-            make test
+          command: make test
 
   platforms-build-steps:
     parameters:
