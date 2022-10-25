@@ -100,10 +100,14 @@ impl RedisString {
         Self { ctx, inner }
     }
 
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn create(ctx: *mut raw::RedisModuleCtx, s: &str) -> Self {
-        let str = CString::new(s).unwrap();
-        let inner = unsafe { raw::RedisModule_CreateString.unwrap()(ctx, str.as_ptr(), s.len()) };
+        Self::from_bytes(ctx, s.as_bytes())
+    }
+
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    pub fn from_bytes(ctx: *mut raw::RedisModuleCtx, bytes: &[u8]) -> Self {
+        let str = CString::new(bytes).unwrap();
+        let inner = unsafe { raw::RedisModule_CreateString.unwrap()(ctx, str.as_ptr(), bytes.len()) };
 
         Self { ctx, inner }
     }

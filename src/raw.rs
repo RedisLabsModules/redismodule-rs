@@ -369,8 +369,12 @@ where
     }
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleString) -> Status {
+    hash_bytes_set(key, field.as_bytes(), value)
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn hash_bytes_set(key: *mut RedisModuleKey, field: &[u8], value: *mut RedisModuleString) -> Status {
     let field = CString::new(field).unwrap();
 
     unsafe {
