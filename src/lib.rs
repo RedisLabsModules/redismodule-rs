@@ -1,8 +1,8 @@
 //#![allow(dead_code)]
 
 pub use crate::context::InfoContext;
+use std::ffi::{CString, NulError};
 use std::os::raw::c_char;
-use std::str::Utf8Error;
 use strum_macros::AsRefStr;
 extern crate num_traits;
 
@@ -52,14 +52,14 @@ pub enum LogLevel {
     Warning,
 }
 
-fn from_byte_string(byte_str: *const c_char, length: size_t) -> Result<String, Utf8Error> {
+fn from_byte_string(byte_str: *const c_char, length: size_t) -> Result<CString, NulError> {
     let mut vec_str: Vec<u8> = Vec::with_capacity(length as usize);
     for j in 0..length {
         let byte = unsafe { *byte_str.add(j) } as u8;
         vec_str.insert(j, byte);
     }
 
-    String::from_utf8(vec_str).map_err(|e| e.utf8_error())
+    CString::new(vec_str)
 }
 
 pub fn base_info_func(

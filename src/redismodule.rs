@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 use std::convert::TryFrom;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::fmt;
 use std::fmt::Display;
 use std::os::raw::{c_char, c_int, c_void};
@@ -103,7 +103,11 @@ impl RedisString {
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn create(ctx: *mut raw::RedisModuleCtx, s: &str) -> Self {
         let str = CString::new(s).unwrap();
-        let inner = unsafe { raw::RedisModule_CreateString.unwrap()(ctx, str.as_ptr(), s.len()) };
+        Self::create_from_cstring(ctx, &str, s.len())
+    }
+
+    pub fn create_from_cstring(ctx: *mut raw::RedisModuleCtx, s: &CStr, len: usize) -> Self {
+        let inner = unsafe { raw::RedisModule_CreateString.unwrap()(ctx, s.as_ptr(), len) };
 
         Self { ctx, inner }
     }

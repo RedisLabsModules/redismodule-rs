@@ -95,14 +95,13 @@ impl Context {
         }
     }
 
-    pub fn call(&self, command: &str, args: &[&str]) -> RedisResult {
-        let terminated_args: Vec<RedisString> = args
-            .iter()
-            .map(|s| RedisString::create(self.ctx, s))
-            .collect();
+    pub fn call(&self, command: &str, args: &[&RedisString]) -> RedisResult {
+        // let terminated_args: Vec<RedisString> = args
+        //     .iter()
+        //     .map(|s| RedisString::create(self.ctx, s))
+        //     .collect();
 
-        let inner_args: Vec<*mut raw::RedisModuleString> =
-            terminated_args.iter().map(|s| s.inner).collect();
+        let inner_args: Vec<*mut raw::RedisModuleString> = args.iter().map(|s| s.inner).collect();
 
         let cmd = CString::new(command).unwrap();
         let reply: *mut raw::RedisModuleCallReply = unsafe {
@@ -112,7 +111,7 @@ impl Context {
                 cmd.as_ptr(),
                 raw::FMT,
                 inner_args.as_ptr() as *mut c_char,
-                terminated_args.len(),
+                args.len(),
             )
         };
         let result = Self::parse_call_reply(reply);
@@ -346,7 +345,7 @@ impl Context {
             }
             _ => {
                 // Call "info server"
-                if let Ok(info) = self.call("info", &["server"]) {
+                if let Ok(info) = self.call("info", &[&self.create_string("server")]) {
                     Context::version_from_info(info)
                 } else {
                     Err(RedisError::Str("Error calling \"info server\""))

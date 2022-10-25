@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
+use std::ffi::{CString, NulError};
 use std::os::raw::c_void;
 use std::ptr;
-use std::str::Utf8Error;
 use std::time::Duration;
 
 use libc::size_t;
@@ -75,11 +75,12 @@ impl RedisKey {
         self.key_inner == null_key
     }
 
-    pub fn read(&self) -> Result<Option<String>, RedisError> {
+    pub fn read(&self) -> Result<Option<RedisString>, RedisError> {
         let val = if self.is_null() {
             None
         } else {
-            Some(read_key(self.key_inner)?)
+            let (cstr, length) = read_key(self.key_inner)?;
+            Some(RedisString::create_from_cstring(self.ctx, &cstr, length))
         };
         Ok(val)
     }
@@ -156,8 +157,11 @@ impl RedisKeyWritable {
     }
     */
 
-    pub fn read(&self) -> Result<Option<String>, RedisError> {
-        Ok(Some(read_key(self.key_inner)?))
+    pub fn read(&self) -> Result<Option<RedisString>, RedisError> {
+        let (cstr, length) = read_key(self.key_inner)?;
+        Ok(Some(RedisString::create_from_cstring(
+            self.ctx, &cstr, length,
+        )))
     }
 
     #[allow(clippy::must_use_candidate)]
@@ -253,8 +257,7 @@ impl RedisKeyWritable {
         }
     }
 
-    pub fn write(&self, val: &str) -> RedisResult {
-        let val_str = RedisString::create(self.ctx, val);
+    pub fn write(&self, val_str: &RedisString) -> RedisResult {
         match raw::string_set(self.key_inner, val_str.inner) {
             raw::Status::Ok => REDIS_OK,
             raw::Status::Err => Err(RedisError::Str("Error while setting key")),
@@ -453,12 +456,13 @@ impl Drop for RedisKeyWritable {
     }
 }
 
-fn read_key(key: *mut raw::RedisModuleKey) -> Result<String, Utf8Error> {
+fn read_key(key: *mut raw::RedisModuleKey) -> Result<(CString, size_t), NulError> {
     let mut length: size_t = 0;
-    from_byte_string(
+    let cstr = from_byte_string(
         raw::string_dma(key, &mut length, raw::KeyMode::READ),
         length,
-    )
+    )?;
+    Ok((cstr, length))
 }
 
 /// Get an arbitrary number of hash fields from a key by batching calls
