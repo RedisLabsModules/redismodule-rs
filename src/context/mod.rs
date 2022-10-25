@@ -96,11 +96,6 @@ impl Context {
     }
 
     pub fn call(&self, command: &str, args: &[&RedisString]) -> RedisResult {
-        // let terminated_args: Vec<RedisString> = args
-        //     .iter()
-        //     .map(|s| RedisString::create(self.ctx, s))
-        //     .collect();
-
         let inner_args: Vec<*mut raw::RedisModuleString> = args.iter().map(|s| s.inner).collect();
 
         let cmd = CString::new(command).unwrap();
