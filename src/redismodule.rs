@@ -112,6 +112,14 @@ impl RedisString {
         Self { ctx, inner }
     }
 
+    pub fn create_from_bytes(ctx: *mut raw::RedisModuleCtx, s: &[u8]) -> Self {
+        let inner = unsafe {
+            raw::RedisModule_CreateString.unwrap()(ctx, s.as_ptr() as *const i8, s.len())
+        };
+
+        Self { ctx, inner }
+    }
+
     pub fn from_redis_module_string(
         ctx: *mut raw::RedisModuleCtx,
         inner: *mut raw::RedisModuleString,
@@ -260,6 +268,48 @@ impl From<RedisString> for String {
         rs.to_string_lossy()
     }
 }
+
+trait IntoRedisString {
+    fn into_redis_string(self, ctx: *mut raw::RedisModuleCtx) -> RedisString;
+}
+
+macro_rules! generate_into_redis_string {
+    ($($t: ty) *) => {
+            $(
+                impl IntoRedisString for $t {
+                    fn into_redis_string(self, ctx: *mut raw::RedisModuleCtx) -> RedisString {
+                        RedisString::create(ctx, &self.to_string())
+                    }
+                }
+            )*
+    };
+}
+
+impl IntoRedisString for &str {
+    fn into_redis_string(self, ctx: *mut raw::RedisModuleCtx) -> RedisString {
+        RedisString::create(ctx, &self)
+    }
+}
+
+impl IntoRedisString for String {
+    fn into_redis_string(self, ctx: *mut raw::RedisModuleCtx) -> RedisString {
+        RedisString::create(ctx, &self)
+    }
+}
+
+impl IntoRedisString for Vec<u8> {
+    fn into_redis_string(self, ctx: *mut raw::RedisModuleCtx) -> RedisString {
+        RedisString::create_from_bytes(ctx, &self)
+    }
+}
+
+impl IntoRedisString for &[u8] {
+    fn into_redis_string(self, ctx: *mut raw::RedisModuleCtx) -> RedisString {
+        RedisString::create_from_bytes(ctx, self)
+    }
+}
+
+generate_into_redis_string!(bool u8 i8 u16 i16 u32 i32 u64 i64 usize isize);
 
 ///////////////////////////////////////////////////
 
