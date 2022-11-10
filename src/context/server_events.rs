@@ -24,6 +24,12 @@ pub enum FlushSubevent {
 }
 
 #[derive(Clone)]
+pub enum ModuleChangeSubevent {
+    Loaded,
+    Unloaded,
+}
+
+#[derive(Clone)]
 pub struct RoleChangedEventData {
     pub role: ServerRole,
 }
@@ -33,12 +39,14 @@ pub enum ServerEventData {
     RoleChangedEvent(RoleChangedEventData),
     LoadingEvent(LoadingSubevent),
     FlushEvent(FlushSubevent),
+    ModuleChange(ModuleChangeSubevent),
 }
 
 pub enum ServerEvents {
     RuleChanged,
     Loading,
     Flush,
+    ModuleChange,
 }
 
 pub type ServerEventCallback = Box<dyn Fn(&Context, ServerEventData)>;
@@ -204,6 +212,40 @@ fn subscribe_to_flush_event(
     unsafe { &mut FLUSH_SUBSCRIBERS }.subscribe_to_event(ctx, callback)
 }
 
+static mut MODULE_LOAD_SUBSCRIBERS: Subscribers = Subscribers {
+    list: None,
+    event_callback: Some(module_change_event_callback),
+    event: raw::RedisModuleEvent {
+        id: raw::REDISMODULE_EVENT_MODULE_CHANGE,
+        dataver: 1,
+    },
+    event_str_rep: "module_change",
+};
+
+extern "C" fn module_change_event_callback(
+    ctx: *mut raw::RedisModuleCtx,
+    _eid: raw::RedisModuleEvent,
+    subevent: u64,
+    _data: *mut ::std::os::raw::c_void,
+) {
+    let module_changed_sub_event = if subevent == raw::REDISMODULE_SUBEVENT_MODULE_LOADED {
+        ModuleChangeSubevent::Loaded
+    } else {
+        ModuleChangeSubevent::Unloaded
+    };
+    let ctx = Context::new(ctx);
+    for callback in unsafe { &MODULE_LOAD_SUBSCRIBERS }.get_subscribers() {
+        callback(&ctx, ServerEventData::ModuleChange(module_changed_sub_event.clone()));
+    }
+}
+
+fn subscribe_to_module_change_event(
+    ctx: &Context,
+    callback: ServerEventCallback,
+) -> Result<(), RedisError> {
+    unsafe { &mut MODULE_LOAD_SUBSCRIBERS }.subscribe_to_event(ctx, callback)
+}
+
 pub fn subscribe_to_server_event(
     ctx: &Context,
     event: ServerEvents,
@@ -213,5 +255,6 @@ pub fn subscribe_to_server_event(
         ServerEvents::RuleChanged => subscribe_to_role_changed_event(ctx, callback),
         ServerEvents::Loading => subscribe_to_loading_event(ctx, callback),
         ServerEvents::Flush => subscribe_to_flush_event(ctx, callback),
+        ServerEvents::ModuleChange => subscribe_to_module_change_event(ctx, callback),
     }
 }
