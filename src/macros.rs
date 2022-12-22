@@ -149,7 +149,7 @@ macro_rules! redis_module {
 
             if unsafe { raw::Export_RedisModule_Init(
                 ctx,
-                name_buffer.as_ptr() as *const c_char,
+                name_buffer.as_ptr().cast::<c_char>(),
                 module_version,
                 raw::REDISMODULE_APIVER_1 as c_int,
             ) } == raw::Status::Err as c_int { return raw::Status::Err as c_int; }

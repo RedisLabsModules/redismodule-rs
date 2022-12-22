@@ -504,7 +504,7 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
             ctx,
             cmd.as_ptr(),
             FMT,
-            inner_args.as_ptr() as *mut c_char,
+            inner_args.as_ptr(),
             terminated_args.len(),
         )
         .into()
@@ -558,7 +558,7 @@ pub fn string_append_buffer(
     buff: &str,
 ) -> Status {
     unsafe {
-        RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut c_char, buff.len())
+        RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr().cast::<c_char>(), buff.len())
             .into()
     }
 }
@@ -581,7 +581,7 @@ pub fn register_info_function(ctx: *mut RedisModuleCtx, callback: RedisModuleInf
 pub fn add_info_section(ctx: *mut RedisModuleInfoCtx, name: Option<&str>) -> Status {
     name.map(|n| CString::new(n).unwrap()).map_or_else(
         || unsafe { RedisModule_InfoAddSection.unwrap()(ctx, ptr::null_mut()).into() },
-        |n| unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr() as *mut c_char).into() },
+        |n| unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr()).into() },
     )
 }
 
@@ -590,7 +590,7 @@ pub fn add_info_field_str(ctx: *mut RedisModuleInfoCtx, name: &str, content: &st
     let name = CString::new(name).unwrap();
     let content = RedisString::create(ptr::null_mut(), content);
     unsafe {
-        RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr() as *mut c_char, content.inner)
+        RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr(), content.inner)
             .into()
     }
 }
@@ -603,7 +603,7 @@ pub fn add_info_field_long_long(
 ) -> Status {
     let name = CString::new(name).unwrap();
     unsafe {
-        RedisModule_InfoAddFieldLongLong.unwrap()(ctx, name.as_ptr() as *mut c_char, value).into()
+        RedisModule_InfoAddFieldLongLong.unwrap()(ctx, name.as_ptr(), value).into()
     }
 }
 
