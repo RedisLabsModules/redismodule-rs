@@ -141,7 +141,7 @@ commands:
 jobs:
   build:
     docker:
-      - image: redisfab/rmbuilder:6.2.5-x64-bullseye
+      - image: redisfab/rmbuilder:6.2.7-x64-bullseye
     steps:
       - build-steps
 
