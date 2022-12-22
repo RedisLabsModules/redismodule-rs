@@ -37,7 +37,7 @@ static MY_REDIS_TYPE: RedisType = RedisType::new(
 );
 
 unsafe extern "C" fn free(value: *mut c_void) {
-    Box::from_raw(value.cast::<MyType>());
+    drop(Box::from_raw(value.cast::<MyType>()));
 }
 
 fn alloc_set(ctx: &Context, args: Vec<RedisString>) -> RedisResult {

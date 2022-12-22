@@ -6,8 +6,6 @@ use std::str::Utf8Error;
 use strum_macros::AsRefStr;
 extern crate num_traits;
 
-use libc::size_t;
-
 pub mod alloc;
 pub mod error;
 pub mod native_types;
@@ -52,8 +50,8 @@ pub enum LogLevel {
     Warning,
 }
 
-fn from_byte_string(byte_str: *const c_char, length: size_t) -> Result<String, Utf8Error> {
-    let mut vec_str: Vec<u8> = Vec::with_capacity(length as usize);
+fn from_byte_string(byte_str: *const c_char, length: usize) -> Result<String, Utf8Error> {
+    let mut vec_str: Vec<u8> = Vec::with_capacity(length);
     for j in 0..length {
         let byte = unsafe { *byte_str.add(j) } as u8;
         vec_str.insert(j, byte);

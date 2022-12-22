@@ -195,7 +195,7 @@ impl Context {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
                     s.as_ptr().cast::<c_char>(),
-                    s.len() as usize,
+                    s.len(),
                 )
                 .into()
             },
@@ -208,7 +208,7 @@ impl Context {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
                     s.as_ptr().cast::<c_char>(),
-                    s.len() as usize,
+                    s.len(),
                 )
                 .into()
             },
