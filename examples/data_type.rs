@@ -34,7 +34,6 @@ static MY_REDIS_TYPE: RedisType = RedisType::new(
         copy: None,
         defrag: None,
 
-        aux_save2: None,
         copy2: None,
         free_effort2: None,
         mem_usage2: None,

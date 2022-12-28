@@ -547,7 +547,7 @@ pub fn save_unsigned(rdb: *mut RedisModuleIO, val: u64) {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn string_compare(a: *const RedisModuleString, b: *const RedisModuleString) -> Ordering {
+pub fn string_compare(a: *mut RedisModuleString, b: *mut RedisModuleString) -> Ordering {
     unsafe { RedisModule_StringCompare.unwrap()(a, b).cmp(&0) }
 }
 
@@ -589,10 +589,7 @@ pub fn add_info_section(ctx: *mut RedisModuleInfoCtx, name: Option<&str>) -> Sta
 pub fn add_info_field_str(ctx: *mut RedisModuleInfoCtx, name: &str, content: &str) -> Status {
     let name = CString::new(name).unwrap();
     let content = RedisString::create(ptr::null_mut(), content);
-    unsafe {
-        RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr(), content.inner)
-            .into()
-    }
+    unsafe { RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr(), content.inner).into() }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -602,9 +599,7 @@ pub fn add_info_field_long_long(
     value: c_longlong,
 ) -> Status {
     let name = CString::new(name).unwrap();
-    unsafe {
-        RedisModule_InfoAddFieldLongLong.unwrap()(ctx, name.as_ptr(), value).into()
-    }
+    unsafe { RedisModule_InfoAddFieldLongLong.unwrap()(ctx, name.as_ptr(), value).into() }
 }
 
 /// # Safety
