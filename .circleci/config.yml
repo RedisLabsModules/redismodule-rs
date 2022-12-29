@@ -157,7 +157,7 @@ jobs:
 
   build-macos:
     macos:
-      xcode: 11.7.0
+      xcode: 12.5.1
     steps:
       - build-steps
 
