@@ -558,7 +558,7 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
     replicate_redis_strings(ctx, command, &terminated_args)
 }
 
-pub fn replicate_slices(ctx: *mut RedisModuleCtx, command: &str, args: &[&[u8]]) -> Status {
+pub fn replicate_slices(ctx: *mut RedisModuleCtx, command: &str, args: &[&[c_char]]) -> Status {
     let terminated_args: Vec<RedisString> = args
         .iter()
         .map(|s| RedisString::create_from_slice(ctx, s))

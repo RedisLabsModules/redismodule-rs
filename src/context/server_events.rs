@@ -235,7 +235,10 @@ extern "C" fn module_change_event_callback(
     };
     let ctx = Context::new(ctx);
     for callback in unsafe { &MODULE_LOAD_SUBSCRIBERS }.get_subscribers() {
-        callback(&ctx, ServerEventData::ModuleChange(module_changed_sub_event.clone()));
+        callback(
+            &ctx,
+            ServerEventData::ModuleChange(module_changed_sub_event.clone()),
+        );
     }
 }
 

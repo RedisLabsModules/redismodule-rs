@@ -204,7 +204,7 @@ impl Context {
         &self,
         command: &str,
         options: *const c_char,
-        args: &[&[u8]],
+        args: &[&[c_char]],
     ) -> RedisResult {
         let terminated_args: Vec<RedisString> = args
             .iter()
@@ -591,7 +591,7 @@ impl Context {
     }
 
     #[must_use]
-    pub fn create_string_from_slice(&self, s: &[u8]) -> RedisString {
+    pub fn create_string_from_slice(&self, s: &[c_char]) -> RedisString {
         RedisString::create_from_slice(self.ctx, s)
     }
 
