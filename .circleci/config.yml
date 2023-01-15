@@ -40,7 +40,7 @@ commands:
             apt-get -q install -y git openssh-client curl ca-certificates make tar gzip
             bash <(curl -fsSL https://raw.githubusercontent.com/docker/docker-install/master/install.sh)
       - setup_remote_docker:
-          version: 20.10.2
+          version: 20.10.14
           docker_layer_caching: true
 
   checkout-all:
@@ -55,6 +55,8 @@ commands:
       - run:
           name: Setup automation
           command: |
+            export HOMEBREW_NO_AUTO_UPDATE=1
+            git submodule update --init deps/readies
             ./deps/readies/bin/getpy3
 
   install-prerequisites:
@@ -69,13 +71,15 @@ commands:
       - setup-automation
       - run:
           name: Setup build environment
+          shell: /bin/bash -l -eo pipefail
           command: |
             ./sbin/system-setup.py
-            bash -l -c "make info"
+            make info
       - run:
           name: Install Redis
+          shell: /bin/bash -l -eo pipefail
           command: |
-            bash -l -c "./deps/readies/bin/getredis -v \"<<parameters.redis_version>>\" --force <<parameters.getredis_params>>"
+            ./deps/readies/bin/getredis -v '<<parameters.redis_version>>' --force <<parameters.getredis_params>>
             redis-server --version
 
   build-steps:
@@ -103,23 +107,27 @@ commands:
             - v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
       - run:
           name: Check formatting
-          command: bash -l -c "make lint"
+          shell: /bin/bash -l -eo pipefail
+          command: make lint
       - run:
           name: Build debug
-          command: bash -l -c "make build DEBUG=1 <<parameters.build_params>>"
+          shell: /bin/bash -l -eo pipefail
+          command: make build DEBUG=1 <<parameters.build_params>>
       - run:
           name: Build release
-          command: bash -l -c "make build <<parameters.build_params>>"
+          shell: /bin/bash -l -eo pipefail
+          command: make build <<parameters.build_params>>
       - save_cache:
           key: v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
           paths:
             - "~/.cargo"
             - "./target"
       - run:
-          name: Run all tests
-          command: bash -l -c "make test"
+          name: Run tests
+          shell: /bin/bash -l -eo pipefail
+          command: make test
 
-  platforms-build-steps:
+  build-platforms-steps:
     parameters:
       platform:
         type: string
@@ -130,40 +138,79 @@ commands:
       - setup-automation
       - run:
           name: Build for platform
+          shell: /bin/bash -l -eo pipefail
           command: |
             cd build/platforms
             make build OSNICK="<<parameters.platform>>" VERSION="$CIRCLE_TAG" BRANCH="$CIRCLE_BRANCH" TEST=1 SHOW=1
+
+  vm-build-platforms-steps:
+    parameters:
+      platform:
+        type: string
+    steps:
+      - early-returns
+      - checkout
+      - setup-automation
+      - run:
+          name: Install Docker
+          shell: /bin/bash -l -eo pipefail
+          command: ./deps/readies/bin/getdocker
+      - run:
+          name: Build for platform
+          command: |
+            cd build/platforms
+            make build OSNICK="<<parameters.platform>>" VERSION="$CIRCLE_TAG" BRANCH="$CIRCLE_BRANCH" TEST=1 SHOW=1
+          no_output_timeout: 30m
 
 #----------------------------------------------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------------------------------------------
 
 jobs:
-  build:
+  build-linux-debian:
     docker:
-      - image: redisfab/rmbuilder:6.2.5-x64-bullseye
+      - image: redisfab/rmbuilder:6.2.7-x64-bullseye
     steps:
       - build-steps
 
-  platforms-build:
+  build-platforms:
     parameters:
       platform:
         type: string
     docker:
       - image: debian:bullseye
     steps:
-      - platforms-build-steps:
+      - build-platforms-steps:
+          platform: <<parameters.platform>>
+
+  build-arm-platforms:
+    parameters:
+      platform:
+        type: string
+    machine:
+      image: ubuntu-2004:202101-01
+    resource_class: arm.medium
+    steps:
+      - vm-build-platforms-steps:
           platform: <<parameters.platform>>
 
   build-macos:
     macos:
       xcode: 11.7.0
+    resource_class: macos.x86.medium.gen2
     steps:
       - build-steps
 
 #----------------------------------------------------------------------------------------------------------------------------------
 
 on-any-branch: &on-any-branch
+  filters:
+    branches:
+      only: /.*/
+    tags:
+      only: /.*/
+
+always: &always
   filters:
     branches:
       only: /.*/
@@ -193,6 +240,14 @@ on-integ-branch: &on-integ-branch
         - /^feature-.*$/
     tags:
       ignore: /.*/
+
+on-integ-branch-cron: &on-integ-branch-cron
+  filters:
+    branches:
+      only:
+        - master
+        - /^\d+\.\d+.*$/
+        - /^feature-.*$/
 
 not-on-integ-branch: &not-on-integ-branch
   filters:
@@ -227,13 +282,20 @@ workflows:
   version: 2
   default-flow:
     jobs:
-      - build:
+      - build-linux-debian:
+          name: build
           <<: *not-on-integ-branch
-      - platforms-build:
-          context: common
+      - build-platforms:
           <<: *on-integ-and-version-tags
+          context: common
           matrix:
             parameters:
-              platform: [focal, bionic, xenial, ol8, centos7, bullseye]
+              platform: [jammy, focal, bionic, xenial, rocky8, centos7, bullseye]
+      - build-arm-platforms:
+          <<: *on-integ-and-version-tags
+          context: common
+          matrix:
+            parameters:
+              platform: [jammy, bionic, focal]
       - build-macos:
           <<: *on-any-branch

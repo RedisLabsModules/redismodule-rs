@@ -1,14 +1,10 @@
 ROOT=.
-MK.pyver:=3
 
-ifeq ($(wildcard $(ROOT)/deps/readies/mk),)
-$(shell mkdir -p deps; cd deps; git clone https://github.com/RedisLabsModules/readies.git)
-endif
 include $(ROOT)/deps/readies/mk/main
 
 #----------------------------------------------------------------------------------------------
 
-define HELP
+define HELPTEXT
 make build
   DEBUG=1          # build debug variant
 make clean         # remove binary files
