@@ -44,7 +44,6 @@ class RedisModuleRSSetup(paella.Setup):
 
     def macos(self):
         self.install_gnu_utils()
-        self.run("%s/bin/getgcc" % READIES)
         self.run("%s/bin/getredis -v 6" % READIES)
 
     def common_last(self):
