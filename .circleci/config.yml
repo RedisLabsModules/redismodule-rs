@@ -74,7 +74,7 @@ commands:
           shell: /bin/bash -l -eo pipefail
           command: |
             ./sbin/system-setup.py
-            make info
+            bash -l -c "make info"
       - run:
           name: Install Redis
           shell: /bin/bash -l -eo pipefail
