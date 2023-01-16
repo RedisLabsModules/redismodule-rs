@@ -1,6 +1,6 @@
 # BUILD redisfab/redismodule-rs:${VERSION}-${ARCH}-${OSNICK}
 
-ARG REDIS_VER=6.2.5
+ARG REDIS_VER=6.2.7
 
 # bullseye|bionic|xenial|centos8|centos7
 ARG OSNICK=bullseye
@@ -8,34 +8,32 @@ ARG OSNICK=bullseye
 # ARCH=x64|arm64v8|arm32v7
 ARG ARCH=x64
 
-ARG PACK=0
 ARG TEST=0
 
 #----------------------------------------------------------------------------------------------
-FROM redisfab/redis:${REDIS_VER}-${ARCH}-${OSNICK} AS builder
+FROM redisfab/redis:${REDIS_VER}-${ARCH}-${OSNICK} AS redis
+FROM debian:bullseye-slim AS builder
 
 ARG OSNICK
 ARG OS
 ARG ARCH
 ARG REDIS_VER
-ARG PACK
 ARG TEST
+
+RUN if [ -f /root/.profile ]; then sed -ie 's/mesg n/tty -s \&\& mesg -n/g' /root/.profile; fi
+SHELL ["/bin/bash", "-l", "-c"]
 
 RUN echo "Building for ${OSNICK} (${OS}) for ${ARCH} [with Redis ${REDIS_VER}]"
  
-ADD ./ /build
+ADD . /build
 WORKDIR /build
 
-RUN ./deps/readies/bin/getpy3
-RUN ./sbin/system-setup.py
-RUN bash -l -c "make info"
-RUN bash -l -c make
+RUN ./sbin/setup
+RUN make info
+RUN make
 
 RUN set -ex ;\
-    if [ "$TEST" = "1" ]; then bash -l -c "TEST= make test"; fi
-RUN set -ex ;\
-    mkdir -p bin/artifacts ;\
-    if [ "$PACK" = "1" ]; then bash -l -c "make pack"; fi
+    if [ "$TEST" = "1" ]; then TEST= make test; fi
 
 #----------------------------------------------------------------------------------------------
 FROM redisfab/redis:${REDIS_VER}-${ARCH}-${OSNICK}
