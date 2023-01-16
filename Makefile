@@ -14,7 +14,7 @@ make all           # build all libraries and packages
 
 make test          # run tests
 
-make platform      # build for specific Linux distribution
+make docker        # build for specific Linux distribution
   OSNICK=nick        # Linux distribution to build for
   REDIS_VER=ver      # use Redis version `ver`
   TEST=1             # test aftar build
@@ -83,10 +83,10 @@ cargo_test:
 
 #----------------------------------------------------------------------------------------------
 
-platform:
-	@make -C build/platforms build
+docker:
+	@make -C build/docker build
 ifeq ($(PUBLISH),1)
-	@make -C build/platforms publish
+	@make -C build/docker publish
 endif
 
 info:
@@ -97,3 +97,5 @@ info:
 	cargo --version
 	rustup --version
 	rustup show
+
+.PHONY: docker info
