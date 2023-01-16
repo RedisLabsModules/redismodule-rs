@@ -84,7 +84,19 @@ impl RedisKey {
         Ok(val)
     }
 
+    pub fn read_bytes(&self) -> Option<Vec<u8>> {
+        if self.is_null() {
+            None
+        } else {
+            Some(read_key_bytes(self.key_inner))
+        }
+    }
+
     pub fn hash_get(&self, field: &str) -> Result<Option<RedisString>, RedisError> {
+        self.hash_bytes_get(field.as_bytes())
+    }
+
+    pub fn hash_bytes_get(&self, field: &[u8]) -> Result<Option<RedisString>, RedisError> {
         let val = if self.is_null() {
             None
         } else {
@@ -160,6 +172,15 @@ impl RedisKeyWritable {
         Ok(Some(read_key(self.key_inner)?))
     }
 
+    pub fn read_bytes(&self) -> Option<Vec<u8>> {
+        Some(read_key_bytes(self.key_inner))
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn hash_bytes_set(&self, field: &[u8], value: RedisString) -> raw::Status {
+        raw::hash_bytes_set(self.key_inner, field, value.inner)
+    }
+
     #[allow(clippy::must_use_candidate)]
     pub fn hash_set(&self, field: &str, value: RedisString) -> raw::Status {
         raw::hash_set(self.key_inner, field, value.inner)
@@ -171,6 +192,10 @@ impl RedisKeyWritable {
     }
 
     pub fn hash_get(&self, field: &str) -> Result<Option<RedisString>, RedisError> {
+        self.hash_bytes_get(field.as_bytes())
+    }
+
+    pub fn hash_bytes_get(&self, field: &[u8]) -> Result<Option<RedisString>, RedisError> {
         Ok(hash_mget_key(self.ctx, self.key_inner, &[field])?
             .pop()
             .expect("hash_mget_key should return vector of same length as input"))
@@ -254,7 +279,11 @@ impl RedisKeyWritable {
     }
 
     pub fn write(&self, val: &str) -> RedisResult {
-        let val_str = RedisString::create(self.ctx, val);
+        self.write_bytes(val.as_bytes())
+    }
+
+    pub fn write_bytes(&self, val: &[u8]) -> RedisResult {
+        let val_str = RedisString::from_bytes(self.ctx, val);
         match raw::string_set(self.key_inner, val_str.inner) {
             raw::Status::Ok => REDIS_OK,
             raw::Status::Err => Err(RedisError::Str("Error while setting key")),
@@ -454,6 +483,10 @@ impl Drop for RedisKeyWritable {
 }
 
 fn read_key(key: *mut raw::RedisModuleKey) -> Result<String, Utf8Error> {
+    String::from_utf8(read_key_bytes(key)).map_err(|e| e.utf8_error())
+}
+
+fn read_key_bytes(key: *mut raw::RedisModuleKey) -> Vec<u8> {
     let mut length: size_t = 0;
     from_byte_string(
         raw::string_dma(key, &mut length, raw::KeyMode::READ),
