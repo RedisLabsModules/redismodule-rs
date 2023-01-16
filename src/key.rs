@@ -402,7 +402,7 @@ where
     /// let hm = ctx
     ///      .open_key(keyname)
     ///      .hash_get_multi(fields)?
-    ///      .ok_or(RedisError::Str("ERR key not found"))?;
+    ///      .ok_or(RedisError::Str("key not found"))?;
     /// let response: HashMap<&str, String> = hm.into_iter().collect();
     /// ```
     ///
@@ -414,7 +414,7 @@ where
     /// let hm = ctx
     ///      .open_key(keyname)
     ///      .hash_get_multi(fields)?
-    ///      .ok_or(RedisError::Str("ERR key not found"))?;
+    ///      .ok_or(RedisError::Str("key not found"))?;
     /// let response: Vec<String> = hm.into_iter().map(|(_, v)| v).collect();
     /// ```
     ///
@@ -502,7 +502,7 @@ pub fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) 
         let raw_type = unsafe { raw::RedisModule_ModuleTypeGetType.unwrap()(key_inner) };
 
         if raw_type != *redis_type.raw_type.borrow() {
-            return Err(RedisError::Str("ERR Existing key has wrong Redis type"));
+            return Err(RedisError::Str("Existing key has wrong Redis type"));
         }
     }
 

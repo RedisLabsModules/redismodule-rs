@@ -365,7 +365,7 @@ where
 
     match res {
         Status::Ok => Ok(()),
-        Status::Err => Err(RedisError::Str("ERR key is not a hash value")),
+        Status::Err => Err(RedisError::Str("key is not a hash value")),
     }
 }
 
