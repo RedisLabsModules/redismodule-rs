@@ -16,6 +16,7 @@ pub mod rediserror;
 mod redismodule;
 pub mod redisraw;
 pub mod redisvalue;
+pub mod dictionary;
 
 mod context;
 pub mod key;
