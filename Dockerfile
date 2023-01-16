@@ -8,7 +8,6 @@ ARG OSNICK=bullseye
 # ARCH=x64|arm64v8|arm32v7
 ARG ARCH=x64
 
-ARG PACK=0
 ARG TEST=0
 
 #----------------------------------------------------------------------------------------------
@@ -19,7 +18,6 @@ ARG OSNICK
 ARG OS
 ARG ARCH
 ARG REDIS_VER
-ARG PACK
 ARG TEST
 
 RUN if [ -f /root/.profile ]; then sed -ie 's/mesg n/tty -s \&\& mesg -n/g' /root/.profile; fi
@@ -36,9 +34,6 @@ RUN make
 
 RUN set -ex ;\
     if [ "$TEST" = "1" ]; then TEST= make test; fi
-RUN set -ex ;\
-    mkdir -p bin/artifacts ;\
-    if [ "$PACK" = "1" ]; then make pack; fi
 
 #----------------------------------------------------------------------------------------------
 FROM redisfab/redis:${REDIS_VER}-${ARCH}-${OSNICK}

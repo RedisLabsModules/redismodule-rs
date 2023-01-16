@@ -18,9 +18,6 @@ make docker        # build for specific Linux distribution
   OSNICK=nick        # Linux distribution to build for
   REDIS_VER=ver      # use Redis version `ver`
   TEST=1             # test aftar build
-  PACK=1             # create packages
-  ARTIFACTS=1        # copy artifacts from docker image
-  PUBLISH=1          # publish (i.e. docker push) after build
 
 
 endef
@@ -85,9 +82,6 @@ cargo_test:
 
 docker:
 	@make -C build/docker build
-ifeq ($(PUBLISH),1)
-	@make -C build/docker publish
-endif
 
 info:
 	gcc --version
