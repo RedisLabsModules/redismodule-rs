@@ -13,6 +13,6 @@ INT_BRANCHES=
 LATEST_BRANCH=
 PREVIEW_BRANCH=
 
-ART_DIR=$(ROOT)/bin/artifacts
+ARTIFACTS=0
 
 include $(MK)/module.docker.rules
