@@ -140,7 +140,7 @@ commands:
           name: Build for platform
           shell: /bin/bash -l -eo pipefail
           command: |
-            cd build/platforms
+            cd build/docker
             make build OSNICK="<<parameters.platform>>" VERSION="$CIRCLE_TAG" BRANCH="$CIRCLE_BRANCH" TEST=1 SHOW=1
 
   vm-build-platforms-steps:
@@ -158,7 +158,7 @@ commands:
       - run:
           name: Build for platform
           command: |
-            cd build/platforms
+            cd build/docker
             make build OSNICK="<<parameters.platform>>" VERSION="$CIRCLE_TAG" BRANCH="$CIRCLE_BRANCH" TEST=1 SHOW=1
           no_output_timeout: 30m
 
