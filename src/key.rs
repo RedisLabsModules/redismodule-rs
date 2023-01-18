@@ -455,7 +455,7 @@ impl<'a> StringDMA<'a> {
     }
 
     pub fn write(&mut self, data: &[u8]) -> Result<&mut Self, RedisError> {
-        if self.buffer.len() < data.len() {
+        if self.buffer.len() != data.len() {
             if raw::Status::Ok == raw::string_truncate(self.key.key_inner, data.len()) {
                 let mut length: size_t = 0;
                 let dma = raw::string_dma(self.key.key_inner, &mut length, raw::KeyMode::WRITE);
@@ -465,6 +465,20 @@ impl<'a> StringDMA<'a> {
             }
         }
         self.buffer[..data.len()].copy_from_slice(data);
+        Ok(self)
+    }
+
+    pub fn append(&mut self, data: &[u8]) -> Result<&mut Self, RedisError> {
+        let current_len = self.buffer.len();
+        let new_len = current_len + data.len();
+        if raw::Status::Ok == raw::string_truncate(self.key.key_inner, new_len) {
+            let mut length: size_t = 0;
+            let dma = raw::string_dma(self.key.key_inner, &mut length, raw::KeyMode::WRITE);
+            self.buffer = unsafe { std::slice::from_raw_parts_mut(dma.cast::<u8>(), length) };
+        } else {
+            return Err(RedisError::Str("Failed to truncate string"));
+        }
+        self.buffer[current_len..new_len].copy_from_slice(data);
         Ok(self)
     }
 
