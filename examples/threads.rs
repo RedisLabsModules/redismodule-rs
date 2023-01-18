@@ -12,7 +12,7 @@ fn threads(_: &Context, _args: Vec<RedisString>) -> RedisResult {
 
         loop {
             let ctx = thread_ctx.lock();
-            ctx.call("INCR", &["threads"]).unwrap();
+            ctx.call("INCR", &[&ctx.create_string("threads")]).unwrap();
             // release the lock as soon as we're done accessing redis memory
             drop(ctx);
             thread::sleep(Duration::from_millis(1000));
