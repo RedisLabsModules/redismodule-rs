@@ -8,6 +8,8 @@ use crate::{add_info_field_long_long, add_info_field_str, raw, utils, Status};
 use crate::{add_info_section, LogLevel};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
+use std::collections::{HashMap, HashSet};
+
 #[cfg(feature = "experimental-api")]
 use std::ffi::CStr;
 
@@ -21,6 +23,109 @@ pub mod thread_safe;
 pub mod blocked;
 
 pub mod info;
+
+pub mod keys_cursor;
+
+pub mod server_events;
+
+pub mod configuration;
+
+#[derive(Clone)]
+pub struct CallOptions {
+    options: String,
+}
+
+pub struct CallOptionsBuilder {
+    options: String,
+}
+
+impl CallOptionsBuilder {
+    pub fn new() -> CallOptionsBuilder {
+        CallOptionsBuilder {
+            options: "v".to_string(),
+        }
+    }
+
+    fn add_flag(&mut self, flag: &str) {
+        self.options.push_str(flag);
+    }
+
+    pub fn no_writes(mut self) -> CallOptionsBuilder {
+        self.add_flag("W");
+        self
+    }
+
+    pub fn script_mode(mut self) -> CallOptionsBuilder {
+        self.add_flag("S");
+        self
+    }
+
+    pub fn verify_acl(mut self) -> CallOptionsBuilder {
+        self.add_flag("C");
+        self
+    }
+
+    pub fn verify_oom(mut self) -> CallOptionsBuilder {
+        self.add_flag("M");
+        self
+    }
+
+    pub fn errors_as_replies(mut self) -> CallOptionsBuilder {
+        self.add_flag("E");
+        self
+    }
+
+    pub fn replicate(mut self) -> CallOptionsBuilder {
+        self.add_flag("!");
+        self
+    }
+
+    pub fn resp_3(mut self) -> CallOptionsBuilder {
+        self.add_flag("3");
+        self
+    }
+
+    pub fn constract(&self) -> CallOptions {
+        let mut res = CallOptions {
+            options: self.options.to_string(),
+        };
+        res.options.push_str("\0"); /* make it C string */
+        res
+    }
+}
+
+pub struct AclPermissions {
+    flags: u32,
+}
+
+impl AclPermissions {
+    pub fn new() -> AclPermissions {
+        AclPermissions { flags: 0 }
+    }
+
+    pub fn add_access_permission(&mut self) {
+        self.flags |= raw::REDISMODULE_CMD_KEY_ACCESS;
+    }
+
+    pub fn add_insert_permission(&mut self) {
+        self.flags |= raw::REDISMODULE_CMD_KEY_INSERT;
+    }
+
+    pub fn add_delete_permission(&mut self) {
+        self.flags |= raw::REDISMODULE_CMD_KEY_DELETE;
+    }
+
+    pub fn add_update_permission(&mut self) {
+        self.flags |= raw::REDISMODULE_CMD_KEY_UPDATE;
+    }
+
+    pub fn add_full_permission(&mut self) {
+        self.add_access_permission();
+        self.add_insert_permission();
+        self.add_delete_permission();
+        self.add_update_permission();
+    }
+}
 
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
@@ -95,10 +200,15 @@ impl Context {
         }
     }
 
-    pub fn call(&self, command: &str, args: &[&str]) -> RedisResult {
+    pub fn call_internal(
+        &self,
+        command: &str,
+        options: *const c_char,
+        args: &[&[u8]],
+    ) -> RedisResult {
         let terminated_args: Vec<RedisString> = args
             .iter()
-            .map(|s| RedisString::create(self.ctx, s))
+            .map(|s| RedisString::create_from_slice(self.ctx, s))
             .collect();
 
         let inner_args: Vec<*mut raw::RedisModuleString> =
@@ -110,7 +220,7 @@ impl Context {
             p_call(
                 self.ctx,
                 cmd.as_ptr(),
-                raw::FMT,
+                options,
                 inner_args.as_ptr() as *mut c_char,
                 terminated_args.len(),
             )
@@ -120,6 +230,18 @@ impl Context {
             raw::free_call_reply(reply);
         }
         result
+    }
+
+    pub fn call_ext(&self, command: &str, options: &CallOptions, args: &[&[u8]]) -> RedisResult {
+        self.call_internal(command, options.options.as_ptr() as *const c_char, args)
+    }
+
+    pub fn call(&self, command: &str, args: &[&str]) -> RedisResult {
+        self.call_internal(
+            command,
+            raw::FMT,
+            &args.iter().map(|v| v.as_bytes()).collect::<Vec<&[u8]>>(),
+        )
     }
 
     fn parse_call_reply(reply: *mut raw::RedisModuleCallReply) -> RedisResult {
@@ -137,8 +259,97 @@ impl Context {
                 Ok(RedisValue::Array(vec))
             }
             raw::ReplyType::Integer => Ok(RedisValue::Integer(raw::call_reply_integer(reply))),
-            raw::ReplyType::String => Ok(RedisValue::SimpleString(raw::call_reply_string(reply))),
+            raw::ReplyType::String => Ok(RedisValue::StringBuffer({
+                let mut len: usize = 0;
+                let buff = raw::call_reply_string_ptr(reply, &mut len);
+                unsafe { std::slice::from_raw_parts(buff as *mut u8, len) }.to_vec()
+            })),
             raw::ReplyType::Null => Ok(RedisValue::Null),
+            raw::ReplyType::Map => {
+                let length = raw::call_reply_length(reply);
+                let mut map = HashMap::new();
+                for i in 0..length {
+                    let (key, val) = raw::call_reply_map_element(reply, i);
+                    let key = Self::parse_call_reply(key)?;
+                    let val = Self::parse_call_reply(val)?;
+                    let key = match key {
+                        RedisValue::SimpleString(s) => {
+                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::SimpleStringStatic(s) => {
+                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::BulkString(s) => {
+                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::BulkRedisString(s) => {
+                            s.as_slice().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::Integer(i) => i
+                            .to_string()
+                            .as_bytes()
+                            .into_iter()
+                            .map(|v| *v)
+                            .collect::<Vec<u8>>(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::Float(f) => f
+                            .to_string()
+                            .as_bytes()
+                            .into_iter()
+                            .map(|v| *v)
+                            .collect::<Vec<u8>>(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::StringBuffer(b) => b,
+                        _ => return Err(RedisError::Str("type is not supported as map key")),
+                    };
+                    map.insert(key, val);
+                }
+                Ok(RedisValue::Map(map))
+            }
+            raw::ReplyType::Set => {
+                let length = raw::call_reply_length(reply);
+                let mut set = HashSet::new();
+                for i in 0..length {
+                    let val = raw::call_reply_set_element(reply, i);
+                    let val = Self::parse_call_reply(val)?;
+                    let val = match val {
+                        RedisValue::SimpleString(s) => {
+                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::SimpleStringStatic(s) => {
+                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::BulkString(s) => {
+                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::BulkRedisString(s) => {
+                            s.as_slice().into_iter().map(|v| *v).collect::<Vec<u8>>()
+                        }
+                        RedisValue::Integer(i) => i
+                            .to_string()
+                            .as_bytes()
+                            .into_iter()
+                            .map(|v| *v)
+                            .collect::<Vec<u8>>(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::Float(f) => f
+                            .to_string()
+                            .as_bytes()
+                            .into_iter()
+                            .map(|v| *v)
+                            .collect::<Vec<u8>>(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::StringBuffer(b) => b,
+                        _ => return Err(RedisError::Str("type is not supported on set")),
+                    };
+                    set.insert(val);
+                }
+                Ok(RedisValue::Set(set))
+            }
+            raw::ReplyType::Bool => Ok(RedisValue::Bool(raw::call_reply_bool(reply) != 0)),
+            raw::ReplyType::Double => Ok(RedisValue::Double(raw::call_reply_double(reply))),
+            raw::ReplyType::BigNumber => {
+                Ok(RedisValue::BigNumber(raw::call_reply_big_numebr(reply)))
+            }
+            raw::ReplyType::VerbatimString => Ok(RedisValue::VerbatimString(
+                raw::call_reply_verbatim_string(reply),
+            )),
         }
     }
 
@@ -156,9 +367,53 @@ impl Context {
     }
 
     #[allow(clippy::must_use_candidate)]
+    pub fn reply_null(&self) -> raw::Status {
+        unsafe { raw::RedisModule_ReplyWithNull.unwrap()(self.ctx).into() }
+    }
+
+    #[allow(clippy::must_use_candidate)]
     pub fn reply_simple_string(&self, s: &str) -> raw::Status {
         let msg = Self::str_as_legal_resp_string(s);
         unsafe { raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into() }
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn reply_bulk_string(&self, s: &str) -> raw::Status {
+        unsafe {
+            raw::RedisModule_ReplyWithStringBuffer.unwrap()(
+                self.ctx,
+                s.as_ptr() as *mut c_char,
+                s.len(),
+            )
+            .into()
+        }
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn reply_bulk_slice(&self, s: &[u8]) -> raw::Status {
+        unsafe {
+            raw::RedisModule_ReplyWithStringBuffer.unwrap()(
+                self.ctx,
+                s.as_ptr() as *mut c_char,
+                s.len(),
+            )
+            .into()
+        }
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn reply_array(&self, size: usize) -> raw::Status {
+        unsafe { raw::RedisModule_ReplyWithArray.unwrap()(self.ctx, size as c_long).into() }
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn reply_long(&self, l: i64) -> raw::Status {
+        unsafe { raw::RedisModule_ReplyWithLongLong.unwrap()(self.ctx, l as c_longlong).into() }
+    }
+
+    #[allow(clippy::must_use_candidate)]
+    pub fn reply_double(&self, d: f64) -> raw::Status {
+        unsafe { raw::RedisModule_ReplyWithDouble.unwrap()(self.ctx, d).into() }
     }
 
     #[allow(clippy::must_use_candidate)]
@@ -227,6 +482,70 @@ impl Context {
                 raw::Status::Ok
             }
 
+            Ok(RedisValue::Map(map)) => {
+                unsafe {
+                    raw::RedisModule_ReplyWithMap.unwrap()(self.ctx, map.len() as c_long);
+                }
+
+                for (key, val) in map {
+                    unsafe {
+                        raw::RedisModule_ReplyWithStringBuffer.unwrap()(
+                            self.ctx,
+                            key.as_ptr().cast::<c_char>(),
+                            key.len() as usize,
+                        );
+                    };
+                    self.reply(Ok(val));
+                }
+
+                raw::Status::Ok
+            }
+
+            Ok(RedisValue::Set(set)) => {
+                unsafe {
+                    raw::RedisModule_ReplyWithSet.unwrap()(self.ctx, set.len() as c_long);
+                }
+
+                for val in set {
+                    unsafe {
+                        raw::RedisModule_ReplyWithStringBuffer.unwrap()(
+                            self.ctx,
+                            val.as_ptr().cast::<c_char>(),
+                            val.len() as usize,
+                        );
+                    };
+                }
+
+                raw::Status::Ok
+            }
+
+            Ok(RedisValue::Bool(b)) => unsafe {
+                raw::RedisModule_ReplyWithBool.unwrap()(self.ctx, b as c_int).into()
+            },
+
+            Ok(RedisValue::Double(d)) => unsafe {
+                raw::RedisModule_ReplyWithDouble.unwrap()(self.ctx, d).into()
+            },
+
+            Ok(RedisValue::BigNumber(s)) => unsafe {
+                raw::RedisModule_ReplyWithBigNumber.unwrap()(
+                    self.ctx,
+                    s.as_ptr() as *mut c_char,
+                    s.len(),
+                )
+                .into()
+            },
+
+            Ok(RedisValue::VerbatimString((t, s))) => unsafe {
+                raw::RedisModule_ReplyWithVerbatimStringType.unwrap()(
+                    self.ctx,
+                    s.as_ptr() as *mut c_char,
+                    s.len(),
+                    t.as_ptr() as *mut c_char,
+                )
+                .into()
+            },
+
             Ok(RedisValue::Null) => unsafe {
                 raw::RedisModule_ReplyWithNull.unwrap()(self.ctx).into()
             },
@@ -269,6 +588,11 @@ impl Context {
     #[must_use]
     pub fn create_string(&self, s: &str) -> RedisString {
         RedisString::create(self.ctx, s)
+    }
+
+    #[must_use]
+    pub fn create_string_from_slice(&self, s: &[u8]) -> RedisString {
+        RedisString::create_from_slice(self.ctx, s)
     }
 
     #[must_use]
@@ -322,17 +646,20 @@ impl Context {
     }
 
     pub fn version_from_info(info: RedisValue) -> Result<Version, RedisError> {
-        if let RedisValue::SimpleString(info_str) = info {
-            if let Some(ver) = utils::get_regexp_captures(
-                info_str.as_str(),
-                r"(?m)\bredis_version:([0-9]+)\.([0-9]+)\.([0-9]+)\b",
-            ) {
-                return Ok(Version {
-                    major: ver[0].parse::<c_int>().unwrap(),
-                    minor: ver[1].parse::<c_int>().unwrap(),
-                    patch: ver[2].parse::<c_int>().unwrap(),
-                });
-            }
+        let info_str = match info {
+            RedisValue::SimpleString(info_str) => info_str,
+            RedisValue::StringBuffer(b) => std::str::from_utf8(&b).unwrap().to_string(),
+            _ => return Err(RedisError::Str("Error getting redis_version")),
+        };
+        if let Some(ver) = utils::get_regexp_captures(
+            info_str.as_str(),
+            r"(?m)\bredis_version:([0-9]+)\.([0-9]+)\.([0-9]+)\b",
+        ) {
+            return Ok(Version {
+                major: ver[0].parse::<c_int>().unwrap(),
+                minor: ver[1].parse::<c_int>().unwrap(),
+                patch: ver[2].parse::<c_int>().unwrap(),
+            });
         }
         Err(RedisError::Str("Error getting redis_version"))
     }
@@ -354,8 +681,75 @@ impl Context {
             }
         }
     }
+
     pub fn set_module_options(&self, options: ModuleOptions) {
         unsafe { raw::RedisModule_SetModuleOptions.unwrap()(self.ctx, options.bits()) };
+    }
+
+    pub fn is_primary(&self) -> bool {
+        let flags = unsafe { raw::RedisModule_GetContextFlags.unwrap()(self.ctx) };
+        flags as u32 & raw::REDISMODULE_CTX_FLAGS_MASTER != 0
+    }
+
+    pub fn is_oom(&self) -> bool {
+        let flags = unsafe { raw::RedisModule_GetContextFlags.unwrap()(self.ctx) };
+        flags as u32 & raw::REDISMODULE_CTX_FLAGS_OOM != 0
+    }
+
+    pub fn allow_block(&self) -> bool {
+        let flags = unsafe { raw::RedisModule_GetContextFlags.unwrap()(self.ctx) };
+        (flags as u32 & raw::REDISMODULE_CTX_FLAGS_DENY_BLOCKING) == 0
+    }
+
+    pub fn get_current_user(&self) -> Result<String, RedisError> {
+        let user = unsafe { raw::RedisModule_GetCurrentUserName.unwrap()(self.ctx) };
+        let user = RedisString::from_redis_module_string(ptr::null_mut(), user);
+        Ok(user.try_as_str()?.to_string())
+    }
+
+    pub fn autenticate_user(&self, user_name: &str) -> raw::Status {
+        if unsafe {
+            raw::RedisModule_AuthenticateClientWithACLUser.unwrap()(
+                self.ctx,
+                user_name.as_ptr() as *const c_char,
+                user_name.len(),
+                None,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        } == raw::REDISMODULE_OK as i32
+        {
+            raw::Status::Ok
+        } else {
+            raw::Status::Err
+        }
+    }
+
+    pub fn acl_check_key_permission(
+        &self,
+        user_name: &str,
+        key_name: &RedisString,
+        permissions: &AclPermissions,
+    ) -> Result<(), RedisError> {
+        let user_name = RedisString::create(self.ctx, user_name);
+        let user = unsafe { raw::RedisModule_GetModuleUserFromUserName.unwrap()(user_name.inner) };
+        if user.is_null() {
+            return Err(RedisError::Str("User does not exists or disabled"));
+        }
+        if unsafe {
+            raw::RedisModule_ACLCheckKeyPermissions.unwrap()(
+                user,
+                key_name.inner,
+                permissions.flags as i32,
+            )
+        } == raw::REDISMODULE_OK as i32
+        {
+            unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
+            Ok(())
+        } else {
+            unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
+            Err(RedisError::Str("User does not have permissions on key"))
+        }
     }
 }
 

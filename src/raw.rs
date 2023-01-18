@@ -68,6 +68,12 @@ pub enum ReplyType {
     Integer = REDISMODULE_REPLY_INTEGER,
     Array = REDISMODULE_REPLY_ARRAY,
     Null = REDISMODULE_REPLY_NULL,
+    Map = REDISMODULE_REPLY_MAP,
+    Set = REDISMODULE_REPLY_SET,
+    Bool = REDISMODULE_REPLY_BOOL,
+    Double = REDISMODULE_REPLY_DOUBLE,
+    BigNumber = REDISMODULE_REPLY_BIG_NUMBER,
+    VerbatimString = REDISMODULE_REPLY_VERBATIM_STRING,
 }
 
 impl From<c_int> for ReplyType {
@@ -117,6 +123,7 @@ bitflags! {
         const STREAM = REDISMODULE_NOTIFY_STREAM;
         const MODULE = REDISMODULE_NOTIFY_MODULE;
         const LOADED = REDISMODULE_NOTIFY_LOADED;
+        const MISSED = REDISMODULE_NOTIFY_KEY_MISS;
         const ALL = REDISMODULE_NOTIFY_ALL;
     }
 }
@@ -202,11 +209,64 @@ pub fn call_reply_integer(reply: *mut RedisModuleCallReply) -> c_longlong {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn call_reply_bool(reply: *mut RedisModuleCallReply) -> c_int {
+    unsafe { RedisModule_CallReplyBool.unwrap()(reply) }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn call_reply_double(reply: *mut RedisModuleCallReply) -> f64 {
+    unsafe { RedisModule_CallReplyDouble.unwrap()(reply) }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn call_reply_big_numebr(reply: *mut RedisModuleCallReply) -> String {
+    unsafe {
+        let mut len: size_t = 0;
+        let reply_string: *mut u8 =
+            RedisModule_CallReplyBigNumber.unwrap()(reply, &mut len) as *mut u8;
+        String::from_utf8(slice::from_raw_parts(reply_string, len).to_vec()).unwrap()
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn call_reply_verbatim_string(reply: *mut RedisModuleCallReply) -> (String, String) {
+    unsafe {
+        let mut len: size_t = 0;
+        let mut format: *const c_char = ptr::null_mut();
+        let reply_string: *mut u8 =
+            RedisModule_CallReplyVerbatim.unwrap()(reply, &mut len, &mut format) as *mut u8;
+        let res = String::from_utf8(slice::from_raw_parts(reply_string, len).to_vec()).unwrap();
+        let format =
+            String::from_utf8(slice::from_raw_parts(format as *mut u8, 3).to_vec()).unwrap();
+        (format, res)
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_array_element(
     reply: *mut RedisModuleCallReply,
     idx: usize,
 ) -> *mut RedisModuleCallReply {
     unsafe { RedisModule_CallReplyArrayElement.unwrap()(reply, idx) }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn call_reply_map_element(
+    reply: *mut RedisModuleCallReply,
+    idx: usize,
+) -> (*mut RedisModuleCallReply, *mut RedisModuleCallReply) {
+    let mut key: *mut RedisModuleCallReply = ptr::null_mut();
+    let mut val: *mut RedisModuleCallReply = ptr::null_mut();
+    unsafe { RedisModule_CallReplyMapElement.unwrap()(reply, idx, &mut key, &mut val) };
+    (key, val)
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn call_reply_set_element(
+    reply: *mut RedisModuleCallReply,
+    idx: usize,
+) -> *mut RedisModuleCallReply {
+    unsafe { RedisModule_CallReplySetElement.unwrap()(reply, idx) }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -495,7 +555,24 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
     let terminated_args: Vec<RedisString> =
         args.iter().map(|s| RedisString::create(ctx, s)).collect();
 
-    let inner_args: Vec<*mut RedisModuleString> = terminated_args.iter().map(|s| s.inner).collect();
+    replicate_redis_strings(ctx, command, &terminated_args)
+}
+
+pub fn replicate_slices(ctx: *mut RedisModuleCtx, command: &str, args: &[&[u8]]) -> Status {
+    let terminated_args: Vec<RedisString> = args
+        .iter()
+        .map(|s| RedisString::create_from_slice(ctx, s))
+        .collect();
+
+    replicate_redis_strings(ctx, command, &terminated_args)
+}
+
+pub fn replicate_redis_strings(
+    ctx: *mut RedisModuleCtx,
+    command: &str,
+    args: &[RedisString],
+) -> Status {
+    let inner_args: Vec<*mut RedisModuleString> = args.iter().map(|s| s.inner).collect();
 
     let cmd = CString::new(command).unwrap();
 
@@ -505,7 +582,7 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
             cmd.as_ptr(),
             FMT,
             inner_args.as_ptr() as *mut c_char,
-            terminated_args.len(),
+            args.len(),
         )
         .into()
     }
@@ -523,6 +600,11 @@ pub fn load_float(rdb: *mut RedisModuleIO) -> Result<f32, Error> {
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn save_string(rdb: *mut RedisModuleIO, buf: &str) {
+    unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr().cast::<c_char>(), buf.len()) };
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn save_slice(rdb: *mut RedisModuleIO, buf: &[u8]) {
     unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr().cast::<c_char>(), buf.len()) };
 }
 

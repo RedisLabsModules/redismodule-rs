@@ -61,6 +61,21 @@ name = "info"
 crate-type = ["cdylib"]
 required-features = []
 
+[[example]]
+name = "stream"
+crate-type = ["cdylib"]
+required-features = ["experimental-api"]
+
+[[example]]
+name = "server_events"
+crate-type = ["cdylib"]
+required-features = ["experimental-api"]
+
+[[example]]
+name = "scan"
+crate-type = ["cdylib"]
+required-features = ["experimental-api"]
+
 [dependencies]
 bitflags = "1.2"
 libc = "0.2"

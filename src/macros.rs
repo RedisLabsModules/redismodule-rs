@@ -57,7 +57,7 @@ macro_rules! redis_event_handler {
         ) -> c_int {
             let context = $crate::Context::new(ctx);
 
-            let redis_key = $crate::RedisString::from_ptr(key).unwrap();
+            let redis_key = $crate::RedisString::string_as_slice(key);
             let event_str = unsafe { CStr::from_ptr(event) };
             $event_handler(
                 &context,
@@ -91,6 +91,7 @@ macro_rules! redis_module {
             $($data_type:ident),* $(,)*
         ],
         $(init: $init_func:ident,)* $(,)*
+        $(post_init: $post_init_func:ident,)* $(,)*
         $(deinit: $deinit_func:ident,)* $(,)*
         $(info: $info_func:ident,)?
         commands: [
@@ -108,6 +109,24 @@ macro_rules! redis_module {
                 $(@$event_type:ident) +:
                 $event_handler:expr
             ]),* $(,)*
+        ])?
+        $(, server_events: [
+            $([
+                @$server_event_type:ident:
+                $server_event_handler:expr
+            ]),* $(,)*
+        ])?
+        $(, string_configurations: [
+            $($string_config_ctx:expr),* $(,)*
+        ])?
+        $(, bool_configurations: [
+            $($bool_config_ctx:expr),* $(,)*
+        ])?
+        $(, numeric_configurations: [
+            $($numeric_config_ctx:expr),* $(,)*
+        ])?
+        $(, enum_configurations: [
+            $($enum_config_ctx:expr),* $(,)*
         ])?
     ) => {
         extern "C" fn __info_func(
@@ -132,6 +151,7 @@ macro_rules! redis_module {
 
             use $crate::raw;
             use $crate::RedisString;
+            use $crate::context::configuration;
 
             // We use a statically sized buffer to avoid allocating.
             // This is needed since we use a custom allocator that relies on the Redis allocator,
@@ -179,7 +199,67 @@ macro_rules! redis_module {
                 )*
             )?
 
+            $(
+                $(
+                    if let Err(err) = (crate::redis_module::context::server_events::subscribe_to_server_event(
+                        &context,
+                        crate::redis_module::context::server_events::ServerEvents::$server_event_type,
+                        Box::new($server_event_handler))) {
+                            context.log_warning(&format!("Failed register server event, {}", err));
+                            return $crate::Status::Err as c_int;
+                        }
+                )*
+            )?
+
+            if let Some(load_config) = raw::RedisModule_LoadConfigs.as_ref() {
+                // configuration api only available on Redis 7.0, if its not available
+                // ignore it. User will have to find another way to read configuration.
+                $(
+                    $(
+                        if let Err(err) = configuration::register_string_configuration(&context, $string_config_ctx) {
+                            context.log_warning(&format!("Failed register string configuration, {}", err));
+                            return $crate::Status::Err as c_int;
+                        }
+                    )*
+                )?
+
+                $(
+                    $(
+                        if let Err(err) = configuration::register_bool_configuration(&context, $bool_config_ctx) {
+                            context.log_warning(&format!("Failed register string configuration, {}", err));
+                            return $crate::Status::Err as c_int;
+                        }
+                    )*
+                )?
+
+                $(
+                    $(
+                        if let Err(err) = configuration::register_numeric_configuration(&context, $numeric_config_ctx) {
+                            context.log_warning(&format!("Failed register string configuration, {}", err));
+                            return $crate::Status::Err as c_int;
+                        }
+                    )*
+                )?
+
+                $(
+                    $(
+                        if let Err(err) = configuration::register_enum_configuration(&context, $enum_config_ctx) {
+                            context.log_warning(&format!("Failed register string configuration, {}", err));
+                            return $crate::Status::Err as c_int;
+                        }
+                    )*
+                )?
+
+                load_config(ctx);
+            }
+
             raw::register_info_function(ctx, Some(__info_func));
+
+            $(
+                if $post_init_func(&context, &args) == $crate::Status::Err {
+                    return $crate::Status::Err as c_int;
+                }
+            )*
 
             raw::Status::Ok as c_int
         }

@@ -148,3 +148,170 @@ fn test_test_helper_err() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_stream_reader() -> Result<()> {
+    let port: u16 = 6485;
+    let _guards = vec![start_redis_server_with_module("stream", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let _: String = redis::cmd("XADD")
+        .arg(&["s", "1-1", "foo", "bar"])
+        .query(&mut con)
+        .with_context(|| "failed to add data to the stream")?;
+
+    let _: String = redis::cmd("XADD")
+        .arg(&["s", "1-2", "foo", "bar"])
+        .query(&mut con)
+        .with_context(|| "failed to add data to the stream")?;
+
+    let res: String = redis::cmd("STREAM_POP")
+        .arg(&["s"])
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+    assert_eq!(res, "1-1");
+
+    let res: String = redis::cmd("STREAM_POP")
+        .arg(&["s"])
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+    assert_eq!(res, "1-2");
+
+    let res: usize = redis::cmd("XLEN")
+        .arg(&["s"])
+        .query(&mut con)
+        .with_context(|| "failed to add data to the stream")?;
+
+    assert_eq!(res, 0);
+
+    Ok(())
+}
+
+#[test]
+fn test_flush_events() -> Result<()> {
+    let port: u16 = 6486;
+    let _guards = vec![start_redis_server_with_module("server_events", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let _: String = redis::cmd("FLUSHALL")
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+
+    let res: usize = redis::cmd("NUM_FLUSHED")
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+    assert_eq!(res, 2); // 2 is because we have flush start and end events
+
+    let _: String = redis::cmd("FLUSHALL")
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+
+    let res: usize = redis::cmd("NUM_FLUSHED")
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+    assert_eq!(res, 4);
+
+    Ok(())
+}
+
+#[test]
+fn test_role_changed_events() -> Result<()> {
+    let port: u16 = 6487;
+    let _guards = vec![start_redis_server_with_module("server_events", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let _: String = redis::cmd("replicaof")
+        .arg(&["127.0.0.1", "33333"])
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+
+    let res: usize = redis::cmd("NUM_ROLED_CHANGED")
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+    assert_eq!(res, 1);
+
+    let _: String = redis::cmd("replicaof")
+        .arg(&["no", "one"])
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+
+    let res: usize = redis::cmd("NUM_ROLED_CHANGED")
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+    assert_eq!(res, 2);
+
+    Ok(())
+}
+
+#[test]
+fn test_loading_events() -> Result<()> {
+    let port: u16 = 6488;
+    let _guards = vec![start_redis_server_with_module("server_events", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    // initial load
+    let initial_num_loading: usize = redis::cmd("NUM_LOADING")
+        .query(&mut con)
+        .with_context(|| "failed to run NUM_LOADING")?;
+
+    let _: String = redis::cmd("debug")
+        .arg(&["reload"])
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+
+    let res: usize = redis::cmd("NUM_LOADING")
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+    assert_eq!(res, initial_num_loading + 2); // 2 is because we have loading start and end events
+
+    let _: String = redis::cmd("debug")
+        .arg(&["reload"])
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+
+    let res: usize = redis::cmd("NUM_LOADING")
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+    assert_eq!(res, initial_num_loading + 4);
+
+    Ok(())
+}
+
+#[test]
+fn test_key_scan() -> Result<()> {
+    let port: u16 = 6489;
+    let _guards = vec![start_redis_server_with_module("scan", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let _: String = redis::cmd("set")
+        .arg(&["x", "1"])
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+
+    let res: Vec<String> = redis::cmd("SCAN_KEYS")
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+    assert_eq!(res.len(), 1);
+
+    let _: String = redis::cmd("set")
+        .arg(&["y", "1"])
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+
+    let res: Vec<String> = redis::cmd("SCAN_KEYS")
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+    assert_eq!(res.len(), 2);
+
+    Ok(())
+}

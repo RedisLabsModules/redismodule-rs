@@ -70,6 +70,10 @@ impl ThreadSafeContext<BlockedClient> {
         let ctx = Context::new(self.ctx);
         ctx.reply(r)
     }
+
+    pub fn get_ctx(&self) -> Context {
+        Context::new(self.ctx)
+    }
 }
 
 impl<B: Send> ThreadSafeContext<B> {
