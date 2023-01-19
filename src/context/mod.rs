@@ -95,14 +95,15 @@ impl Context {
         }
     }
 
-    pub fn call(&self, command: &str, args: &[&str]) -> RedisResult {
-        let terminated_args: Vec<RedisString> = args
-            .iter()
-            .map(|s| RedisString::create(self.ctx, s))
+    pub fn call<T: ?Sized>(&self, command: &str, args: &[&T]) -> RedisResult 
+    where for<'a> &'a T: Into<RedisString> 
+    {
+        let terminated_args: Vec<*mut raw::RedisModuleString> = args
+            .into_iter()
+            .map(|s|{
+                Into::<RedisString>::into(*s).take()
+            } )
             .collect();
-
-        let inner_args: Vec<*mut raw::RedisModuleString> =
-            terminated_args.iter().map(|s| s.inner).collect();
 
         let cmd = CString::new(command).unwrap();
         let reply: *mut raw::RedisModuleCallReply = unsafe {
@@ -111,13 +112,16 @@ impl Context {
                 self.ctx,
                 cmd.as_ptr(),
                 raw::FMT,
-                inner_args.as_ptr() as *mut c_char,
+                terminated_args.as_ptr() as *mut c_char,
                 terminated_args.len(),
             )
         };
         let result = Self::parse_call_reply(reply);
         if !reply.is_null() {
             raw::free_call_reply(reply);
+        }
+        for s in terminated_args {
+            unsafe{raw::RedisModule_FreeString.unwrap()(self.ctx, s)};
         }
         result
     }

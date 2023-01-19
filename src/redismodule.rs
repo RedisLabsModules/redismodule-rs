@@ -88,6 +88,24 @@ pub fn decode_args(
 
 ///////////////////////////////////////////////////
 
+impl From<&RedisString> for RedisString {
+    fn from(val: &RedisString) -> Self {
+        RedisString::new(std::ptr::null_mut(), val.inner)
+    }
+}
+
+impl From<&str> for RedisString {
+    fn from(val: &str) -> Self {
+        RedisString::create(std::ptr::null_mut(), val)
+    }
+}
+
+impl From<&String> for RedisString {
+    fn from(val: &String) -> Self {
+        RedisString::create(std::ptr::null_mut(), val.as_str())
+    }
+}
+
 #[derive(Debug)]
 pub struct RedisString {
     ctx: *mut raw::RedisModuleCtx,
@@ -95,6 +113,12 @@ pub struct RedisString {
 }
 
 impl RedisString {
+    pub(crate) fn take(&mut self) -> *mut raw::RedisModuleString {
+        let inner = self.inner;
+        self.inner = std::ptr::null_mut();
+        inner
+    }
+
     pub fn new(ctx: *mut raw::RedisModuleCtx, inner: *mut raw::RedisModuleString) -> Self {
         raw::string_retain_string(ctx, inner);
         Self { ctx, inner }
@@ -198,8 +222,10 @@ impl RedisString {
 
 impl Drop for RedisString {
     fn drop(&mut self) {
-        unsafe {
-            raw::RedisModule_FreeString.unwrap()(self.ctx, self.inner);
+        if !self.inner.is_null() {
+            unsafe {
+                raw::RedisModule_FreeString.unwrap()(self.ctx, self.inner);
+            }
         }
     }
 }
