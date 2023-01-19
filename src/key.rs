@@ -1,4 +1,6 @@
 use std::convert::TryFrom;
+use std::ops::Index;
+use std::ops::IndexMut;
 use std::os::raw::c_void;
 use std::ptr;
 use std::time::Duration;
@@ -73,7 +75,7 @@ impl RedisKey {
         self.key_inner == null_key
     }
 
-    pub fn read<'a>(&self) -> Result<Option<&'a [u8]>, RedisError> {
+    pub fn read(&self) -> Result<Option<&[u8]>, RedisError> {
         if self.is_null() {
             Ok(None)
         } else {
@@ -442,6 +444,20 @@ pub struct StringDMA<'a> {
     buffer: &'a mut [u8],
 }
 
+impl<'a> Index<usize> for StringDMA<'a> {
+    type Output = u8;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.buffer[index]
+    }
+}
+
+impl<'a> IndexMut<usize> for StringDMA<'a> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.buffer[index]
+    }
+}
+
 impl<'a> StringDMA<'a> {
     fn new(key: &'a RedisKeyWritable) -> Result<StringDMA<'a>, RedisError> {
         let mut length: size_t = 0;
@@ -484,6 +500,10 @@ impl<'a> StringDMA<'a> {
 
     pub fn as_bytes(&self) -> &[u8] {
         self.buffer
+    }
+
+    pub const fn len(&self) -> usize {
+        self.buffer.len()
     }
 }
 
