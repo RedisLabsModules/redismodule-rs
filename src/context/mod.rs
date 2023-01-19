@@ -101,7 +101,7 @@ impl Context {
             .map(|s| RedisString::create(self.ctx, s))
             .collect();
 
-        let inner_args: Vec<*mut raw::RedisModuleString> =
+        let mut inner_args: Vec<*mut raw::RedisModuleString> =
             terminated_args.iter().map(|s| s.inner).collect();
 
         let cmd = CString::new(command).unwrap();
@@ -111,7 +111,7 @@ impl Context {
                 self.ctx,
                 cmd.as_ptr(),
                 raw::FMT,
-                inner_args.as_ptr() as *mut c_char,
+                inner_args.as_mut_ptr(),
                 terminated_args.len(),
             )
         };
@@ -195,7 +195,7 @@ impl Context {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
                     s.as_ptr().cast::<c_char>(),
-                    s.len() as usize,
+                    s.len(),
                 )
                 .into()
             },
@@ -208,7 +208,7 @@ impl Context {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
                     s.as_ptr().cast::<c_char>(),
-                    s.len() as usize,
+                    s.len(),
                 )
                 .into()
             },
@@ -347,7 +347,7 @@ impl Context {
             _ => {
                 // Call "info server"
                 if let Ok(info) = self.call("info", &["server"]) {
-                    Context::version_from_info(info)
+                    Self::version_from_info(info)
                 } else {
                     Err(RedisError::Str("Error calling \"info server\""))
                 }
