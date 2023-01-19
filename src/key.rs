@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
-use std::ops::Index;
-use std::ops::IndexMut;
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::os::raw::c_void;
 use std::ptr;
 use std::time::Duration;
@@ -444,17 +444,17 @@ pub struct StringDMA<'a> {
     buffer: &'a mut [u8],
 }
 
-impl<'a> Index<usize> for StringDMA<'a> {
-    type Output = u8;
+impl<'a> Deref for StringDMA<'a> {
+    type Target = [u8];
 
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.buffer[index]
+    fn deref(&self) -> &Self::Target {
+        self.buffer
     }
 }
 
-impl<'a> IndexMut<usize> for StringDMA<'a> {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.buffer[index]
+impl<'a> DerefMut for StringDMA<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.buffer
     }
 }
 
@@ -496,18 +496,6 @@ impl<'a> StringDMA<'a> {
         }
         self.buffer[current_len..new_len].copy_from_slice(data);
         Ok(self)
-    }
-
-    pub fn as_bytes(&self) -> &[u8] {
-        self.buffer
-    }
-
-    pub const fn len(&self) -> usize {
-        self.buffer.len()
-    }
-
-    pub const fn is_empty(&self) -> bool {
-        self.buffer.is_empty()
     }
 }
 
