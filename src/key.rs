@@ -505,6 +505,10 @@ impl<'a> StringDMA<'a> {
     pub const fn len(&self) -> usize {
         self.buffer.len()
     }
+
+    pub const fn is_empty(&self) -> bool {
+        self.buffer.is_empty()
+    }
 }
 
 impl From<raw::Status> for Result<(), RedisError> {
