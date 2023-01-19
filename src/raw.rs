@@ -280,8 +280,13 @@ pub fn set_expire(key: *mut RedisModuleKey, expire: c_longlong) -> Status {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> *const c_char {
+pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> *mut c_char {
     unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits) }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn string_truncate(key: *mut RedisModuleKey, new_len: size_t) -> Status {
+    unsafe { RedisModule_StringTruncate.unwrap()(key, new_len).into() }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]

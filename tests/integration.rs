@@ -148,3 +148,23 @@ fn test_test_helper_err() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_string() -> Result<()> {
+    let port: u16 = 6485;
+    let _guards = vec![start_redis_server_with_module("string", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    redis::cmd("string.set")
+        .arg(&["key", "value"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    let res: String = redis::cmd("string.get").arg(&["key"]).query(&mut con)?;
+
+    assert_eq!(&res, "value");
+
+    Ok(())
+}
