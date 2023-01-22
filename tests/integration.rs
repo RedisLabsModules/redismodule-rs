@@ -168,3 +168,21 @@ fn test_string() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_call() -> Result<()> {
+    let port: u16 = 6486;
+    let _guards = vec![start_redis_server_with_module("call", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: String = redis::cmd("call.test")
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(&res, "pass");
+
+    Ok(())
+}
+
