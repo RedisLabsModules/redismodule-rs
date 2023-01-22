@@ -14,8 +14,9 @@ pub enum RedisValue {
     NoReply, // No reply at all (as opposed to a Null reply)
 }
 
-impl From<RedisValue> for Result<String, RedisError> {
-    fn from(val: RedisValue) -> Self {
+impl TryFrom<RedisValue> for String {
+    type Error = RedisError;
+    fn try_from(val: RedisValue) -> Result<Self, RedisError> {
         match val {
             RedisValue::SimpleStringStatic(s) => Ok(s.to_string()),
             RedisValue::SimpleString(s) => Ok(s),
