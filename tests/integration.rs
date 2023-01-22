@@ -185,4 +185,3 @@ fn test_call() -> Result<()> {
 
     Ok(())
 }
-

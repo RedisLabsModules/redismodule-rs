@@ -1,4 +1,4 @@
-use crate::{RedisString, RedisError};
+use crate::{RedisError, RedisString};
 
 #[derive(Debug, PartialEq)]
 pub enum RedisValue {
@@ -22,7 +22,7 @@ impl From<RedisValue> for Result<String, RedisError> {
             RedisValue::BulkString(s) => Ok(s),
             RedisValue::BulkRedisString(s) => Ok(s.try_as_str()?.to_string()),
             RedisValue::StringBuffer(s) => Ok(std::str::from_utf8(&s)?.to_string()),
-            _ => Err(RedisError::Str("Can not convert result to String"))
+            _ => Err(RedisError::Str("Can not convert result to String")),
         }
     }
 }
