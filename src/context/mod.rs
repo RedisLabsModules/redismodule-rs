@@ -28,13 +28,13 @@ pub struct Context {
     pub ctx: *mut raw::RedisModuleCtx,
 }
 
-pub struct StrCallArs<'a> {
+pub struct StrCallArgs<'a> {
     is_owner: bool,
     args: Vec<*mut raw::RedisModuleString>,
     phantom: std::marker::PhantomData<&'a u64>, // allows to make sure the object will not leave longer then actaull arguments slice
 }
 
-impl<'a> Drop for StrCallArs<'a> {
+impl<'a> Drop for StrCallArgs<'a> {
     fn drop(&mut self) {
         if self.is_owner {
             for v in self.args.iter() {
@@ -44,9 +44,9 @@ impl<'a> Drop for StrCallArs<'a> {
     }
 }
 
-impl<'a> From<&'a [&str]> for StrCallArs<'a> {
+impl<'a> From<&'a [&str]> for StrCallArgs<'a> {
     fn from(vals: &'a [&str]) -> Self {
-        StrCallArs {
+        StrCallArgs {
             is_owner: true,
             args: vals
                 .iter()
@@ -57,22 +57,9 @@ impl<'a> From<&'a [&str]> for StrCallArs<'a> {
     }
 }
 
-impl<'a, const SIZE: usize> From<&'a [&str; SIZE]> for StrCallArs<'a> {
-    fn from(vals: &'a [&str; SIZE]) -> Self {
-        StrCallArs {
-            is_owner: true,
-            args: vals
-                .iter()
-                .map(|v| RedisString::create(std::ptr::null_mut(), *v).take())
-                .collect(),
-            phantom: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<'a> From<&'a [&String]> for StrCallArs<'a> {
+impl<'a> From<&'a [&String]> for StrCallArgs<'a> {
     fn from(vals: &'a [&String]) -> Self {
-        StrCallArs {
+        StrCallArgs {
             is_owner: true,
             args: vals
                 .iter()
@@ -83,22 +70,9 @@ impl<'a> From<&'a [&String]> for StrCallArs<'a> {
     }
 }
 
-impl<'a, const SIZE: usize> From<&'a [&String; SIZE]> for StrCallArs<'a> {
-    fn from(vals: &'a [&String; SIZE]) -> Self {
-        StrCallArs {
-            is_owner: true,
-            args: vals
-                .iter()
-                .map(|v| RedisString::create(std::ptr::null_mut(), v.as_str()).take())
-                .collect(),
-            phantom: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<'a> From<&'a [&RedisString]> for StrCallArs<'a> {
+impl<'a> From<&'a [&RedisString]> for StrCallArgs<'a> {
     fn from(vals: &'a [&RedisString]) -> Self {
-        StrCallArs {
+        StrCallArgs {
             is_owner: false,
             args: vals.iter().map(|v| v.inner).collect(),
             phantom: std::marker::PhantomData,
@@ -106,17 +80,16 @@ impl<'a> From<&'a [&RedisString]> for StrCallArs<'a> {
     }
 }
 
-impl<'a, const SIZE: usize> From<&'a [&RedisString; SIZE]> for StrCallArs<'a> {
-    fn from(vals: &'a [&RedisString; SIZE]) -> Self {
-        StrCallArs {
-            is_owner: false,
-            args: vals.iter().map(|v| v.inner).collect(),
-            phantom: std::marker::PhantomData,
-        }
+impl<'a, const SIZE: usize, T: ?Sized> From<&'a [&T; SIZE]> for StrCallArgs<'a>
+where
+    for<'b> &'a [&'b T]: Into<StrCallArgs<'a>>,
+{
+    fn from(vals: &'a [&T; SIZE]) -> Self {
+        vals.as_ref().into()
     }
 }
 
-impl<'a> StrCallArs<'a> {
+impl<'a> StrCallArgs<'a> {
     fn args(&self) -> &[*mut raw::RedisModuleString] {
         &self.args
     }
@@ -189,8 +162,8 @@ impl Context {
         }
     }
 
-    pub fn call<'a, T: Into<StrCallArs<'a>>>(&self, command: &str, args: T) -> RedisResult {
-        let call_args: StrCallArs = args.into();
+    pub fn call<'a, T: Into<StrCallArgs<'a>>>(&self, command: &str, args: T) -> RedisResult {
+        let call_args: StrCallArgs = args.into();
         let final_args: &[*mut raw::RedisModuleString] = call_args.args();
 
         let cmd = CString::new(command).unwrap();
