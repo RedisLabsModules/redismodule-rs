@@ -28,6 +28,100 @@ pub struct Context {
     pub ctx: *mut raw::RedisModuleCtx,
 }
 
+pub struct StrCallArs<'a> {
+    is_owner: bool,
+    args: Vec<*mut raw::RedisModuleString>,
+    phantom: std::marker::PhantomData<&'a u64>, // allows to make sure the object will not leave longer then actaull arguments slice
+}
+
+impl<'a> Drop for StrCallArs<'a> {
+    fn drop(&mut self) {
+        if self.is_owner {
+            for v in self.args.iter() {
+                unsafe { raw::RedisModule_FreeString.unwrap()(std::ptr::null_mut(), *v) };
+            }
+        }
+    }
+}
+
+impl<'a> From<&'a [&str]> for StrCallArs<'a> {
+    fn from(vals: &'a [&str]) -> Self {
+        StrCallArs {
+            is_owner: true,
+            args: vals
+                .iter()
+                .map(|v| RedisString::create(std::ptr::null_mut(), *v).take())
+                .collect(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, const SIZE: usize> From<&'a [&str; SIZE]> for StrCallArs<'a> {
+    fn from(vals: &'a [&str; SIZE]) -> Self {
+        StrCallArs {
+            is_owner: true,
+            args: vals
+                .iter()
+                .map(|v| RedisString::create(std::ptr::null_mut(), *v).take())
+                .collect(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a> From<&'a [&String]> for StrCallArs<'a> {
+    fn from(vals: &'a [&String]) -> Self {
+        StrCallArs {
+            is_owner: true,
+            args: vals
+                .iter()
+                .map(|v| RedisString::create(std::ptr::null_mut(), v.as_str()).take())
+                .collect(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, const SIZE: usize> From<&'a [&String; SIZE]> for StrCallArs<'a> {
+    fn from(vals: &'a [&String; SIZE]) -> Self {
+        StrCallArs {
+            is_owner: true,
+            args: vals
+                .iter()
+                .map(|v| RedisString::create(std::ptr::null_mut(), v.as_str()).take())
+                .collect(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a> From<&'a [&RedisString]> for StrCallArs<'a> {
+    fn from(vals: &'a [&RedisString]) -> Self {
+        StrCallArs {
+            is_owner: false,
+            args: vals.iter().map(|v| v.inner).collect(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, const SIZE: usize> From<&'a [&RedisString; SIZE]> for StrCallArs<'a> {
+    fn from(vals: &'a [&RedisString; SIZE]) -> Self {
+        StrCallArs {
+            is_owner: false,
+            args: vals.iter().map(|v| v.inner).collect(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a> StrCallArs<'a> {
+    fn args(&self) -> &[*mut raw::RedisModuleString] {
+        &self.args
+    }
+}
+
 impl Context {
     pub const fn new(ctx: *mut raw::RedisModuleCtx) -> Self {
         Self { ctx }
@@ -95,15 +189,9 @@ impl Context {
         }
     }
 
-    pub fn call<T: ?Sized>(&self, command: &str, args: &[&T]) -> RedisResult 
-    where for<'a> &'a T: Into<RedisString> 
-    {
-        let terminated_args: Vec<*mut raw::RedisModuleString> = args
-            .into_iter()
-            .map(|s|{
-                Into::<RedisString>::into(*s).take()
-            } )
-            .collect();
+    pub fn call<'a, T: Into<StrCallArs<'a>>>(&self, command: &str, args: T) -> RedisResult {
+        let call_args: StrCallArs = args.into();
+        let final_args: &[*mut raw::RedisModuleString] = call_args.args();
 
         let cmd = CString::new(command).unwrap();
         let reply: *mut raw::RedisModuleCallReply = unsafe {
@@ -112,16 +200,13 @@ impl Context {
                 self.ctx,
                 cmd.as_ptr(),
                 raw::FMT,
-                terminated_args.as_ptr() as *mut c_char,
-                terminated_args.len(),
+                final_args.as_ptr() as *mut c_char,
+                final_args.len(),
             )
         };
         let result = Self::parse_call_reply(reply);
         if !reply.is_null() {
             raw::free_call_reply(reply);
-        }
-        for s in terminated_args {
-            unsafe{raw::RedisModule_FreeString.unwrap()(self.ctx, s)};
         }
         result
     }
