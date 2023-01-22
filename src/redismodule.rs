@@ -114,6 +114,12 @@ impl RedisString {
         Self { ctx, inner }
     }
 
+    pub fn create_from_slice(ctx: *mut raw::RedisModuleCtx, s: &[u8]) -> Self {
+        let inner = unsafe { raw::RedisModule_CreateString.unwrap()(ctx, s.as_ptr() as *const c_char, s.len()) };
+
+        Self { ctx, inner }
+    }
+
     pub fn from_redis_module_string(
         ctx: *mut raw::RedisModuleCtx,
         inner: *mut raw::RedisModuleString,

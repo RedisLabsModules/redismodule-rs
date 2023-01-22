@@ -31,7 +31,41 @@ pub struct Context {
 pub struct StrCallArgs<'a> {
     is_owner: bool,
     args: Vec<*mut raw::RedisModuleString>,
-    phantom: std::marker::PhantomData<&'a u64>, // allows to make sure the object will not leave longer then actaull arguments slice
+    phantom: std::marker::PhantomData<&'a u64>, // allows to make sure the object will not leave longer than actaull arguments slice
+}
+
+pub trait AsBytes {
+    fn as_bytes(&self) -> &[u8];
+}
+
+impl AsBytes for str {
+    fn as_bytes(&self) -> &[u8] {
+        self.as_bytes()
+    }
+}
+
+impl AsBytes for String {
+    fn as_bytes(&self) -> &[u8] {
+        self.as_bytes()
+    }
+}
+
+impl AsBytes for [u8] {
+    fn as_bytes(&self) -> &[u8] {
+        self
+    }
+}
+
+impl AsBytes for Vec<u8> {
+    fn as_bytes(&self) -> &[u8] {
+        self
+    }
+}
+
+impl<const SIZE: usize> AsBytes for [u8;SIZE] {
+    fn as_bytes(&self) -> &[u8] {
+        self
+    }
 }
 
 impl<'a> Drop for StrCallArgs<'a> {
@@ -44,26 +78,13 @@ impl<'a> Drop for StrCallArgs<'a> {
     }
 }
 
-impl<'a> From<&'a [&str]> for StrCallArgs<'a> {
-    fn from(vals: &'a [&str]) -> Self {
+impl<'a, T:AsBytes + ?Sized> From<&'a [&T]> for StrCallArgs<'a> {
+    fn from(vals: &'a [&T]) -> Self {
         StrCallArgs {
             is_owner: true,
             args: vals
                 .iter()
-                .map(|v| RedisString::create(std::ptr::null_mut(), *v).take())
-                .collect(),
-            phantom: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<'a> From<&'a [&String]> for StrCallArgs<'a> {
-    fn from(vals: &'a [&String]) -> Self {
-        StrCallArgs {
-            is_owner: true,
-            args: vals
-                .iter()
-                .map(|v| RedisString::create(std::ptr::null_mut(), v.as_str()).take())
+                .map(|v| RedisString::create_from_slice(std::ptr::null_mut(),v.as_bytes()).take())
                 .collect(),
             phantom: std::marker::PhantomData,
         }
