@@ -111,8 +111,8 @@ where
 }
 
 impl<'a> StrCallArgs<'a> {
-    fn args(&self) -> &[*mut raw::RedisModuleString] {
-        &self.args
+    fn args_mut(&mut self) -> &mut [*mut raw::RedisModuleString] {
+        &mut self.args
     }
 }
 
@@ -184,8 +184,8 @@ impl Context {
     }
 
     pub fn call<'a, T: Into<StrCallArgs<'a>>>(&self, command: &str, args: T) -> RedisResult {
-        let call_args: StrCallArgs = args.into();
-        let final_args: &[*mut raw::RedisModuleString] = call_args.args();
+        let mut call_args: StrCallArgs = args.into();
+        let final_args = call_args.args_mut();
 
         let cmd = CString::new(command).unwrap();
         let reply: *mut raw::RedisModuleCallReply = unsafe {
@@ -194,7 +194,7 @@ impl Context {
                 self.ctx,
                 cmd.as_ptr(),
                 raw::FMT,
-                final_args.as_ptr() as *mut c_char,
+                final_args.as_mut_ptr(),
                 final_args.len(),
             )
         };
@@ -278,7 +278,7 @@ impl Context {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
                     s.as_ptr().cast::<c_char>(),
-                    s.len() as usize,
+                    s.len(),
                 )
                 .into()
             },
@@ -291,7 +291,7 @@ impl Context {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
                     s.as_ptr().cast::<c_char>(),
-                    s.len() as usize,
+                    s.len(),
                 )
                 .into()
             },
@@ -430,7 +430,7 @@ impl Context {
             _ => {
                 // Call "info server"
                 if let Ok(info) = self.call("info", &["server"]) {
-                    Context::version_from_info(info)
+                    Self::version_from_info(info)
                 } else {
                     Err(RedisError::Str("Error calling \"info server\""))
                 }

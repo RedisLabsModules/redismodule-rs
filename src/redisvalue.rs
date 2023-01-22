@@ -89,10 +89,7 @@ impl From<&String> for RedisValue {
 
 impl<T: Into<Self>> From<Option<T>> for RedisValue {
     fn from(s: Option<T>) -> Self {
-        match s {
-            Some(v) => v.into(),
-            None => Self::Null,
-        }
+        s.map_or(Self::Null, |v| v.into())
     }
 }
 
