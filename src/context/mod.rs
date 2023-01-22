@@ -62,7 +62,7 @@ impl AsBytes for Vec<u8> {
     }
 }
 
-impl<const SIZE: usize> AsBytes for [u8;SIZE] {
+impl<const SIZE: usize> AsBytes for [u8; SIZE] {
     fn as_bytes(&self) -> &[u8] {
         self
     }
@@ -78,13 +78,13 @@ impl<'a> Drop for StrCallArgs<'a> {
     }
 }
 
-impl<'a, T:AsBytes + ?Sized> From<&'a [&T]> for StrCallArgs<'a> {
+impl<'a, T: AsBytes + ?Sized> From<&'a [&T]> for StrCallArgs<'a> {
     fn from(vals: &'a [&T]) -> Self {
         StrCallArgs {
             is_owner: true,
             args: vals
                 .iter()
-                .map(|v| RedisString::create_from_slice(std::ptr::null_mut(),v.as_bytes()).take())
+                .map(|v| RedisString::create_from_slice(std::ptr::null_mut(), v.as_bytes()).take())
                 .collect(),
             phantom: std::marker::PhantomData,
         }
