@@ -41,6 +41,6 @@ redis_module! {
     version: 1,
     data_types: [],
     commands: [
-        ["STREAM_POP", stream_read_from, "fast deny-oom", 1, 1, 1],
+        ["STREAM_POP", stream_read_from, "write", 1, 1, 1],
     ],
 }
