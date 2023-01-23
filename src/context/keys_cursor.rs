@@ -24,6 +24,7 @@ extern "C" fn scan_callback<C: FnMut(&Context, RedisString, Option<&RedisKey>)>(
     let callback = unsafe { &mut *(privdata as *mut C) };
     callback(&context, key_name, redis_key.as_ref());
 
+    // we are not the owner of the key, so we must take the underline *mut raw::RedisModuleKey so it will not be freed.
     redis_key.map(|v| v.take());
 }
 
