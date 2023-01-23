@@ -168,3 +168,30 @@ fn test_string() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_server_event() -> Result<()> {
+    let port: u16 = 6486;
+    let _guards = vec![start_redis_server_with_module("server_events", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    redis::cmd("flushall")
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    let res: i64 = redis::cmd("num_flushed").query(&mut con)?;
+
+    assert_eq!(res, 1);
+
+    redis::cmd("flushall")
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    let res: i64 = redis::cmd("num_flushed").query(&mut con)?;
+
+    assert_eq!(res, 2);
+
+    Ok(())
+}

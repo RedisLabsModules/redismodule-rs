@@ -51,6 +51,10 @@ name = "load_unload"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "server_events"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "events"
 crate-type = ["cdylib"]
 required-features = ["experimental-api"]
@@ -74,10 +78,12 @@ regex = "1"
 strum_macros = "0.24"
 #failure = "0.1"
 backtrace = "0.3"
+linkme = "0.3"
 
 [dev-dependencies]
 anyhow = "1.0.38"
 redis = "0.22.1"
+redis_module_derive = { path = "./redismodule-rs-derive"}
 
 [build-dependencies]
 bindgen = "0.63"
