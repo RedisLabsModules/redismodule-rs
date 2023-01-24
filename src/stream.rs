@@ -34,10 +34,10 @@ impl<'key> StreamIterator<'key> {
                 to.as_mut().map_or(ptr::null_mut(), |v| v),
             )
         };
-        if res != raw::REDISMODULE_OK as i32 {
-            Err(RedisError::Str("Failed creating stream iterator"))
-        } else {
+if Status::Ok == res.into() {
             Ok(StreamIterator { key })
+        } else {
+            Err(RedisError::Str("Failed creating stream iterator"))
         }
     }
 }
@@ -50,24 +50,28 @@ impl<'key> Iterator for StreamIterator<'key> {
         let mut num_fields: c_long = 0;
         let mut field_name: *mut raw::RedisModuleString = ptr::null_mut();
         let mut field_val: *mut raw::RedisModuleString = ptr::null_mut();
-        if unsafe {
-            raw::RedisModule_StreamIteratorNextID.unwrap()(
-                self.key.key_inner,
-                &mut id,
-                &mut num_fields,
-            )
-        } != raw::REDISMODULE_OK as i32
+        if Status::Ok
+            != unsafe {
+                raw::RedisModule_StreamIteratorNextID.unwrap()(
+                    self.key.key_inner,
+                    &mut id,
+                    &mut num_fields,
+                )
+            }
+            .into()
         {
             return None;
         }
         let mut fields = Vec::new();
-        while unsafe {
-            raw::RedisModule_StreamIteratorNextField.unwrap()(
-                self.key.key_inner,
-                &mut field_name,
-                &mut field_val,
-            )
-        } == raw::REDISMODULE_OK as i32
+        while Status::Ok
+            == unsafe {
+                raw::RedisModule_StreamIteratorNextField.unwrap()(
+                    self.key.key_inner,
+                    &mut field_name,
+                    &mut field_val,
+                )
+                .into()
+            }
         {
             fields.push((
                 RedisString::from_redis_module_string(self.key.ctx, field_name),
