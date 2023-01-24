@@ -309,7 +309,7 @@ impl Context {
         }
     }
 
-    /// Returns the redis version either by calling RedisModule_GetServerVersion API,
+    /// Returns the redis version either by calling `RedisModule_GetServerVersion` API,
     /// Or if it is not available, by calling "info server" API and parsing the reply
     pub fn get_redis_version(&self) -> Result<Version, RedisError> {
         self.get_redis_version_internal(false)
