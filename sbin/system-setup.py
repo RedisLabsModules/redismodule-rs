@@ -12,7 +12,7 @@ import paella
 
 #----------------------------------------------------------------------------------------------
 
-class RedisModuleRSSetup(paella.Setup):\
+class RedisModuleRSSetup(paella.Setup):
     def __init__(self, args):
         paella.Setup.__init__(self, args.nop)
 
