@@ -23,7 +23,6 @@ class RedisModuleRSSetup(paella.Setup):
 
         self.run("%s/bin/getclang --modern" % READIES)
         self.run("%s/bin/getrust" % READIES)
-
         if self.osnick == 'ol8':
             self.install('tar')
         self.run("%s/bin/getcmake --usr" % READIES)
