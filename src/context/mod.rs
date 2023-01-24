@@ -31,15 +31,16 @@ pub struct Context {
 pub struct StrCallArgs<'a> {
     is_owner: bool,
     args: Vec<*mut raw::RedisModuleString>,
-    phantom: std::marker::PhantomData<&'a u64>, // allows to make sure the object will not leave longer than actaull arguments slice
+    // Phantom is used to make sure the object will not live longer than actual arguments slice
+    phantom: std::marker::PhantomData<&'a raw::RedisModuleString>,
 }
 
 impl<'a> Drop for StrCallArgs<'a> {
     fn drop(&mut self) {
         if self.is_owner {
-            for v in self.args.iter() {
-                unsafe { raw::RedisModule_FreeString.unwrap()(std::ptr::null_mut(), *v) };
-            }
+            self.args.iter_mut().for_each(|v| unsafe {
+                raw::RedisModule_FreeString.unwrap()(std::ptr::null_mut(), *v)
+            });
         }
     }
 }
