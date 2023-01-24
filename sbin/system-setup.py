@@ -18,10 +18,8 @@ class RedisModuleRSSetup(paella.Setup):
 
     def common_first(self):
         self.install_downloaders()
-
+        self.run("%s/bin/enable-utf8" % READIES, sudo=self.os != 'macos')
         self.install("git")
-
-        self.run("%s/bin/enable-utf8" % READIES)
 
         self.run("%s/bin/getclang --modern" % READIES)
         self.run("%s/bin/getrust" % READIES)
@@ -48,7 +46,7 @@ class RedisModuleRSSetup(paella.Setup):
         self.run("%s/bin/getredis -v 6" % READIES)
 
     def common_last(self):
-        self.pip_install("toml")
+        pass
 
 #----------------------------------------------------------------------------------------------
 
