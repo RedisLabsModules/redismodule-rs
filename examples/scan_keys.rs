@@ -19,6 +19,6 @@ redis_module! {
     version: 1,
     data_types: [],
     commands: [
-        ["scan_keys", scan_keys, "", 0, 0, 0],
+        ["scan_keys", scan_keys, "readonly", 0, 0, 0],
     ],
 }

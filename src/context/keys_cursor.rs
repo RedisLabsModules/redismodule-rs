@@ -10,18 +10,18 @@ pub struct KeysCursor {
 
 extern "C" fn scan_callback<C: FnMut(&Context, RedisString, Option<&RedisKey>)>(
     ctx: *mut raw::RedisModuleCtx,
-    keyname: *mut raw::RedisModuleString,
+    key_name: *mut raw::RedisModuleString,
     key: *mut raw::RedisModuleKey,
-    privdata: *mut ::std::os::raw::c_void,
+    private_data: *mut ::std::os::raw::c_void,
 ) {
     let context = Context::new(ctx);
-    let key_name = RedisString::new(ctx, keyname);
-    let redis_key = if !key.is_null() {
-        Some(RedisKey::from_raw_parts(ctx, key))
-    } else {
+    let key_name = RedisString::new(ctx, key_name);
+    let redis_key = if key.is_null() {
         None
+    } else {
+        Some(RedisKey::from_raw_parts(ctx, key))
     };
-    let callback = unsafe { &mut *(privdata as *mut C) };
+    let callback = unsafe { &mut *(private_data.cast::<C>()) };
     callback(&context, key_name, redis_key.as_ref());
 
     // we are not the owner of the key, so we must take the underline *mut raw::RedisModuleKey so it will not be freed.
@@ -52,6 +52,12 @@ impl KeysCursor {
 
     pub fn restart(&self) {
         unsafe { raw::RedisModule_ScanCursorRestart.unwrap()(self.inner_cursor) };
+    }
+}
+
+impl Default for KeysCursor {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
