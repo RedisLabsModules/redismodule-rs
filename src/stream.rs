@@ -1,8 +1,8 @@
-use crate::Status;
 use crate::key::RedisKey;
 use crate::raw;
 use crate::RedisError;
 use crate::RedisString;
+use crate::Status;
 use std::os::raw::c_long;
 use std::ptr;
 
