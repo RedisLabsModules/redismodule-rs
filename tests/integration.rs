@@ -170,8 +170,34 @@ fn test_string() -> Result<()> {
 }
 
 #[test]
-fn test_stream_reader() -> Result<()> {
+fn test_scan() -> Result<()> {
     let port: u16 = 6486;
+    let _guards = vec![start_redis_server_with_module("scan_keys", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    redis::cmd("set")
+        .arg(&["x", "1"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    redis::cmd("set")
+        .arg(&["y", "1"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    let mut res: Vec<String> = redis::cmd("scan_keys").query(&mut con)?;
+    res.sort();
+
+    assert_eq!(&res, &["x", "y"]);
+
+    Ok(())
+}
+
+#[test]
+fn test_stream_reader() -> Result<()> {
+    let port: u16 = 6487;
     let _guards = vec![start_redis_server_with_module("stream", port)
         .with_context(|| "failed to start redis server")?];
     let mut con =

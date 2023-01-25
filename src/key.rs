@@ -38,8 +38,21 @@ pub struct RedisKey {
 }
 
 impl RedisKey {
+    pub(crate) fn take(mut self) -> *mut raw::RedisModuleKey {
+        let res = self.key_inner;
+        self.key_inner = std::ptr::null_mut();
+        res
+    }
+
     pub fn open(ctx: *mut raw::RedisModuleCtx, key: &RedisString) -> Self {
         let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::Read));
+        Self { ctx, key_inner }
+    }
+
+    pub(crate) fn from_raw_parts(
+        ctx: *mut raw::RedisModuleCtx,
+        key_inner: *mut raw::RedisModuleKey,
+    ) -> Self {
         Self { ctx, key_inner }
     }
 
@@ -142,7 +155,9 @@ impl RedisKey {
 impl Drop for RedisKey {
     // Frees resources appropriately as a RedisKey goes out of scope.
     fn drop(&mut self) {
-        raw::close_key(self.key_inner);
+        if !self.key_inner.is_null() {
+            raw::close_key(self.key_inner);
+        }
     }
 }
 

@@ -66,6 +66,10 @@ crate-type = ["cdylib"]
 required-features = []
 
 [[example]]
+name = "scan_keys"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "stream"
 crate-type = ["cdylib"]
 
