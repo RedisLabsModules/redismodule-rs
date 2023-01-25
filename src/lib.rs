@@ -12,6 +12,7 @@ pub mod rediserror;
 mod redismodule;
 pub mod redisraw;
 pub mod redisvalue;
+pub mod stream;
 
 mod context;
 pub mod key;

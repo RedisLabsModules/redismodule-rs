@@ -12,6 +12,7 @@ use raw::KeyType;
 use crate::native_types::RedisType;
 use crate::raw;
 use crate::redismodule::REDIS_OK;
+use crate::stream::StreamIterator;
 use crate::RedisError;
 use crate::RedisResult;
 use crate::RedisString;
@@ -32,8 +33,8 @@ pub enum KeyMode {
 
 #[derive(Debug)]
 pub struct RedisKey {
-    ctx: *mut raw::RedisModuleCtx,
-    key_inner: *mut raw::RedisModuleKey,
+    pub(crate) ctx: *mut raw::RedisModuleCtx,
+    pub(crate) key_inner: *mut raw::RedisModuleKey,
 }
 
 impl RedisKey {
@@ -135,6 +136,20 @@ impl RedisKey {
             })
         };
         Ok(val)
+    }
+
+    pub fn get_stream_iterator(&self, reverse: bool) -> Result<StreamIterator, RedisError> {
+        StreamIterator::new(self, None, None, false, reverse)
+    }
+
+    pub fn get_stream_range_iterator(
+        &self,
+        from: Option<raw::RedisModuleStreamID>,
+        to: Option<raw::RedisModuleStreamID>,
+        exclusive: bool,
+        reverse: bool,
+    ) -> Result<StreamIterator, RedisError> {
+        StreamIterator::new(self, from, to, exclusive, reverse)
     }
 }
 
@@ -350,6 +365,26 @@ impl RedisKeyWritable {
         .into();
 
         status.into()
+    }
+
+    pub fn trim_stream_by_id(
+        &self,
+        mut id: raw::RedisModuleStreamID,
+        approx: bool,
+    ) -> Result<usize, RedisError> {
+        let flags = if approx {
+            raw::REDISMODULE_STREAM_TRIM_APPROX
+        } else {
+            0
+        };
+        let res = unsafe {
+            raw::RedisModule_StreamTrimByID.unwrap()(self.key_inner, flags as i32, &mut id)
+        };
+        if res <= 0 {
+            Err(RedisError::Str("Failed trimming the stream"))
+        } else {
+            Ok(res as usize)
+        }
     }
 }
 
