@@ -34,7 +34,7 @@ impl<'key> StreamIterator<'key> {
                 to.as_mut().map_or(ptr::null_mut(), |v| v),
             )
         };
-if Status::Ok == res.into() {
+        if Status::Ok == res.into() {
             Ok(StreamIterator { key })
         } else {
             Err(RedisError::Str("Failed creating stream iterator"))
