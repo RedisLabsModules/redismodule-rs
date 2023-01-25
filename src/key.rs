@@ -138,8 +138,8 @@ impl RedisKey {
         Ok(val)
     }
 
-    pub fn get_stream_iterator(&self) -> Result<StreamIterator, RedisError> {
-        StreamIterator::new(self, None, None, false)
+    pub fn get_stream_iterator(&self, reverse: bool) -> Result<StreamIterator, RedisError> {
+        StreamIterator::new(self, None, None, false, reverse)
     }
 
     pub fn get_stream_range_iterator(
@@ -147,8 +147,9 @@ impl RedisKey {
         from: Option<raw::RedisModuleStreamID>,
         to: Option<raw::RedisModuleStreamID>,
         exclusive: bool,
+        reverse: bool,
     ) -> Result<StreamIterator, RedisError> {
-        StreamIterator::new(self, from, to, exclusive)
+        StreamIterator::new(self, from, to, exclusive, reverse)
     }
 }
 

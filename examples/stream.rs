@@ -16,7 +16,7 @@ fn stream_read_from(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
         return Err(RedisError::WrongType);
     }
 
-    let mut iter = stream.get_stream_iterator()?;
+    let mut iter = stream.get_stream_iterator(false)?;
     let element = iter.next();
     let id_to_keep = iter.next().as_ref().map_or_else(
         || RedisModuleStreamID {

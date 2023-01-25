@@ -21,12 +21,20 @@ impl<'key> StreamIterator<'key> {
         mut from: Option<raw::RedisModuleStreamID>,
         mut to: Option<raw::RedisModuleStreamID>,
         exclusive: bool,
+        reverse: bool,
     ) -> Result<StreamIterator, RedisError> {
-        let flags = if exclusive {
+        let mut flags = if exclusive {
             raw::REDISMODULE_STREAM_ITERATOR_EXCLUSIVE as i32
         } else {
             0
         };
+
+        flags |= if reverse {
+            raw::REDISMODULE_STREAM_ITERATOR_REVERSE as i32
+        } else {
+            0
+        };
+
         let res = unsafe {
             raw::RedisModule_StreamIteratorStart.unwrap()(
                 key.key_inner,
