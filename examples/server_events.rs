@@ -26,6 +26,6 @@ redis_module! {
     version: 1,
     data_types: [],
     commands: [
-        ["num_flushed", num_flushed, "read-only", 0, 0, 0],
+        ["num_flushed", num_flushed, "readonly", 0, 0, 0],
     ],
 }
