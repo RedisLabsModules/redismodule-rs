@@ -4,7 +4,13 @@ extern crate redis_module;
 use redis_module::{Context, RedisResult, RedisString, RedisValue};
 
 fn role(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
-    Ok(RedisValue::SimpleStringStatic(if ctx.get_flags().is_master() {"master"} else {"slave"}))
+    Ok(RedisValue::SimpleStringStatic(
+        if ctx.get_flags().is_master() {
+            "master"
+        } else {
+            "slave"
+        },
+    ))
 }
 
 //////////////////////////////////////////////////////
