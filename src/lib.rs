@@ -12,6 +12,7 @@ pub mod rediserror;
 mod redismodule;
 pub mod redisraw;
 pub mod redisvalue;
+pub mod stream;
 
 mod context;
 pub mod key;
@@ -26,6 +27,7 @@ pub use crate::context::thread_safe::{DetachedFromClient, ThreadSafeContext};
 #[cfg(feature = "experimental-api")]
 pub use crate::raw::NotifyEvent;
 
+pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::server_events;
 pub use crate::context::Context;
 pub use crate::raw::*;

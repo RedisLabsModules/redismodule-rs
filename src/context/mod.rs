@@ -24,6 +24,8 @@ pub mod info;
 
 pub mod server_events;
 
+pub mod keys_cursor;
+
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
