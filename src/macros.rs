@@ -183,7 +183,7 @@ macro_rules! redis_module {
             raw::register_info_function(ctx, Some(__info_func));
 
             if let Err(e) = register_server_events(&context) {
-                context.log_warning(&format!("{}", e));
+                context.log_warning(&format!("{e}"));
                 return raw::Status::Err as c_int;
             }
 

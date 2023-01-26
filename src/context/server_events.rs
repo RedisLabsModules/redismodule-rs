@@ -60,9 +60,9 @@ extern "C" fn role_changed_callback(
         ServerRole::Replica
     };
     let ctx = Context::new(ctx);
-    for callback in ROLE_CHANGED_SERVER_EVENTS_LIST.iter() {
+    ROLE_CHANGED_SERVER_EVENTS_LIST.iter().for_each(|callback| {
         callback(&ctx, new_role.clone());
-    }
+    });
 }
 
 extern "C" fn loading_event_callback(
@@ -78,9 +78,9 @@ extern "C" fn loading_event_callback(
         _ => LoadingSubevent::Failed,
     };
     let ctx = Context::new(ctx);
-    for callback in LOADING_SERVER_EVENTS_LIST.iter() {
+    LOADING_SERVER_EVENTS_LIST.iter().for_each(|callback| {
         callback(&ctx, loading_sub_event.clone());
-    }
+    });
 }
 
 extern "C" fn flush_event_callback(
@@ -95,9 +95,9 @@ extern "C" fn flush_event_callback(
         FlushSubevent::Ended
     };
     let ctx = Context::new(ctx);
-    for callback in FLUSH_SERVER_EVENTS_LIST.iter() {
+    FLUSH_SERVER_EVENTS_LIST.iter().for_each(|callback| {
         callback(&ctx, flush_sub_event.clone());
-    }
+    });
 }
 
 extern "C" fn module_change_event_callback(
@@ -112,9 +112,11 @@ extern "C" fn module_change_event_callback(
         ModuleChangeSubevent::Unloaded
     };
     let ctx = Context::new(ctx);
-    for callback in MODULE_CHANGED_SERVER_EVENTS_LIST.iter() {
-        callback(&ctx, module_changed_sub_event.clone());
-    }
+    MODULE_CHANGED_SERVER_EVENTS_LIST
+        .iter()
+        .for_each(|callback| {
+            callback(&ctx, module_changed_sub_event.clone());
+        });
 }
 
 pub fn register_server_events(ctx: &Context) -> Result<(), RedisError> {
