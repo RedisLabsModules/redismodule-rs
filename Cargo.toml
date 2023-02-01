@@ -91,7 +91,7 @@ linkme = "0.3"
 [dev-dependencies]
 anyhow = "1.0.38"
 redis = "0.22.1"
-redis_module_derive = { path = "./redismodule-rs-derive"}
+redis-module-derive = { path = "./redismodule-rs-derive"}
 
 [build-dependencies]
 bindgen = "0.63"
