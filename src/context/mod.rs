@@ -360,6 +360,11 @@ impl Context {
         unsafe { raw::RedisModule_SetModuleOptions.unwrap()(self.ctx, options.bits()) };
     }
 
+    /// Return ContextFlags object that allows to check properties related to the state of
+    /// the current Redis instance such as:
+    /// * Role (master/slave)
+    /// * Loading RDB/AOF
+    /// * Execution mode such as multi exec or Lua
     pub fn get_flags(&self) -> ContextFlags {
         ContextFlags {
             _ctx: self,
@@ -399,128 +404,124 @@ pub struct ContextFlags<'a> {
 }
 
 impl<'a> ContextFlags<'a> {
-    /* The command is running in the context of a Lua script */
+    /// The command is running in the context of a Lua script
     pub fn is_lua(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_LUA != 0
     }
 
-    /* The command is running inside a Redis transaction */
+    /// The command is running inside a Redis transaction
     pub fn is_multi(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_MULTI != 0
     }
 
-    /* The instance is a master */
+    /// The instance is a master
     pub fn is_master(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_MASTER != 0
     }
 
-    /* The instance is a SLAVE  */
+    /// The instance is a SLAVE
     pub fn is_slave(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_SLAVE != 0
     }
 
-    /* The instance is read-only (usually meaning it's a slave as well) */
+    /// The instance is read-only (usually meaning it's a slave as well)
     pub fn is_read_only(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_READONLY != 0
     }
 
-    /* The instance is running in cluster mode */
+    /// The instance is running in cluster mode
     pub fn is_cluster(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_CLUSTER != 0
     }
 
-    /* The instance has AOF enabled */
+    /// The instance has AOF enabled
     pub fn is_aof(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_AOF != 0
     }
 
-    /* The instance has RDB enabled */
+    /// The instance has RDB enabled
     pub fn is_rdb(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_RDB != 0
     }
 
-    /* The instance has Maxmemory set */
+    /// The instance has Maxmemory set
     pub fn is_max_memory(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_MAXMEMORY != 0
     }
 
-    /* Maxmemory is set and has an eviction policy that may delete keys */
+    /// Maxmemory is set and has an eviction policy that may delete keys
     pub fn is_evict(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_EVICT != 0
     }
 
-    /* Redis is out of memory according to the maxmemory flag. */
+    /// Redis is out of memory according to the maxmemory flag.
     pub fn is_oom(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_OOM != 0
     }
 
-    /* Less than 25% of memory available according to maxmemory. */
+    /// Less than 25% of memory available according to maxmemory.
     pub fn is_oom_warning(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_OOM_WARNING != 0
     }
 
-    /* The command was sent over the replication link. */
+    /// The command was sent over the replication link.
     pub fn is_replicated(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_REPLICATED != 0
     }
 
-    /* Redis is currently loading either from AOF or RDB. */
+    /// Redis is currently loading either from AOF or RDB.
     pub fn is_loading(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_LOADING != 0
     }
 
-    /* The replica has no link with its master */
+    /// The replica has no link with its master
     pub fn is_stale_replica(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_REPLICA_IS_STALE != 0
     }
 
-    /* The replica is trying to connect with the master */
+    /// The replica is trying to connect with the master
     pub fn is_replica_connecting(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_REPLICA_IS_CONNECTING != 0
     }
 
-    /* The replica is receiving an RDB file from its master. */
+    /// The replica is receiving an RDB file from its master.
     pub fn is_replica_transferring_rdb(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_REPLICA_IS_TRANSFERRING != 0
     }
 
-    /* The replica is online, receiving updates from its master. */
+    /// The replica is online, receiving updates from its master
     pub fn is_replica_online(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_REPLICA_IS_ONLINE != 0
     }
 
-    /* There is currently some background process active. */
+    /// There is currently some background process active.
     pub fn has_active_child(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_ACTIVE_CHILD != 0
     }
 
-    /* Redis is currently running inside background child process. */
+    /// Redis is currently running inside background child process.
     pub fn is_child(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_IS_CHILD != 0
     }
 
-    /* The next EXEC will fail due to dirty CAS (touched keys). */
+    /// The next EXEC will fail due to dirty CAS (touched keys).
     pub fn is_multi_dirty(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_MULTI_DIRTY != 0
     }
 
-    /* The current client does not allow blocking, either called from
-     * within multi, lua, or from another module using RM_Call */
+    /// The current client does not allow blocking, either called from
+    /// within multi, lua, or from another module using RM_Call
     pub fn deny_blocking(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_DENY_BLOCKING != 0
     }
 
-    /* The current client uses RESP3 protocol */
+    /// The current client uses RESP3 protocol
     pub fn is_resp3(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_RESP3 != 0
     }
 
-    /* Redis is currently async loading database for diskless replication. */
+    /// Redis is currently async loading database for diskless replication.
     pub fn is_async_loading(&self) -> bool {
         self.flags & raw::REDISMODULE_CTX_FLAGS_ASYNC_LOADING != 0
-    }
-
-    pub fn raw_flags(&self) -> u32 {
-        self.flags
     }
 }
