@@ -12,6 +12,17 @@ pub(crate) fn log_internal(ctx: *mut raw::RedisModuleCtx, level: LogLevel, messa
     unsafe { raw::RedisModule_Log.unwrap()(ctx, level.as_ptr(), fmt.as_ptr()) }
 }
 
+/// This function should be used when a callback is returning a critical error
+/// to the caller since cannot load or save the data for some critical reason.
+pub fn log_io_error(io: *mut raw::RedisModuleIO, level: LogLevel, message: &str) {
+    if cfg!(feature = "test") {
+        return;
+    }
+    let level = CString::new(level.as_ref()).unwrap();
+    let fmt = CString::new(message).unwrap();
+    unsafe { raw::RedisModule_LogIOError.unwrap()(io, level.as_ptr(), fmt.as_ptr()) }
+}
+
 /// Log a message to the Redis log with the given log level, without
 /// requiring a context. This prevents Redis from including the module
 /// name in the logged message.

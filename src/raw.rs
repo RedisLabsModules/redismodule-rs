@@ -6,6 +6,7 @@ extern crate enum_primitive_derive;
 extern crate libc;
 extern crate num_traits;
 
+use std::cmp::Ordering;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
 use std::ptr;
@@ -35,7 +36,7 @@ bitflags! {
     }
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum KeyType {
     Empty = REDISMODULE_KEYTYPE_EMPTY,
     String = REDISMODULE_KEYTYPE_STRING,
@@ -53,13 +54,13 @@ impl From<c_int> for KeyType {
     }
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Where {
     ListHead = REDISMODULE_LIST_HEAD,
     ListTail = REDISMODULE_LIST_TAIL,
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum ReplyType {
     Unknown = REDISMODULE_REPLY_UNKNOWN,
     String = REDISMODULE_REPLY_STRING,
@@ -75,13 +76,13 @@ impl From<c_int> for ReplyType {
     }
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Aux {
     Before = REDISMODULE_AUX_BEFORE_RDB,
     After = REDISMODULE_AUX_AFTER_RDB,
 }
 
-#[derive(Primitive, Debug, PartialEq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Status {
     Ok = REDISMODULE_OK,
     Err = REDISMODULE_ERR,
@@ -224,13 +225,7 @@ pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
         let mut len: size_t = 0;
         let reply_string: *mut u8 =
             RedisModule_CallReplyStringPtr.unwrap()(reply, &mut len) as *mut u8;
-        String::from_utf8(
-            slice::from_raw_parts(reply_string, len)
-                .iter()
-                .copied()
-                .collect(),
-        )
-        .unwrap()
+        String::from_utf8(slice::from_raw_parts(reply_string, len).to_vec()).unwrap()
     }
 }
 
@@ -285,8 +280,13 @@ pub fn set_expire(key: *mut RedisModuleKey, expire: c_longlong) -> Status {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> *const c_char {
+pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> *mut c_char {
     unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits) }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn string_truncate(key: *mut RedisModuleKey, new_len: size_t) -> Status {
+    unsafe { RedisModule_StringTruncate.unwrap()(key, new_len).into() }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -509,7 +509,7 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
             ctx,
             cmd.as_ptr(),
             FMT,
-            inner_args.as_ptr() as *mut c_char,
+            inner_args.as_ptr(),
             terminated_args.len(),
         )
         .into()
@@ -552,13 +552,18 @@ pub fn save_unsigned(rdb: *mut RedisModuleIO, val: u64) {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn string_compare(a: *mut RedisModuleString, b: *mut RedisModuleString) -> Ordering {
+    unsafe { RedisModule_StringCompare.unwrap()(a, b).cmp(&0) }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn string_append_buffer(
     ctx: *mut RedisModuleCtx,
     s: *mut RedisModuleString,
     buff: &str,
 ) -> Status {
     unsafe {
-        RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut c_char, buff.len())
+        RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr().cast::<c_char>(), buff.len())
             .into()
     }
 }
@@ -581,7 +586,7 @@ pub fn register_info_function(ctx: *mut RedisModuleCtx, callback: RedisModuleInf
 pub fn add_info_section(ctx: *mut RedisModuleInfoCtx, name: Option<&str>) -> Status {
     name.map(|n| CString::new(n).unwrap()).map_or_else(
         || unsafe { RedisModule_InfoAddSection.unwrap()(ctx, ptr::null_mut()).into() },
-        |n| unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr() as *mut c_char).into() },
+        |n| unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr()).into() },
     )
 }
 
@@ -589,10 +594,7 @@ pub fn add_info_section(ctx: *mut RedisModuleInfoCtx, name: Option<&str>) -> Sta
 pub fn add_info_field_str(ctx: *mut RedisModuleInfoCtx, name: &str, content: &str) -> Status {
     let name = CString::new(name).unwrap();
     let content = RedisString::create(ptr::null_mut(), content);
-    unsafe {
-        RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr() as *mut c_char, content.inner)
-            .into()
-    }
+    unsafe { RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr(), content.inner).into() }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -602,9 +604,7 @@ pub fn add_info_field_long_long(
     value: c_longlong,
 ) -> Status {
     let name = CString::new(name).unwrap();
-    unsafe {
-        RedisModule_InfoAddFieldLongLong.unwrap()(ctx, name.as_ptr() as *mut c_char, value).into()
-    }
+    unsafe { RedisModule_InfoAddFieldLongLong.unwrap()(ctx, name.as_ptr(), value).into() }
 }
 
 /// # Safety
@@ -639,7 +639,7 @@ pub fn get_keyspace_events() -> NotifyEvent {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Version {
     pub major: i32,
     pub minor: i32,

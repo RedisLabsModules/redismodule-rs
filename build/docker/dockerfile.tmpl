@@ -1,0 +1,25 @@
+
+#----------------------------------------------------------------------------------------------
+FROM redisfab/redis:{{REDIS_VERSION}}-{{ARCH}}-{{OSNICK}} AS redis
+FROM {{OS}} AS builder
+
+RUN if [ -f /root/.profile ]; then sed -ie 's/mesg n/tty -s \&\& mesg -n/g' /root/.profile; fi
+SHELL ["/bin/bash", "-l", "-c"]
+
+RUN echo "Building for {{OSNICK}} ({{OS}}) for {{ARCH}} [with Redis {{REDIS_VERSION}}]"
+
+WORKDIR /build
+COPY --from=redis /usr/local/ /usr/local/
+
+ADD . /build
+
+RUN ./deps/readies/bin/getupdates
+RUN ./sbin/setup
+
+RUN /usr/local/bin/redis-server --version
+
+RUN make build SHOW=1
+
+{% if TEST == "1" %}
+RUN TEST='' make test
+{% endif %}

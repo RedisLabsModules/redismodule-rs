@@ -13,24 +13,19 @@ import paella
 #----------------------------------------------------------------------------------------------
 
 class RedisModuleRSSetup(paella.Setup):
-    def __init__(self, nop=False):
-        paella.Setup.__init__(self, nop)
+    def __init__(self, args):
+        paella.Setup.__init__(self, args.nop)
 
     def common_first(self):
         self.install_downloaders()
-        self.pip_install("wheel")
-        self.pip_install("setuptools --upgrade")
-
+        self.run("%s/bin/enable-utf8" % READIES, sudo=self.os != 'macos')
         self.install("git")
 
-        self.run("%s/bin/enable-utf8" % READIES)
-
         self.run("%s/bin/getclang --modern" % READIES)
-        if not self.has_command("rustc"):
-            self.run("%s/bin/getrust" % READIES)
+        self.run("%s/bin/getrust" % READIES)
         if self.osnick == 'ol8':
             self.install('tar')
-        self.run("%s/bin/getcmake" % READIES)
+        self.run("%s/bin/getcmake --usr" % READIES)
 
     def debian_compat(self):
         self.run("%s/bin/getgcc" % READIES)
@@ -39,16 +34,18 @@ class RedisModuleRSSetup(paella.Setup):
         self.install("redhat-lsb-core")
         self.run("%s/bin/getgcc --modern" % READIES)
 
+        if not self.platform.is_arm():
+            self.install_linux_gnu_tar()
+
     def fedora(self):
         self.run("%s/bin/getgcc" % READIES)
 
     def macos(self):
         self.install_gnu_utils()
-        self.run("%s/bin/getgcc" % READIES)
         self.run("%s/bin/getredis -v 6" % READIES)
 
     def common_last(self):
-        self.pip_install("toml")
+        pass
 
 #----------------------------------------------------------------------------------------------
 
@@ -56,4 +53,4 @@ parser = argparse.ArgumentParser(description='Set up system for build.')
 parser.add_argument('-n', '--nop', action="store_true", help='no operation')
 args = parser.parse_args()
 
-RedisModuleRSSetup(nop = args.nop).setup()
+RedisModuleRSSetup(args).setup()

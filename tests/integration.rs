@@ -148,3 +148,106 @@ fn test_test_helper_err() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_string() -> Result<()> {
+    let port: u16 = 6485;
+    let _guards = vec![start_redis_server_with_module("string", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    redis::cmd("string.set")
+        .arg(&["key", "value"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    let res: String = redis::cmd("string.get").arg(&["key"]).query(&mut con)?;
+
+    assert_eq!(&res, "value");
+
+    Ok(())
+}
+
+#[test]
+fn test_scan() -> Result<()> {
+    let port: u16 = 6486;
+    let _guards = vec![start_redis_server_with_module("scan_keys", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    redis::cmd("set")
+        .arg(&["x", "1"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    redis::cmd("set")
+        .arg(&["y", "1"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    let mut res: Vec<String> = redis::cmd("scan_keys").query(&mut con)?;
+    res.sort();
+
+    assert_eq!(&res, &["x", "y"]);
+
+    Ok(())
+}
+
+#[test]
+fn test_stream_reader() -> Result<()> {
+    let port: u16 = 6487;
+    let _guards = vec![start_redis_server_with_module("stream", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let _: String = redis::cmd("XADD")
+        .arg(&["s", "1-1", "foo", "bar"])
+        .query(&mut con)
+        .with_context(|| "failed to add data to the stream")?;
+
+    let _: String = redis::cmd("XADD")
+        .arg(&["s", "1-2", "foo", "bar"])
+        .query(&mut con)
+        .with_context(|| "failed to add data to the stream")?;
+
+    let res: String = redis::cmd("STREAM_POP")
+        .arg(&["s"])
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+    assert_eq!(res, "1-1");
+
+    let res: String = redis::cmd("STREAM_POP")
+        .arg(&["s"])
+        .query(&mut con)
+        .with_context(|| "failed to run keys_pos")?;
+    assert_eq!(res, "1-2");
+
+    let res: usize = redis::cmd("XLEN")
+        .arg(&["s"])
+        .query(&mut con)
+        .with_context(|| "failed to add data to the stream")?;
+
+    assert_eq!(res, 0);
+
+    Ok(())
+}
+
+#[test]
+fn test_call() -> Result<()> {
+    let port: u16 = 6488;
+    let _guards = vec![start_redis_server_with_module("call", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: String = redis::cmd("call.test")
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(&res, "pass");
+
+    Ok(())
+}

@@ -40,9 +40,9 @@ impl Display for Error {
         match *self {
             // Both underlying errors already impl `Display`, so we defer to
             // their implementations.
-            Error::Generic(ref err) => write!(f, "{}", err),
-            Error::FromUtf8(ref err) => write!(f, "{}", err),
-            Error::ParseInt(ref err) => write!(f, "{}", err),
+            Self::Generic(ref err) => write!(f, "{}", err),
+            Self::FromUtf8(ref err) => write!(f, "{}", err),
+            Self::ParseInt(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -54,9 +54,9 @@ impl error::Error for Error {
             // types (either `&io::Error` or `&num::ParseIntError`)
             // to a trait object `&Error`. This works because both error types
             // implement `Error`.
-            Error::Generic(ref err) => Some(err),
-            Error::FromUtf8(ref err) => Some(err),
-            Error::ParseInt(ref err) => Some(err),
+            Self::Generic(ref err) => Some(err),
+            Self::FromUtf8(ref err) => Some(err),
+            Self::ParseInt(ref err) => Some(err),
         }
     }
 }
@@ -75,13 +75,13 @@ impl GenericError {
     }
 }
 
-impl<'a> Display for GenericError {
+impl Display for GenericError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Store error: {}", self.message)
     }
 }
 
-impl<'a> error::Error for GenericError {
+impl error::Error for GenericError {
     fn description(&self) -> &str {
         self.message.as_str()
     }
