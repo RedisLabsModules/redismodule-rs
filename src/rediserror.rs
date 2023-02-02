@@ -31,18 +31,18 @@ impl<T: std::error::Error> From<T> for RedisError {
 impl fmt::Display for RedisError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let d = match self {
-            RedisError::WrongArity => "Wrong Arity",
+            Self::WrongArity => "Wrong Arity",
             // remove NUL from the end of raw::REDISMODULE_ERRORMSG_WRONGTYPE
             // before converting &[u8] to &str to ensure CString::new() doesn't
             // panic when this is passed to it.
-            RedisError::WrongType => std::str::from_utf8(
+            Self::WrongType => std::str::from_utf8(
                 CStr::from_bytes_with_nul(raw::REDISMODULE_ERRORMSG_WRONGTYPE)
                     .unwrap()
                     .to_bytes(),
             )
             .unwrap(),
-            RedisError::Str(s) => s,
-            RedisError::String(s) => s.as_str(),
+            Self::Str(s) => s,
+            Self::String(s) => s.as_str(),
         };
 
         write!(f, "{}", d)

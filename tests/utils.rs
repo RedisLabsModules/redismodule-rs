@@ -15,10 +15,10 @@ pub struct ChildGuard {
 impl Drop for ChildGuard {
     fn drop(&mut self) {
         if let Err(e) = self.child.kill() {
-            println!("Could not kill {}: {}", self.name, e);
+            println!("Could not kill {}: {e}", self.name);
         }
         if let Err(e) = self.child.wait() {
-            println!("Could not wait for {}: {}", self.name, e);
+            println!("Could not wait for {}: {e}", self.name);
         }
     }
 }
@@ -72,7 +72,7 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
 
 // Get connection to Redis
 pub fn get_redis_connection(port: u16) -> Result<Connection> {
-    let client = redis::Client::open(format!("redis://127.0.0.1:{}/", port))?;
+    let client = redis::Client::open(format!("redis://127.0.0.1:{port}/"))?;
     loop {
         let res = client.get_connection();
         match res {

@@ -280,8 +280,13 @@ pub fn set_expire(key: *mut RedisModuleKey, expire: c_longlong) -> Status {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> *const c_char {
+pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> *mut c_char {
     unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits) }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn string_truncate(key: *mut RedisModuleKey, new_len: size_t) -> Status {
+    unsafe { RedisModule_StringTruncate.unwrap()(key, new_len).into() }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -504,7 +509,7 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
             ctx,
             cmd.as_ptr(),
             FMT,
-            inner_args.as_ptr() as *mut c_char,
+            inner_args.as_ptr(),
             terminated_args.len(),
         )
         .into()
@@ -547,7 +552,7 @@ pub fn save_unsigned(rdb: *mut RedisModuleIO, val: u64) {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn string_compare(a: *const RedisModuleString, b: *const RedisModuleString) -> Ordering {
+pub fn string_compare(a: *mut RedisModuleString, b: *mut RedisModuleString) -> Ordering {
     unsafe { RedisModule_StringCompare.unwrap()(a, b).cmp(&0) }
 }
 
@@ -558,7 +563,7 @@ pub fn string_append_buffer(
     buff: &str,
 ) -> Status {
     unsafe {
-        RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr() as *mut c_char, buff.len())
+        RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr().cast::<c_char>(), buff.len())
             .into()
     }
 }
@@ -581,7 +586,7 @@ pub fn register_info_function(ctx: *mut RedisModuleCtx, callback: RedisModuleInf
 pub fn add_info_section(ctx: *mut RedisModuleInfoCtx, name: Option<&str>) -> Status {
     name.map(|n| CString::new(n).unwrap()).map_or_else(
         || unsafe { RedisModule_InfoAddSection.unwrap()(ctx, ptr::null_mut()).into() },
-        |n| unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr() as *mut c_char).into() },
+        |n| unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr()).into() },
     )
 }
 
@@ -589,10 +594,7 @@ pub fn add_info_section(ctx: *mut RedisModuleInfoCtx, name: Option<&str>) -> Sta
 pub fn add_info_field_str(ctx: *mut RedisModuleInfoCtx, name: &str, content: &str) -> Status {
     let name = CString::new(name).unwrap();
     let content = RedisString::create(ptr::null_mut(), content);
-    unsafe {
-        RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr() as *mut c_char, content.inner)
-            .into()
-    }
+    unsafe { RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr(), content.inner).into() }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -602,9 +604,7 @@ pub fn add_info_field_long_long(
     value: c_longlong,
 ) -> Status {
     let name = CString::new(name).unwrap();
-    unsafe {
-        RedisModule_InfoAddFieldLongLong.unwrap()(ctx, name.as_ptr() as *mut c_char, value).into()
-    }
+    unsafe { RedisModule_InfoAddFieldLongLong.unwrap()(ctx, name.as_ptr(), value).into() }
 }
 
 /// # Safety

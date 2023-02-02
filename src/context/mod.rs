@@ -22,10 +22,67 @@ pub mod blocked;
 
 pub mod info;
 
+pub mod keys_cursor;
+
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
     pub ctx: *mut raw::RedisModuleCtx,
+}
+
+pub struct StrCallArgs<'a> {
+    is_owner: bool,
+    args: Vec<*mut raw::RedisModuleString>,
+    // Phantom is used to make sure the object will not live longer than actual arguments slice
+    phantom: std::marker::PhantomData<&'a raw::RedisModuleString>,
+}
+
+impl<'a> Drop for StrCallArgs<'a> {
+    fn drop(&mut self) {
+        if self.is_owner {
+            self.args.iter_mut().for_each(|v| unsafe {
+                raw::RedisModule_FreeString.unwrap()(std::ptr::null_mut(), *v)
+            });
+        }
+    }
+}
+
+impl<'a, T: AsRef<[u8]> + ?Sized> From<&'a [&T]> for StrCallArgs<'a> {
+    fn from(vals: &'a [&T]) -> Self {
+        StrCallArgs {
+            is_owner: true,
+            args: vals
+                .iter()
+                .map(|v| RedisString::create_from_slice(std::ptr::null_mut(), v.as_ref()).take())
+                .collect(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a> From<&'a [&RedisString]> for StrCallArgs<'a> {
+    fn from(vals: &'a [&RedisString]) -> Self {
+        StrCallArgs {
+            is_owner: false,
+            args: vals.iter().map(|v| v.inner).collect(),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'a, const SIZE: usize, T: ?Sized> From<&'a [&T; SIZE]> for StrCallArgs<'a>
+where
+    for<'b> &'a [&'b T]: Into<StrCallArgs<'a>>,
+{
+    fn from(vals: &'a [&T; SIZE]) -> Self {
+        vals.as_ref().into()
+    }
+}
+
+impl<'a> StrCallArgs<'a> {
+    fn args_mut(&mut self) -> &mut [*mut raw::RedisModuleString] {
+        &mut self.args
+    }
 }
 
 impl Context {
@@ -95,14 +152,9 @@ impl Context {
         }
     }
 
-    pub fn call(&self, command: &str, args: &[&str]) -> RedisResult {
-        let terminated_args: Vec<RedisString> = args
-            .iter()
-            .map(|s| RedisString::create(self.ctx, s))
-            .collect();
-
-        let inner_args: Vec<*mut raw::RedisModuleString> =
-            terminated_args.iter().map(|s| s.inner).collect();
+    pub fn call<'a, T: Into<StrCallArgs<'a>>>(&self, command: &str, args: T) -> RedisResult {
+        let mut call_args: StrCallArgs = args.into();
+        let final_args = call_args.args_mut();
 
         let cmd = CString::new(command).unwrap();
         let reply: *mut raw::RedisModuleCallReply = unsafe {
@@ -111,8 +163,8 @@ impl Context {
                 self.ctx,
                 cmd.as_ptr(),
                 raw::FMT,
-                inner_args.as_ptr() as *mut c_char,
-                terminated_args.len(),
+                final_args.as_mut_ptr(),
+                final_args.len(),
             )
         };
         let result = Self::parse_call_reply(reply);
@@ -195,7 +247,7 @@ impl Context {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
                     s.as_ptr().cast::<c_char>(),
-                    s.len() as usize,
+                    s.len(),
                 )
                 .into()
             },
@@ -208,7 +260,7 @@ impl Context {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
                     s.as_ptr().cast::<c_char>(),
-                    s.len() as usize,
+                    s.len(),
                 )
                 .into()
             },
@@ -347,7 +399,7 @@ impl Context {
             _ => {
                 // Call "info server"
                 if let Ok(info) = self.call("info", &["server"]) {
-                    Context::version_from_info(info)
+                    Self::version_from_info(info)
                 } else {
                     Err(RedisError::Str("Error calling \"info server\""))
                 }

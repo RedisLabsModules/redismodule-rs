@@ -1,12 +1,8 @@
 //#![allow(dead_code)]
 
 pub use crate::context::InfoContext;
-use std::os::raw::c_char;
-use std::str::Utf8Error;
 use strum_macros::AsRefStr;
 extern crate num_traits;
-
-use libc::size_t;
 
 pub mod alloc;
 pub mod error;
@@ -16,6 +12,7 @@ pub mod rediserror;
 mod redismodule;
 pub mod redisraw;
 pub mod redisvalue;
+pub mod stream;
 
 mod context;
 pub mod key;
@@ -30,6 +27,7 @@ pub use crate::context::thread_safe::{DetachedFromClient, ThreadSafeContext};
 #[cfg(feature = "experimental-api")]
 pub use crate::raw::NotifyEvent;
 
+pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::Context;
 pub use crate::raw::*;
 pub use crate::redismodule::*;
@@ -50,16 +48,6 @@ pub enum LogLevel {
     Notice,
     Verbose,
     Warning,
-}
-
-fn from_byte_string(byte_str: *const c_char, length: size_t) -> Result<String, Utf8Error> {
-    let mut vec_str: Vec<u8> = Vec::with_capacity(length as usize);
-    for j in 0..length {
-        let byte = unsafe { *byte_str.add(j) } as u8;
-        vec_str.insert(j, byte);
-    }
-
-    String::from_utf8(vec_str).map_err(|e| e.utf8_error())
 }
 
 pub fn base_info_func(
