@@ -330,7 +330,10 @@ impl RedisKeyWritable {
     /// # Panics
     ///
     /// Will panic if `RedisModule_ModuleTypeGetValue` is missing in redismodule.h    
-    pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&mut T>, RedisError> {
+    pub fn get_value<'a, 'b, T>(
+        &'a self,
+        redis_type: &RedisType,
+    ) -> Result<Option<&'b mut T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
         let value =
             unsafe { raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner).cast::<T>() };
