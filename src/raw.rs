@@ -139,7 +139,7 @@ pub enum CommandFlag {
     Movablekeys,
 }
 
-fn command_flag_repr(flag: &CommandFlag) -> &'static str {
+const fn command_flag_repr(flag: &CommandFlag) -> &'static str {
     use crate::raw::CommandFlag::*;
     match flag {
         Write => "write",
