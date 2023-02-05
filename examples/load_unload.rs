@@ -14,10 +14,7 @@ fn init(ctx: &Context, args: &[RedisString]) -> Status {
     };
     ctx.log(
         LogLevel::Warning,
-        &format!(
-            "Update global state on LOAD. BEFORE: {:?}, AFTER: {:?}",
-            before, after
-        ),
+        &format!("Update global state on LOAD. BEFORE: {before:?}, AFTER: {after:?}",),
     );
 
     Status::Ok
@@ -31,10 +28,7 @@ fn deinit(ctx: &Context) -> Status {
     };
     ctx.log(
         LogLevel::Warning,
-        &format!(
-            "Update global state on UNLOAD. BEFORE: {:?}, AFTER: {:?}",
-            before, after
-        ),
+        &format!("Update global state on UNLOAD. BEFORE: {before:?}, AFTER: {after:?}"),
     );
 
     Status::Ok
