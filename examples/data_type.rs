@@ -33,6 +33,11 @@ static MY_REDIS_TYPE: RedisType = RedisType::new(
         unlink: None,
         copy: None,
         defrag: None,
+
+        copy2: None,
+        free_effort2: None,
+        mem_usage2: None,
+        unlink2: None,
     },
 );
 
@@ -45,7 +50,7 @@ fn alloc_set(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let key = args.next_arg()?;
     let size = args.next_i64()?;
 
-    ctx.log_debug(format!("key: {}, size: {}", key, size).as_str());
+    ctx.log_debug(format!("key: {key}, size: {size}").as_str());
 
     let key = ctx.open_key_writable(&key);
 

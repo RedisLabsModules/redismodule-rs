@@ -16,6 +16,14 @@ name = "hello"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "string"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "call"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "keys_pos"
 crate-type = ["cdylib"]
 
@@ -60,6 +68,14 @@ required-features = ["test","experimental-api"]
 name = "info"
 crate-type = ["cdylib"]
 required-features = []
+
+[[example]]
+name = "scan_keys"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "stream"
+crate-type = ["cdylib"]
 
 [dependencies]
 bitflags = "1.2"

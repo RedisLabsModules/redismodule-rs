@@ -115,9 +115,9 @@ macro_rules! redis_module {
             for_crash_report: i32,
         ) {
             use $crate::InfoContext;
-            let mut __info_func__cb : Option<fn(&InfoContext, bool)> = None;
-            $( __info_func__cb = Some($info_func); )?
-            $crate::base_info_func(&$crate::InfoContext::new(ctx), for_crash_report == 1, __info_func__cb);
+            let mut __info_func_cb : Option<fn(&InfoContext, bool)> = None;
+            $( __info_func_cb = Some($info_func); )?
+            $crate::base_info_func(&$crate::InfoContext::new(ctx), for_crash_report == 1, __info_func_cb);
         }
 
         #[no_mangle]
@@ -149,7 +149,7 @@ macro_rules! redis_module {
 
             if unsafe { raw::Export_RedisModule_Init(
                 ctx,
-                name_buffer.as_ptr() as *const c_char,
+                name_buffer.as_ptr().cast::<c_char>(),
                 module_version,
                 raw::REDISMODULE_APIVER_1 as c_int,
             ) } == raw::Status::Err as c_int { return raw::Status::Err as c_int; }

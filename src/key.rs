@@ -1,17 +1,18 @@
 use std::convert::TryFrom;
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::os::raw::c_void;
 use std::ptr;
-use std::str::Utf8Error;
 use std::time::Duration;
 
 use libc::size_t;
 
 use raw::KeyType;
 
-use crate::from_byte_string;
 use crate::native_types::RedisType;
 use crate::raw;
 use crate::redismodule::REDIS_OK;
+use crate::stream::StreamIterator;
 use crate::RedisError;
 use crate::RedisResult;
 use crate::RedisString;
@@ -32,13 +33,26 @@ pub enum KeyMode {
 
 #[derive(Debug)]
 pub struct RedisKey {
-    ctx: *mut raw::RedisModuleCtx,
-    key_inner: *mut raw::RedisModuleKey,
+    pub(crate) ctx: *mut raw::RedisModuleCtx,
+    pub(crate) key_inner: *mut raw::RedisModuleKey,
 }
 
 impl RedisKey {
+    pub(crate) fn take(mut self) -> *mut raw::RedisModuleKey {
+        let res = self.key_inner;
+        self.key_inner = std::ptr::null_mut();
+        res
+    }
+
     pub fn open(ctx: *mut raw::RedisModuleCtx, key: &RedisString) -> Self {
         let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::Read));
+        Self { ctx, key_inner }
+    }
+
+    pub(crate) fn from_raw_parts(
+        ctx: *mut raw::RedisModuleCtx,
+        key_inner: *mut raw::RedisModuleKey,
+    ) -> Self {
         Self { ctx, key_inner }
     }
 
@@ -75,13 +89,20 @@ impl RedisKey {
         self.key_inner == null_key
     }
 
-    pub fn read(&self) -> Result<Option<String>, RedisError> {
-        let val = if self.is_null() {
-            None
+    pub fn read(&self) -> Result<Option<&[u8]>, RedisError> {
+        if self.is_null() {
+            Ok(None)
         } else {
-            Some(read_key(self.key_inner)?)
-        };
-        Ok(val)
+            let mut length: size_t = 0;
+            let dma = raw::string_dma(self.key_inner, &mut length, raw::KeyMode::READ);
+            if dma.is_null() {
+                Err(RedisError::Str("Could not read key"))
+            } else {
+                Ok(Some(unsafe {
+                    std::slice::from_raw_parts(dma.cast::<u8>(), length)
+                }))
+            }
+        }
     }
 
     pub fn hash_get(&self, field: &str) -> Result<Option<RedisString>, RedisError> {
@@ -116,12 +137,28 @@ impl RedisKey {
         };
         Ok(val)
     }
+
+    pub fn get_stream_iterator(&self, reverse: bool) -> Result<StreamIterator, RedisError> {
+        StreamIterator::new(self, None, None, false, reverse)
+    }
+
+    pub fn get_stream_range_iterator(
+        &self,
+        from: Option<raw::RedisModuleStreamID>,
+        to: Option<raw::RedisModuleStreamID>,
+        exclusive: bool,
+        reverse: bool,
+    ) -> Result<StreamIterator, RedisError> {
+        StreamIterator::new(self, from, to, exclusive, reverse)
+    }
 }
 
 impl Drop for RedisKey {
     // Frees resources appropriately as a RedisKey goes out of scope.
     fn drop(&mut self) {
-        raw::close_key(self.key_inner);
+        if !self.key_inner.is_null() {
+            raw::close_key(self.key_inner);
+        }
     }
 }
 
@@ -144,20 +181,15 @@ impl RedisKeyWritable {
     /// as you open the key in read mode, but when asking for write Redis
     /// returns a non-null pointer to allow us to write to even an empty key,
     /// so we have to check the key's value instead.
-    /*
-    fn is_empty_old(&self) -> Result<bool, Error> {
-        match self.read()? {
-            Some(s) => match s.as_str() {
-                "" => Ok(true),
-                _ => Ok(false),
-            },
-            _ => Ok(false),
-        }
-    }
-    */
-
-    pub fn read(&self) -> Result<Option<String>, RedisError> {
-        Ok(Some(read_key(self.key_inner)?))
+    ///
+    /// ```
+    /// fn is_empty_old(key: &RedisKeyWritable) -> Result<bool, Error> {
+    ///     let s = key.as_string_dma();
+    ///     s.write(b"new value")?;
+    /// }
+    /// ```
+    pub fn as_string_dma(&self) -> Result<StringDMA, RedisError> {
+        StringDMA::new(self)
     }
 
     #[allow(clippy::must_use_candidate)]
@@ -334,6 +366,26 @@ impl RedisKeyWritable {
 
         status.into()
     }
+
+    pub fn trim_stream_by_id(
+        &self,
+        mut id: raw::RedisModuleStreamID,
+        approx: bool,
+    ) -> Result<usize, RedisError> {
+        let flags = if approx {
+            raw::REDISMODULE_STREAM_TRIM_APPROX
+        } else {
+            0
+        };
+        let res = unsafe {
+            raw::RedisModule_StreamTrimByID.unwrap()(self.key_inner, flags as i32, &mut id)
+        };
+        if res <= 0 {
+            Err(RedisError::Str("Failed trimming the stream"))
+        } else {
+            Ok(res as usize)
+        }
+    }
 }
 
 /// Opaque type used to hold multi-get results. Use the provided methods to convert
@@ -437,6 +489,66 @@ where
     }
 }
 
+pub struct StringDMA<'a> {
+    key: &'a RedisKeyWritable,
+    buffer: &'a mut [u8],
+}
+
+impl<'a> Deref for StringDMA<'a> {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        self.buffer
+    }
+}
+
+impl<'a> DerefMut for StringDMA<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.buffer
+    }
+}
+
+impl<'a> StringDMA<'a> {
+    fn new(key: &'a RedisKeyWritable) -> Result<StringDMA<'a>, RedisError> {
+        let mut length: size_t = 0;
+        let dma = raw::string_dma(key.key_inner, &mut length, raw::KeyMode::WRITE);
+        if dma.is_null() {
+            Err(RedisError::Str("Could not read key"))
+        } else {
+            let buffer = unsafe { std::slice::from_raw_parts_mut(dma.cast::<u8>(), length) };
+            Ok(StringDMA { key, buffer })
+        }
+    }
+
+    pub fn write(&mut self, data: &[u8]) -> Result<&mut Self, RedisError> {
+        if self.buffer.len() != data.len() {
+            if raw::Status::Ok == raw::string_truncate(self.key.key_inner, data.len()) {
+                let mut length: size_t = 0;
+                let dma = raw::string_dma(self.key.key_inner, &mut length, raw::KeyMode::WRITE);
+                self.buffer = unsafe { std::slice::from_raw_parts_mut(dma.cast::<u8>(), length) };
+            } else {
+                return Err(RedisError::Str("Failed to truncate string"));
+            }
+        }
+        self.buffer[..data.len()].copy_from_slice(data);
+        Ok(self)
+    }
+
+    pub fn append(&mut self, data: &[u8]) -> Result<&mut Self, RedisError> {
+        let current_len = self.buffer.len();
+        let new_len = current_len + data.len();
+        if raw::Status::Ok == raw::string_truncate(self.key.key_inner, new_len) {
+            let mut length: size_t = 0;
+            let dma = raw::string_dma(self.key.key_inner, &mut length, raw::KeyMode::WRITE);
+            self.buffer = unsafe { std::slice::from_raw_parts_mut(dma.cast::<u8>(), length) };
+        } else {
+            return Err(RedisError::Str("Failed to truncate string"));
+        }
+        self.buffer[current_len..new_len].copy_from_slice(data);
+        Ok(self)
+    }
+}
+
 impl From<raw::Status> for Result<(), RedisError> {
     fn from(s: raw::Status) -> Self {
         match s {
@@ -451,14 +563,6 @@ impl Drop for RedisKeyWritable {
     fn drop(&mut self) {
         raw::close_key(self.key_inner);
     }
-}
-
-fn read_key(key: *mut raw::RedisModuleKey) -> Result<String, Utf8Error> {
-    let mut length: size_t = 0;
-    from_byte_string(
-        raw::string_dma(key, &mut length, raw::KeyMode::READ),
-        length,
-    )
 }
 
 /// Get an arbitrary number of hash fields from a key by batching calls
