@@ -49,7 +49,7 @@ impl RedisKey {
         Self { ctx, key_inner }
     }
 
-    pub(crate) fn from_raw_parts(
+    pub(crate) const fn from_raw_parts(
         ctx: *mut raw::RedisModuleCtx,
         key_inner: *mut raw::RedisModuleKey,
     ) -> Self {
@@ -270,10 +270,7 @@ impl RedisKeyWritable {
         let exp_millis = expire.as_millis();
 
         let exp_time = i64::try_from(exp_millis).map_err(|_| {
-            RedisError::String(format!(
-                "Error expire duration {} is not allowed",
-                exp_millis
-            ))
+            RedisError::String(format!("Error expire duration {exp_millis} is not allowed"))
         })?;
 
         match raw::set_expire(self.key_inner, exp_time) {
@@ -333,10 +330,7 @@ impl RedisKeyWritable {
     /// # Panics
     ///
     /// Will panic if `RedisModule_ModuleTypeGetValue` is missing in redismodule.h    
-    pub fn get_value<'a, 'b, T>(
-        &'a self,
-        redis_type: &RedisType,
-    ) -> Result<Option<&'b mut T>, RedisError> {
+    pub fn get_value<T>(&self, redis_type: &RedisType) -> Result<Option<&mut T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
         let value =
             unsafe { raw::RedisModule_ModuleTypeGetValue.unwrap()(self.key_inner).cast::<T>() };
