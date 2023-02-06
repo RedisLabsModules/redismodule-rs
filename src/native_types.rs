@@ -34,7 +34,7 @@ impl RedisType {
     pub fn create_data_type(&self, ctx: *mut raw::RedisModuleCtx) -> Result<(), &str> {
         if self.name.len() != 9 {
             let msg = "Redis requires the length of native type names to be exactly 9 characters";
-            redis_log(ctx, format!("{}, name is: '{}'", msg, self.name).as_str());
+            redis_log(ctx, format!("{msg}, name is: '{}'", self.name).as_str());
             return Err(msg);
         }
 

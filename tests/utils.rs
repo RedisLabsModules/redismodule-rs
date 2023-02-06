@@ -39,8 +39,7 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
     let module_path: PathBuf = [
         std::env::current_dir()?,
         PathBuf::from(format!(
-            "target/{}/examples/lib{}.{}",
-            profile, module_name, extension
+            "target/{profile}/examples/lib{module_name}.{extension}"
         )),
     ]
     .iter()

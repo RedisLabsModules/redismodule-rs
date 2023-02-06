@@ -123,7 +123,7 @@ impl RedisString {
         Self { ctx, inner }
     }
 
-    pub fn from_redis_module_string(
+    pub const fn from_redis_module_string(
         ctx: *mut raw::RedisModuleCtx,
         inner: *mut raw::RedisModuleString,
     ) -> Self {
@@ -283,7 +283,7 @@ pub struct RedisBuffer {
 }
 
 impl RedisBuffer {
-    pub fn new(buffer: *mut c_char, len: usize) -> Self {
+    pub const fn new(buffer: *mut c_char, len: usize) -> Self {
         Self { buffer, len }
     }
 
