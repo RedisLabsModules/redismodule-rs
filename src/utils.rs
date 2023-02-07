@@ -3,7 +3,7 @@ use regex::Regex;
 /// Extracts regexp captures
 ///
 /// Extract from `s` the captures defined in `reg_exp`
-pub fn get_regexp_captures<'a, 'b>(s: &'a str, reg_exp: &'b str) -> Option<Vec<&'a str>> {
+pub fn get_regexp_captures<'a>(s: &'a str, reg_exp: &str) -> Option<Vec<&'a str>> {
     Regex::new(reg_exp).map_or_else(
         |_| None,
         |re| {

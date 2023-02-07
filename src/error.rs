@@ -40,9 +40,9 @@ impl Display for Error {
         match *self {
             // Both underlying errors already impl `Display`, so we defer to
             // their implementations.
-            Self::Generic(ref err) => write!(f, "{}", err),
-            Self::FromUtf8(ref err) => write!(f, "{}", err),
-            Self::ParseInt(ref err) => write!(f, "{}", err),
+            Self::Generic(ref err) => write!(f, "{err}"),
+            Self::FromUtf8(ref err) => write!(f, "{err}"),
+            Self::ParseInt(ref err) => write!(f, "{err}"),
         }
     }
 }

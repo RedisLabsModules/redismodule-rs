@@ -62,7 +62,7 @@ fn main() {
     let mut build = bindgen::Builder::default();
 
     if experimental_api() {
-        build = build.clang_arg(format!("-D{}", EXPERIMENTAL_API).as_str());
+        build = build.clang_arg(format!("-D{EXPERIMENTAL_API}").as_str());
     }
 
     let bindings = build

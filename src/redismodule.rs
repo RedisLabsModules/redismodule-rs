@@ -95,6 +95,12 @@ pub struct RedisString {
 }
 
 impl RedisString {
+    pub(crate) fn take(mut self) -> *mut raw::RedisModuleString {
+        let inner = self.inner;
+        self.inner = std::ptr::null_mut();
+        inner
+    }
+
     pub fn new(ctx: *mut raw::RedisModuleCtx, inner: *mut raw::RedisModuleString) -> Self {
         raw::string_retain_string(ctx, inner);
         Self { ctx, inner }
@@ -108,7 +114,16 @@ impl RedisString {
         Self { ctx, inner }
     }
 
-    pub fn from_redis_module_string(
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    pub fn create_from_slice(ctx: *mut raw::RedisModuleCtx, s: &[u8]) -> Self {
+        let inner = unsafe {
+            raw::RedisModule_CreateString.unwrap()(ctx, s.as_ptr().cast::<c_char>(), s.len())
+        };
+
+        Self { ctx, inner }
+    }
+
+    pub const fn from_redis_module_string(
         ctx: *mut raw::RedisModuleCtx,
         inner: *mut raw::RedisModuleString,
     ) -> Self {
@@ -198,8 +213,10 @@ impl RedisString {
 
 impl Drop for RedisString {
     fn drop(&mut self) {
-        unsafe {
-            raw::RedisModule_FreeString.unwrap()(self.ctx, self.inner);
+        if !self.inner.is_null() {
+            unsafe {
+                raw::RedisModule_FreeString.unwrap()(self.ctx, self.inner);
+            }
         }
     }
 }
@@ -266,7 +283,7 @@ pub struct RedisBuffer {
 }
 
 impl RedisBuffer {
-    pub fn new(buffer: *mut c_char, len: usize) -> Self {
+    pub const fn new(buffer: *mut c_char, len: usize) -> Self {
         Self { buffer, len }
     }
 

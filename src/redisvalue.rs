@@ -1,4 +1,4 @@
-use crate::RedisString;
+use crate::{RedisError, RedisString};
 
 #[derive(Debug, PartialEq)]
 pub enum RedisValue {
@@ -12,6 +12,20 @@ pub enum RedisValue {
     Array(Vec<RedisValue>),
     Null,
     NoReply, // No reply at all (as opposed to a Null reply)
+}
+
+impl TryFrom<RedisValue> for String {
+    type Error = RedisError;
+    fn try_from(val: RedisValue) -> Result<Self, RedisError> {
+        match val {
+            RedisValue::SimpleStringStatic(s) => Ok(s.to_string()),
+            RedisValue::SimpleString(s) => Ok(s),
+            RedisValue::BulkString(s) => Ok(s),
+            RedisValue::BulkRedisString(s) => Ok(s.try_as_str()?.to_string()),
+            RedisValue::StringBuffer(s) => Ok(std::str::from_utf8(&s)?.to_string()),
+            _ => Err(RedisError::Str("Can not convert result to String")),
+        }
+    }
 }
 
 impl From<()> for RedisValue {
@@ -76,7 +90,7 @@ impl From<&String> for RedisValue {
 
 impl<T: Into<Self>> From<Option<T>> for RedisValue {
     fn from(s: Option<T>) -> Self {
-        s.map_or(Self::Null, |v| v.into())
+        s.map_or(Self::Null, Into::into)
     }
 }
 
