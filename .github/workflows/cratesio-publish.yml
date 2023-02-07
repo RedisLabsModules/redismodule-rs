@@ -27,7 +27,7 @@ jobs:
           file: "Cargo.toml"
           key: "package.version"
           value: "${{ steps.get_version.outputs.VERSION }}"
-      
+
       - name: Set the version for publishing on derive crate
         uses: ciiiii/toml-editor@1.0.0
         with:
