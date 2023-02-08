@@ -1,3 +1,8 @@
+use std::{
+    collections::{HashMap, HashSet},
+    hash::{Hash, Hasher},
+};
+
 use crate::{RedisError, RedisString};
 
 #[derive(Debug, PartialEq)]
@@ -8,10 +13,44 @@ pub enum RedisValue {
     BulkRedisString(RedisString),
     StringBuffer(Vec<u8>),
     Integer(i64),
+    Bool(bool),
     Float(f64),
     Array(Vec<RedisValue>),
+    Map(HashMap<RedisValue, RedisValue>),
+    Set(HashSet<RedisValue>),
     Null,
     NoReply, // No reply at all (as opposed to a Null reply)
+}
+
+impl Eq for RedisValue {}
+
+impl Hash for RedisValue {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            RedisValue::SimpleStringStatic(s) => s.hash(state),
+            RedisValue::SimpleString(s) => s.hash(state),
+            RedisValue::BulkString(s) => s.hash(state),
+            RedisValue::BulkRedisString(s) => s.hash(state),
+            RedisValue::StringBuffer(s) => s.hash(state),
+            RedisValue::Integer(i) => i.hash(state),
+            RedisValue::Bool(b) => b.hash(state),
+            RedisValue::Float(f) => f.to_bits().hash(state),
+            RedisValue::Array(a) => a.hash(state),
+            RedisValue::Map(m) => {
+                for (k, v) in m {
+                    k.hash(state);
+                    v.hash(state);
+                }
+            }
+            RedisValue::Set(s) => {
+                for v in s {
+                    v.hash(state);
+                }
+            }
+            RedisValue::Null => 0.hash(state),
+            RedisValue::NoReply => 0.hash(state),
+        }
+    }
 }
 
 impl TryFrom<RedisValue> for String {
