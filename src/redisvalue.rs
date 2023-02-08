@@ -24,6 +24,7 @@ pub enum RedisValue {
 
 impl Eq for RedisValue {}
 
+#[allow(clippy::derive_hash_xor_eq)]
 impl Hash for RedisValue {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
