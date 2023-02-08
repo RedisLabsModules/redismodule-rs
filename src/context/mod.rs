@@ -223,8 +223,9 @@ impl Context {
     ///
     /// Will panic if methods used are missing in redismodule.h
     #[allow(clippy::must_use_candidate)]
-    pub fn reply(&self, r: RedisResult) -> raw::Status {
-        match r {
+    pub fn reply(&self, result: RedisResult) -> raw::Status {
+        match result {
+            Ok(RedisValue::Bool(v)) => raw::reply_with_bool(self.ctx, v.into()),
             Ok(RedisValue::Integer(v)) => raw::reply_with_long_long(self.ctx, v),
             Ok(RedisValue::Float(v)) => raw::reply_with_double(self.ctx, v),
             Ok(RedisValue::SimpleStringStatic(s)) => {
@@ -248,11 +249,30 @@ impl Context {
             }
 
             Ok(RedisValue::Array(array)) => {
-                // According to the Redis source code this always succeeds,
-                // so there is no point in checking its return value.
                 raw::reply_with_array(self.ctx, array.len() as c_long);
 
                 for elem in array {
+                    self.reply(Ok(elem));
+                }
+
+                raw::Status::Ok
+            }
+
+            Ok(RedisValue::Map(map)) => {
+                raw::reply_with_map(self.ctx, map.len() as c_long);
+
+                for (key, value) in map {
+                    self.reply(Ok(key));
+                    self.reply(Ok(value));
+                }
+
+                raw::Status::Ok
+            }
+
+            Ok(RedisValue::Set(set)) => {
+                raw::reply_with_set(self.ctx, set.len() as c_long);
+
+                for elem in set {
                     self.reply(Ok(elem));
                 }
 
