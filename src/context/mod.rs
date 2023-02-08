@@ -210,7 +210,7 @@ impl Context {
     #[allow(clippy::must_use_candidate)]
     pub fn reply_simple_string(&self, s: &str) -> raw::Status {
         let msg = Self::str_as_legal_resp_string(s);
-        unsafe { raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into() }
+        raw::reply_with_simple_string(self.ctx, msg.as_ptr())
     }
 
     #[allow(clippy::must_use_candidate)]
@@ -225,52 +225,32 @@ impl Context {
     #[allow(clippy::must_use_candidate)]
     pub fn reply(&self, r: RedisResult) -> raw::Status {
         match r {
-            Ok(RedisValue::Integer(v)) => unsafe {
-                raw::RedisModule_ReplyWithLongLong.unwrap()(self.ctx, v).into()
-            },
-
-            Ok(RedisValue::Float(v)) => unsafe {
-                raw::RedisModule_ReplyWithDouble.unwrap()(self.ctx, v).into()
-            },
-
-            Ok(RedisValue::SimpleStringStatic(s)) => unsafe {
+            Ok(RedisValue::Integer(v)) => raw::reply_with_long_long(self.ctx, v),
+            Ok(RedisValue::Float(v)) => raw::reply_with_double(self.ctx, v),
+            Ok(RedisValue::SimpleStringStatic(s)) => {
                 let msg = CString::new(s).unwrap();
-                raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into()
-            },
+                raw::reply_with_simple_string(self.ctx, msg.as_ptr())
+            }
 
-            Ok(RedisValue::SimpleString(s)) => unsafe {
+            Ok(RedisValue::SimpleString(s)) => {
                 let msg = CString::new(s).unwrap();
-                raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into()
-            },
+                raw::reply_with_simple_string(self.ctx, msg.as_ptr())
+            }
 
-            Ok(RedisValue::BulkString(s)) => unsafe {
-                raw::RedisModule_ReplyWithStringBuffer.unwrap()(
-                    self.ctx,
-                    s.as_ptr().cast::<c_char>(),
-                    s.len(),
-                )
-                .into()
-            },
+            Ok(RedisValue::BulkString(s)) => {
+                raw::reply_with_string_buffer(self.ctx, s.as_ptr().cast::<c_char>(), s.len())
+            }
 
-            Ok(RedisValue::BulkRedisString(s)) => unsafe {
-                raw::RedisModule_ReplyWithString.unwrap()(self.ctx, s.inner).into()
-            },
+            Ok(RedisValue::BulkRedisString(s)) => raw::reply_with_string(self.ctx, s.inner),
 
-            Ok(RedisValue::StringBuffer(s)) => unsafe {
-                raw::RedisModule_ReplyWithStringBuffer.unwrap()(
-                    self.ctx,
-                    s.as_ptr().cast::<c_char>(),
-                    s.len(),
-                )
-                .into()
-            },
+            Ok(RedisValue::StringBuffer(s)) => {
+                raw::reply_with_string_buffer(self.ctx, s.as_ptr().cast::<c_char>(), s.len())
+            }
 
             Ok(RedisValue::Array(array)) => {
-                unsafe {
-                    // According to the Redis source code this always succeeds,
-                    // so there is no point in checking its return value.
-                    raw::RedisModule_ReplyWithArray.unwrap()(self.ctx, array.len() as c_long);
-                }
+                // According to the Redis source code this always succeeds,
+                // so there is no point in checking its return value.
+                raw::reply_with_array(self.ctx, array.len() as c_long);
 
                 for elem in array {
                     self.reply(Ok(elem));
@@ -279,9 +259,7 @@ impl Context {
                 raw::Status::Ok
             }
 
-            Ok(RedisValue::Null) => unsafe {
-                raw::RedisModule_ReplyWithNull.unwrap()(self.ctx).into()
-            },
+            Ok(RedisValue::Null) => raw::reply_with_null(self.ctx),
 
             Ok(RedisValue::NoReply) => raw::Status::Ok,
 
