@@ -251,3 +251,33 @@ fn test_call() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_response() -> Result<()> {
+    let port: u16 = 6488;
+    let _guards = vec![start_redis_server_with_module("response", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    redis::cmd("hset")
+        .arg(&["k", "a", "b", "c", "d", "e", "b", "f", "g"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    let res: Vec<String> = redis::cmd("map.mget")
+        .arg(&["k", "a", "c", "e"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(&res, &["a", "b", "c", "d", "e", "b"]);
+
+    let res: Vec<String> = redis::cmd("map.unique")
+        .arg(&["k", "a", "c", "e"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(&res, &["b", "d"]);
+
+    Ok(())
+}

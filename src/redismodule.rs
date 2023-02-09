@@ -274,6 +274,12 @@ impl From<RedisString> for String {
     }
 }
 
+impl From<RedisString> for Vec<u8> {
+    fn from(rs: RedisString) -> Self {
+        rs.as_slice().to_vec()
+    }
+}
+
 ///////////////////////////////////////////////////
 
 #[derive(Debug)]

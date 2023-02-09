@@ -254,13 +254,19 @@ pub fn reply_with_array(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn reply_with_map(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
-    unsafe { RedisModule_ReplyWithMap.unwrap()(ctx, len).into() }
+    unsafe {
+        let cmd = RedisModule_ReplyWithMap.unwrap_or(RedisModule_ReplyWithArray.unwrap());
+        cmd(ctx, len).into()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn reply_with_set(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
-    unsafe { RedisModule_ReplyWithSet.unwrap()(ctx, len).into() }
+    unsafe {
+        let cmd = RedisModule_ReplyWithSet.unwrap_or(RedisModule_ReplyWithArray.unwrap());
+        cmd(ctx, len).into()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]

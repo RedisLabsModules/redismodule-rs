@@ -77,6 +77,10 @@ crate-type = ["cdylib"]
 name = "stream"
 crate-type = ["cdylib"]
 
+[[example]]
+name = "response"
+crate-type = ["cdylib"]
+
 [dependencies]
 bitflags = "1.2"
 libc = "0.2"
