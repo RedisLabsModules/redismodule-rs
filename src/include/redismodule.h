@@ -1381,7 +1381,7 @@ static int RedisModule_Init(RedisModuleCtx *ctx, const char *name, int ver, int 
     REDISMODULE_GET_API(TrimStringAllocation);
     REDISMODULE_GET_API(RetainString);
     REDISMODULE_GET_API(HoldString);
-    // REDISMODULE_GET_API(StringCompare);
+    REDISMODULE_GET_API(StringCompare);
     REDISMODULE_GET_API(GetContextFromIO);
     REDISMODULE_GET_API(GetKeyNameFromIO);
     REDISMODULE_GET_API(GetKeyNameFromModuleKey);
