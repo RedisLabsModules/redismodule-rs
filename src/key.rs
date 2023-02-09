@@ -334,9 +334,9 @@ impl RedisKeyWritable {
     /// # Panics
     ///
     /// Will panic if `RedisModule_ModuleTypeGetValue` is missing in redismodule.h
-    /// 
+    ///
     /// TODO Avoid clippy warning about needless lifetime as a temporary workaround
-    #[allow(clippy::needless_lifetimes)]    
+    #[allow(clippy::needless_lifetimes)]
     pub fn get_value<'a, 'b, T>(
         &'a self,
         redis_type: &RedisType,
