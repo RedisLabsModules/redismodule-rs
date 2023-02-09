@@ -255,8 +255,12 @@ pub fn reply_with_array(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
 #[inline]
 pub fn reply_with_map(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
     unsafe {
-        let cmd = RedisModule_ReplyWithMap.unwrap_or(RedisModule_ReplyWithArray.unwrap());
-        cmd(ctx, len).into()
+        RedisModule_ReplyWithMap
+            .map_or_else(
+                || RedisModule_ReplyWithArray.unwrap()(ctx, len * 2),
+                |f| f(ctx, len),
+            )
+            .into()
     }
 }
 
@@ -264,8 +268,12 @@ pub fn reply_with_map(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
 #[inline]
 pub fn reply_with_set(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
     unsafe {
-        let cmd = RedisModule_ReplyWithSet.unwrap_or(RedisModule_ReplyWithArray.unwrap());
-        cmd(ctx, len).into()
+        RedisModule_ReplyWithSet
+            .map_or_else(
+                || RedisModule_ReplyWithArray.unwrap()(ctx, len * 2),
+                |f| f(ctx, len),
+            )
+            .into()
     }
 }
 

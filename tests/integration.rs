@@ -265,18 +265,20 @@ fn test_response() -> Result<()> {
         .query(&mut con)
         .with_context(|| "failed to run string.set")?;
 
-    let res: Vec<String> = redis::cmd("map.mget")
+    let mut res: Vec<String> = redis::cmd("map.mget")
         .arg(&["k", "a", "c", "e"])
         .query(&mut con)
         .with_context(|| "failed to run string.set")?;
 
-    assert_eq!(&res, &["a", "b", "c", "d", "e", "b"]);
+    res.sort();
+    assert_eq!(&res, &["a", "b", "b", "c", "d", "e"]);
 
-    let res: Vec<String> = redis::cmd("map.unique")
+    let mut res: Vec<String> = redis::cmd("map.unique")
         .arg(&["k", "a", "c", "e"])
         .query(&mut con)
         .with_context(|| "failed to run string.set")?;
 
+    res.sort();
     assert_eq!(&res, &["b", "d"]);
 
     Ok(())
