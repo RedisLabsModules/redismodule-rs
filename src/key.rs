@@ -600,7 +600,7 @@ where
             if ptr.is_null() {
                 None
             } else {
-                Some(RedisString::new(ctx, *ptr))
+                Some(RedisString::from_redis_module_string(ctx, *ptr))
             }
         }));
     }
