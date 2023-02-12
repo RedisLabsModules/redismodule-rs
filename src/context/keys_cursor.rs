@@ -29,9 +29,9 @@ extern "C" fn scan_callback<C: FnMut(&Context, RedisString, Option<&RedisKey>)>(
 }
 
 impl KeysCursor {
-    pub fn new() -> KeysCursor {
+    pub fn new() -> Self {
         let inner_cursor = unsafe { raw::RedisModule_ScanCursorCreate.unwrap()() };
-        KeysCursor { inner_cursor }
+        Self { inner_cursor }
     }
 
     pub fn scan<F: FnMut(&Context, RedisString, Option<&RedisKey>)>(

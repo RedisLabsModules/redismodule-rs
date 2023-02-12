@@ -24,6 +24,6 @@ unsafe impl GlobalAlloc for RedisAlloc {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
-        raw::RedisModule_Free.unwrap()(ptr.cast::<c_void>())
+        raw::RedisModule_Free.unwrap()(ptr.cast::<c_void>());
     }
 }

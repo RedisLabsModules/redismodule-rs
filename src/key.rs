@@ -49,7 +49,7 @@ impl RedisKey {
         Self { ctx, key_inner }
     }
 
-    pub(crate) fn from_raw_parts(
+    pub(crate) const fn from_raw_parts(
         ctx: *mut raw::RedisModuleCtx,
         key_inner: *mut raw::RedisModuleKey,
     ) -> Self {
@@ -183,9 +183,13 @@ impl RedisKeyWritable {
     /// so we have to check the key's value instead.
     ///
     /// ```
-    /// fn is_empty_old(key: &RedisKeyWritable) -> Result<bool, Error> {
-    ///     let s = key.as_string_dma();
-    ///     s.write(b"new value")?;
+    /// use redis_module::key::RedisKeyWritable;
+    /// use redis_module::RedisError;
+    ///
+    /// fn is_empty_old(key: &RedisKeyWritable) -> Result<bool, RedisError> {
+    ///     let mut s = key.as_string_dma()?;
+    ///     let is_empty = s.write(b"new value")?.is_empty();
+    ///     Ok(is_empty)
     /// }
     /// ```
     pub fn as_string_dma(&self) -> Result<StringDMA, RedisError> {
@@ -270,10 +274,7 @@ impl RedisKeyWritable {
         let exp_millis = expire.as_millis();
 
         let exp_time = i64::try_from(exp_millis).map_err(|_| {
-            RedisError::String(format!(
-                "Error expire duration {} is not allowed",
-                exp_millis
-            ))
+            RedisError::String(format!("Error expire duration {exp_millis} is not allowed"))
         })?;
 
         match raw::set_expire(self.key_inner, exp_time) {
@@ -454,28 +455,37 @@ where
     /// Get a [`HashMap`] from the results:
     ///
     /// ```
-    /// use std::collections::HashMap;
-    /// use redis_module::RedisError;
+    /// use redis_module::key::HMGetResult;
+    /// use redis_module::{Context, RedisError, RedisResult, RedisString, RedisValue};
     ///
-    /// let keyname = "config";
-    /// let fields = &["username", "password", "email"];
-    /// let hm = ctx
-    ///      .open_key(keyname)
-    ///      .hash_get_multi(fields)?
-    ///      .ok_or(RedisError::Str("ERR key not found"))?;
-    /// let response: HashMap<&str, String> = hm.into_iter().collect();
+    /// fn call_hash(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
+    ///     let key_name = RedisString::create(ctx.ctx, "config");
+    ///     let fields = &["username", "password", "email"];
+    ///     let hm: HMGetResult<'_, &str, RedisString> = ctx
+    ///         .open_key(&key_name)
+    ///         .hash_get_multi(fields)?
+    ///         .ok_or(RedisError::Str("ERR key not found"))?;
+    ///     let response: Vec<RedisValue> = hm.into_iter().map(|(_, v)| v.into()).collect();
+    ///     Ok(RedisValue::Array(response))
+    /// }
     /// ```
     ///
     /// Get a [`Vec`] of only the field values from the results:
     ///
     /// ```
-    /// use redis_module::RedisError;
+    /// use redis_module::{Context, RedisError, RedisResult, RedisString, RedisValue};
+    /// use redis_module::key::HMGetResult;
     ///
-    /// let hm = ctx
-    ///      .open_key(keyname)
-    ///      .hash_get_multi(fields)?
-    ///      .ok_or(RedisError::Str("ERR key not found"))?;
-    /// let response: Vec<String> = hm.into_iter().map(|(_, v)| v).collect();
+    /// fn call_hash(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
+    ///     let key_name = RedisString::create(ctx.ctx, "config");
+    ///     let fields = &["username", "password", "email"];
+    ///     let hm: HMGetResult<'_, &str, RedisString> = ctx
+    ///          .open_key(&key_name)
+    ///          .hash_get_multi(fields)?
+    ///          .ok_or(RedisError::Str("ERR key not found"))?;
+    ///     let response: Vec<RedisValue> = hm.into_iter().map(|(_, v)| RedisValue::BulkRedisString(v)).collect();
+    ///     Ok(RedisValue::Array(response))
+    /// }
     /// ```
     ///
     /// [`HashMap`]: std::collections::HashMap
