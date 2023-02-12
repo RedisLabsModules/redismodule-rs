@@ -254,7 +254,7 @@ fn test_call() -> Result<()> {
 
 #[test]
 fn test_response() -> Result<()> {
-    let port: u16 = 6488;
+    let port: u16 = 6489;
     let _guards = vec![start_redis_server_with_module("response", port)
         .with_context(|| "failed to start redis server")?];
     let mut con =
