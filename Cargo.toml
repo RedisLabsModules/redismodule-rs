@@ -98,7 +98,7 @@ redis = "0.22.1"
 redis-module-derive = { path = "./redismodule-rs-derive"}
 
 [build-dependencies]
-bindgen = "0.63"
+bindgen = "0.64"
 cc = "1.0"
 
 [features]
