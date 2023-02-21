@@ -15,12 +15,12 @@ impl ConfigFlags {
         }
     }
 
-    pub fn emmutable(mut self) -> Self {
+    pub fn immutable(mut self) -> Self {
         self.flags |= raw::REDISMODULE_CONFIG_IMMUTABLE;
         self
     }
 
-    pub fn is_emmutable(&self) -> bool {
+    pub fn is_immutable(&self) -> bool {
         self.flags & raw::REDISMODULE_CONFIG_IMMUTABLE != 0
     }
 
