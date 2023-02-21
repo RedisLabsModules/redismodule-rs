@@ -201,9 +201,9 @@ macro_rules! redis_module {
 
             $(
                 $(
-                    if let Err(err) = (crate::redis_module::context::server_events::subscribe_to_server_event(
+                    if let Err(err) = ($crate::context::server_events::subscribe_to_server_event(
                         &context,
-                        crate::redis_module::context::server_events::ServerEvents::$server_event_type,
+                        $crate::context::server_events::ServerEvents::$server_event_type,
                         Box::new($server_event_handler))) {
                             context.log_warning(&format!("Failed register server event, {}", err));
                             return $crate::Status::Err as c_int;
