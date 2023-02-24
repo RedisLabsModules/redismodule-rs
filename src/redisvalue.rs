@@ -9,7 +9,10 @@ pub enum RedisValue {
     StringBuffer(Vec<u8>),
     Integer(i64),
     Float(f64),
+    Boolean(bool),
     Array(Vec<RedisValue>),
+    Map(Vec<(RedisValue, RedisValue)>),
+    Set(Vec<RedisValue>),
     Null,
     NoReply, // No reply at all (as opposed to a Null reply)
 }
@@ -97,6 +100,12 @@ impl<T: Into<Self>> From<Option<T>> for RedisValue {
 impl<T: Into<Self>> From<Vec<T>> for RedisValue {
     fn from(items: Vec<T>) -> Self {
         Self::Array(items.into_iter().map(Into::into).collect())
+    }
+}
+
+impl From<bool> for RedisValue {
+    fn from(b: bool) -> Self {
+        Self::Boolean(b)
     }
 }
 

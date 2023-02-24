@@ -233,6 +233,10 @@ impl Context {
                 raw::RedisModule_ReplyWithDouble.unwrap()(self.ctx, v).into()
             },
 
+            Ok(RedisValue::Boolean(v)) => unsafe {
+                raw::RedisModule_ReplyWithBool.unwrap()(self.ctx, if v { 1 } else { 0 }).into()
+            },
+
             Ok(RedisValue::SimpleStringStatic(s)) => unsafe {
                 let msg = CString::new(s).unwrap();
                 raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into()
@@ -273,6 +277,31 @@ impl Context {
                 }
 
                 for elem in array {
+                    self.reply(Ok(elem));
+                }
+
+                raw::Status::Ok
+            }
+
+            Ok(RedisValue::Map(map)) => {
+                unsafe {
+                    raw::RedisModule_ReplyWithMap.unwrap()(self.ctx, map.len() as c_long);
+                }
+
+                for (key, value) in map {
+                    self.reply(Ok(key));
+                    self.reply(Ok(value));
+                }
+
+                raw::Status::Ok
+            }
+
+            Ok(RedisValue::Set(set)) => {
+                unsafe {
+                    raw::RedisModule_ReplyWithSet.unwrap()(self.ctx, set.len() as c_long);
+                }
+
+                for elem in set {
                     self.reply(Ok(elem));
                 }
 
