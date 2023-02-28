@@ -721,7 +721,7 @@ pub fn get_keyspace_events() -> NotifyEvent {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Version {
     pub major: i32,
     pub minor: i32,
