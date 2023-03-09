@@ -1,7 +1,7 @@
+use bitflags::bitflags;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr;
-use bitflags::bitflags;
 
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::raw::{ModuleOptions, Version};
@@ -417,7 +417,9 @@ impl Context {
     /// * Loading RDB/AOF
     /// * Execution mode such as multi exec or Lua
     pub fn get_flags(&self) -> ContextFlags {
-        ContextFlags::from_bits_truncate(unsafe { raw::RedisModule_GetContextFlags.unwrap()(self.ctx) as u32 } as c_int)
+        ContextFlags::from_bits_truncate(unsafe {
+            raw::RedisModule_GetContextFlags.unwrap()(self.ctx) as u32
+        } as c_int)
     }
 }
 
@@ -456,7 +458,7 @@ bitflags! {
 
         /// The instance is a master
         const MASTER = raw::REDISMODULE_CTX_FLAGS_MASTER as c_int;
-        
+
         /// The instance is a SLAVE
         const SLAVE = raw::REDISMODULE_CTX_FLAGS_SLAVE as c_int;
 

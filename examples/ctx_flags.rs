@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{Context, RedisResult, RedisString, RedisValue, ContextFlags};
+use redis_module::{Context, ContextFlags, RedisResult, RedisString, RedisValue};
 
 fn role(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     Ok(RedisValue::SimpleStringStatic(
