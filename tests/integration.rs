@@ -251,3 +251,18 @@ fn test_call() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_ctx_flags() -> Result<()> {
+    let port: u16 = 6489;
+    let _guards = vec![start_redis_server_with_module("ctx_flags", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: String = redis::cmd("my_role").query(&mut con)?;
+
+    assert_eq!(&res, "master");
+
+    Ok(())
+}

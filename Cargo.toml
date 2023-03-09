@@ -55,6 +55,10 @@ name = "load_unload"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "ctx_flags"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "events"
 crate-type = ["cdylib"]
 required-features = ["experimental-api"]
