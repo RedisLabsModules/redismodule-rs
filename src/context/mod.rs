@@ -418,8 +418,8 @@ impl Context {
     /// * Execution mode such as multi exec or Lua
     pub fn get_flags(&self) -> ContextFlags {
         ContextFlags::from_bits_truncate(unsafe {
-            raw::RedisModule_GetContextFlags.unwrap()(self.ctx) as u32
-        } as c_int)
+            raw::RedisModule_GetContextFlags.unwrap()(self.ctx)
+        })
     }
 }
 
