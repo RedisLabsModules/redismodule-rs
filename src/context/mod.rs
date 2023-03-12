@@ -1,3 +1,4 @@
+use bitflags::bitflags;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr;
@@ -411,6 +412,17 @@ impl Context {
     pub fn set_module_options(&self, options: ModuleOptions) {
         unsafe { raw::RedisModule_SetModuleOptions.unwrap()(self.ctx, options.bits()) };
     }
+
+    /// Return ContextFlags object that allows to check properties related to the state of
+    /// the current Redis instance such as:
+    /// * Role (master/slave)
+    /// * Loading RDB/AOF
+    /// * Execution mode such as multi exec or Lua
+    pub fn get_flags(&self) -> ContextFlags {
+        ContextFlags::from_bits_truncate(unsafe {
+            raw::RedisModule_GetContextFlags.unwrap()(self.ctx)
+        })
+    }
 }
 
 pub struct InfoContext {
@@ -435,5 +447,82 @@ impl InfoContext {
     #[allow(clippy::must_use_candidate)]
     pub fn add_info_field_long_long(&self, name: &str, value: c_longlong) -> Status {
         add_info_field_long_long(self.ctx, name, value)
+    }
+}
+
+bitflags! {
+    pub struct ContextFlags : c_int {
+        /// The command is running in the context of a Lua script
+        const LUA = raw::REDISMODULE_CTX_FLAGS_LUA as c_int;
+
+        /// The command is running inside a Redis transaction
+        const MULTI = raw::REDISMODULE_CTX_FLAGS_MULTI as c_int;
+
+        /// The instance is a master
+        const MASTER = raw::REDISMODULE_CTX_FLAGS_MASTER as c_int;
+
+        /// The instance is a SLAVE
+        const SLAVE = raw::REDISMODULE_CTX_FLAGS_SLAVE as c_int;
+
+        /// The instance is read-only (usually meaning it's a slave as well)
+        const READONLY = raw::REDISMODULE_CTX_FLAGS_READONLY as c_int;
+
+        /// The instance is running in cluster mode
+        const CLUSTER = raw::REDISMODULE_CTX_FLAGS_CLUSTER as c_int;
+
+        /// The instance has AOF enabled
+        const AOF = raw::REDISMODULE_CTX_FLAGS_AOF as c_int;
+
+        /// The instance has RDB enabled
+        const RDB = raw::REDISMODULE_CTX_FLAGS_RDB as c_int;
+
+        /// The instance has Maxmemory set
+        const MAXMEMORY = raw::REDISMODULE_CTX_FLAGS_MAXMEMORY as c_int;
+
+        /// Maxmemory is set and has an eviction policy that may delete keys
+        const EVICTED = raw::REDISMODULE_CTX_FLAGS_EVICT as c_int;
+
+        /// Redis is out of memory according to the maxmemory flag.
+        const OOM = raw::REDISMODULE_CTX_FLAGS_OOM as c_int;
+
+        /// Less than 25% of memory available according to maxmemory.
+        const OOM_WARNING = raw::REDISMODULE_CTX_FLAGS_OOM_WARNING as c_int;
+
+        /// The command was sent over the replication link.
+        const REPLICATED = raw::REDISMODULE_CTX_FLAGS_REPLICATED as c_int;
+
+        /// Redis is currently loading either from AOF or RDB.
+        const LOADING = raw::REDISMODULE_CTX_FLAGS_LOADING as c_int;
+
+        /// The replica has no link with its master
+        const REPLICA_IS_STALE = raw::REDISMODULE_CTX_FLAGS_REPLICA_IS_STALE as c_int;
+
+        /// The replica is trying to connect with the master
+        const REPLICA_IS_CONNECTING = raw::REDISMODULE_CTX_FLAGS_REPLICA_IS_CONNECTING as c_int;
+
+        /// The replica is receiving an RDB file from its master.
+        const REPLICA_IS_TRANSFERRING = raw::REDISMODULE_CTX_FLAGS_REPLICA_IS_TRANSFERRING as c_int;
+
+        /// The replica is online, receiving updates from its master
+        const REPLICA_IS_ONLINE = raw::REDISMODULE_CTX_FLAGS_REPLICA_IS_ONLINE as c_int;
+
+        /// There is currently some background process active.
+        const ACTIVE_CHILD = raw::REDISMODULE_CTX_FLAGS_ACTIVE_CHILD as c_int;
+
+        /// Redis is currently running inside background child process.
+        const IS_CHILD = raw::REDISMODULE_CTX_FLAGS_IS_CHILD as c_int;
+
+        /// The next EXEC will fail due to dirty CAS (touched keys).
+        const MULTI_DIRTY = raw::REDISMODULE_CTX_FLAGS_MULTI_DIRTY as c_int;
+
+        /// The current client does not allow blocking, either called from
+        /// within multi, lua, or from another module using RM_Call
+        const DENY_BLOCKING = raw::REDISMODULE_CTX_FLAGS_DENY_BLOCKING as c_int;
+
+        /// The current client uses RESP3 protocol
+        const FLAGS_RESP3 = raw::REDISMODULE_CTX_FLAGS_RESP3 as c_int;
+
+        /// Redis is currently async loading database for diskless replication.
+        const ASYNC_LOADING = raw::REDISMODULE_CTX_FLAGS_ASYNC_LOADING as c_int;
     }
 }
