@@ -82,7 +82,7 @@ name = "stream"
 crate-type = ["cdylib"]
 
 [dependencies]
-bitflags = "1.2"
+bitflags = "2.0"
 libc = "0.2"
 enum-primitive-derive = "^0.1"
 num-traits = "^0.2"
