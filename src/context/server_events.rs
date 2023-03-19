@@ -2,13 +2,13 @@ use crate::raw;
 use crate::{context::Context, RedisError};
 use linkme::distributed_slice;
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum ServerRole {
     Primary,
     Replica,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum LoadingSubevent {
     RdbStarted,
     AofStarted,
@@ -17,18 +17,19 @@ pub enum LoadingSubevent {
     Failed,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum FlushSubevent {
     Started,
     Ended,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum ModuleChangeSubevent {
     Loaded,
     Unloaded,
 }
 
+#[derive(Clone)]
 pub enum ServerEventHandler {
     RuleChanged(fn(&Context, ServerRole)),
     Loading(fn(&Context, LoadingSubevent)),
@@ -61,7 +62,7 @@ extern "C" fn role_changed_callback(
     };
     let ctx = Context::new(ctx);
     ROLE_CHANGED_SERVER_EVENTS_LIST.iter().for_each(|callback| {
-        callback(&ctx, new_role.clone());
+        callback(&ctx, new_role);
     });
 }
 
@@ -79,7 +80,7 @@ extern "C" fn loading_event_callback(
     };
     let ctx = Context::new(ctx);
     LOADING_SERVER_EVENTS_LIST.iter().for_each(|callback| {
-        callback(&ctx, loading_sub_event.clone());
+        callback(&ctx, loading_sub_event);
     });
 }
 
@@ -96,7 +97,7 @@ extern "C" fn flush_event_callback(
     };
     let ctx = Context::new(ctx);
     FLUSH_SERVER_EVENTS_LIST.iter().for_each(|callback| {
-        callback(&ctx, flush_sub_event.clone());
+        callback(&ctx, flush_sub_event);
     });
 }
 
@@ -115,80 +116,36 @@ extern "C" fn module_change_event_callback(
     MODULE_CHANGED_SERVER_EVENTS_LIST
         .iter()
         .for_each(|callback| {
-            callback(&ctx, module_changed_sub_event.clone());
+            callback(&ctx, module_changed_sub_event);
         });
 }
 
+fn register_single_server_event_type<T>(ctx: &Context, callbacks: &[fn(&Context, T)], server_event: u64, inner_callback: raw::RedisModuleEventCallback) -> Result<(), RedisError> {
+    if !callbacks.is_empty() {
+        let res = unsafe {
+            raw::RedisModule_SubscribeToServerEvent.unwrap()(
+                ctx.ctx,
+                raw::RedisModuleEvent {
+                    id: server_event,
+                    dataver: 1,
+                },
+                inner_callback,
+            )
+        };
+        if res != raw::REDISMODULE_OK as i32 {
+            return Err(RedisError::Str(
+                "Failed subscribing to server event",
+            ));
+        }
+    }
+
+    Ok(())
+}
+
 pub fn register_server_events(ctx: &Context) -> Result<(), RedisError> {
-    if !ROLE_CHANGED_SERVER_EVENTS_LIST.is_empty() {
-        let res = unsafe {
-            raw::RedisModule_SubscribeToServerEvent.unwrap()(
-                ctx.ctx,
-                raw::RedisModuleEvent {
-                    id: raw::REDISMODULE_EVENT_REPLICATION_ROLE_CHANGED,
-                    dataver: 1,
-                },
-                Some(role_changed_callback),
-            )
-        };
-        if res != raw::REDISMODULE_OK as i32 {
-            return Err(RedisError::Str(
-                "Failed subscribing to role changed server event",
-            ));
-        }
-    }
-
-    if !LOADING_SERVER_EVENTS_LIST.is_empty() {
-        let res = unsafe {
-            raw::RedisModule_SubscribeToServerEvent.unwrap()(
-                ctx.ctx,
-                raw::RedisModuleEvent {
-                    id: raw::REDISMODULE_EVENT_LOADING,
-                    dataver: 1,
-                },
-                Some(loading_event_callback),
-            )
-        };
-        if res != raw::REDISMODULE_OK as i32 {
-            return Err(RedisError::Str(
-                "Failed subscribing to loading server event",
-            ));
-        }
-    }
-
-    if !FLUSH_SERVER_EVENTS_LIST.is_empty() {
-        let res = unsafe {
-            raw::RedisModule_SubscribeToServerEvent.unwrap()(
-                ctx.ctx,
-                raw::RedisModuleEvent {
-                    id: raw::REDISMODULE_EVENT_FLUSHDB,
-                    dataver: 1,
-                },
-                Some(flush_event_callback),
-            )
-        };
-        if res != raw::REDISMODULE_OK as i32 {
-            return Err(RedisError::Str("Failed subscribing to flush server event"));
-        }
-    }
-
-    if !MODULE_CHANGED_SERVER_EVENTS_LIST.is_empty() {
-        let res = unsafe {
-            raw::RedisModule_SubscribeToServerEvent.unwrap()(
-                ctx.ctx,
-                raw::RedisModuleEvent {
-                    id: raw::REDISMODULE_EVENT_MODULE_CHANGE,
-                    dataver: 1,
-                },
-                Some(module_change_event_callback),
-            )
-        };
-        if res != raw::REDISMODULE_OK as i32 {
-            return Err(RedisError::Str(
-                "Failed subscribing to module changed server event",
-            ));
-        }
-    }
-
+    register_single_server_event_type(ctx, &ROLE_CHANGED_SERVER_EVENTS_LIST, raw::REDISMODULE_EVENT_REPLICATION_ROLE_CHANGED, Some(role_changed_callback))?;
+    register_single_server_event_type(ctx, &LOADING_SERVER_EVENTS_LIST, raw::REDISMODULE_EVENT_LOADING, Some(loading_event_callback))?;
+    register_single_server_event_type(ctx, &FLUSH_SERVER_EVENTS_LIST, raw::REDISMODULE_EVENT_FLUSHDB, Some(flush_event_callback))?;
+    register_single_server_event_type(ctx, &MODULE_CHANGED_SERVER_EVENTS_LIST, raw::REDISMODULE_EVENT_MODULE_CHANGE, Some(module_change_event_callback))?;
     Ok(())
 }
