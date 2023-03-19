@@ -120,7 +120,12 @@ extern "C" fn module_change_event_callback(
         });
 }
 
-fn register_single_server_event_type<T>(ctx: &Context, callbacks: &[fn(&Context, T)], server_event: u64, inner_callback: raw::RedisModuleEventCallback) -> Result<(), RedisError> {
+fn register_single_server_event_type<T>(
+    ctx: &Context,
+    callbacks: &[fn(&Context, T)],
+    server_event: u64,
+    inner_callback: raw::RedisModuleEventCallback,
+) -> Result<(), RedisError> {
     if !callbacks.is_empty() {
         let res = unsafe {
             raw::RedisModule_SubscribeToServerEvent.unwrap()(
@@ -133,9 +138,7 @@ fn register_single_server_event_type<T>(ctx: &Context, callbacks: &[fn(&Context,
             )
         };
         if res != raw::REDISMODULE_OK as i32 {
-            return Err(RedisError::Str(
-                "Failed subscribing to server event",
-            ));
+            return Err(RedisError::Str("Failed subscribing to server event"));
         }
     }
 
@@ -143,9 +146,29 @@ fn register_single_server_event_type<T>(ctx: &Context, callbacks: &[fn(&Context,
 }
 
 pub fn register_server_events(ctx: &Context) -> Result<(), RedisError> {
-    register_single_server_event_type(ctx, &ROLE_CHANGED_SERVER_EVENTS_LIST, raw::REDISMODULE_EVENT_REPLICATION_ROLE_CHANGED, Some(role_changed_callback))?;
-    register_single_server_event_type(ctx, &LOADING_SERVER_EVENTS_LIST, raw::REDISMODULE_EVENT_LOADING, Some(loading_event_callback))?;
-    register_single_server_event_type(ctx, &FLUSH_SERVER_EVENTS_LIST, raw::REDISMODULE_EVENT_FLUSHDB, Some(flush_event_callback))?;
-    register_single_server_event_type(ctx, &MODULE_CHANGED_SERVER_EVENTS_LIST, raw::REDISMODULE_EVENT_MODULE_CHANGE, Some(module_change_event_callback))?;
+    register_single_server_event_type(
+        ctx,
+        &ROLE_CHANGED_SERVER_EVENTS_LIST,
+        raw::REDISMODULE_EVENT_REPLICATION_ROLE_CHANGED,
+        Some(role_changed_callback),
+    )?;
+    register_single_server_event_type(
+        ctx,
+        &LOADING_SERVER_EVENTS_LIST,
+        raw::REDISMODULE_EVENT_LOADING,
+        Some(loading_event_callback),
+    )?;
+    register_single_server_event_type(
+        ctx,
+        &FLUSH_SERVER_EVENTS_LIST,
+        raw::REDISMODULE_EVENT_FLUSHDB,
+        Some(flush_event_callback),
+    )?;
+    register_single_server_event_type(
+        ctx,
+        &MODULE_CHANGED_SERVER_EVENTS_LIST,
+        raw::REDISMODULE_EVENT_MODULE_CHANGE,
+        Some(module_change_event_callback),
+    )?;
     Ok(())
 }
