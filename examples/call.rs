@@ -1,7 +1,10 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{Context, RedisError, RedisResult, RedisString};
+use redis_module::raw::*;
+use redis_module::{
+    CallOptionsBuilder, CallReply, Context, RedisError, RedisResult, RedisString, RootCallReply,
+};
 
 fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
     let res: String = ctx.call("ECHO", &["TEST"])?.try_into()?;
@@ -60,6 +63,19 @@ fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
         return Err(RedisError::Str(
             "Failed calling 'ECHO TEST' with dynamic array of RedisString",
         ));
+    }
+
+    let call_options = CallOptionsBuilder::new().script_mode().errors_as_replies();
+    let res: RootCallReply =
+        ctx.call_ext::<&[&str; 0], _>("SHUTDOWN", &call_options.constract(), &[]);
+    if res.get_type() != ReplyType::Error {
+        return Err(RedisError::Str("Failed to set script mode on call_ext"));
+    }
+    let error_msg = res.get_string().unwrap();
+    if !error_msg.contains("not allow") {
+        return Err(RedisError::String(format!(
+            "Failed to verify error messages, expected error message to contain 'not allow', error message: '{error_msg}'",
+        )));
     }
 
     Ok("pass".into())

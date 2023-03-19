@@ -1,4 +1,4 @@
-use crate::{RedisError, RedisString};
+use crate::{raw, CallReply, RedisError, RedisString};
 
 #[derive(Debug, PartialEq)]
 pub enum RedisValue {
@@ -10,6 +10,8 @@ pub enum RedisValue {
     Integer(i64),
     Float(f64),
     Array(Vec<RedisValue>),
+    Error(String),
+    StaticError(&'static str),
     Null,
     NoReply, // No reply at all (as opposed to a Null reply)
 }
@@ -97,6 +99,19 @@ impl<T: Into<Self>> From<Option<T>> for RedisValue {
 impl<T: Into<Self>> From<Vec<T>> for RedisValue {
     fn from(items: Vec<T>) -> Self {
         Self::Array(items.into_iter().map(Into::into).collect())
+    }
+}
+
+impl<T: CallReply> From<T> for RedisValue {
+    fn from(reply: T) -> Self {
+        match reply.get_type() {
+            raw::ReplyType::Error => RedisValue::Error(reply.get_string().unwrap()),
+            raw::ReplyType::Unknown => RedisValue::StaticError("Error on method call"),
+            raw::ReplyType::Array => RedisValue::Array(reply.iter().map(|v| v.into()).collect()),
+            raw::ReplyType::Integer => RedisValue::Integer(reply.get_int()),
+            raw::ReplyType::String => RedisValue::SimpleString(reply.get_string().unwrap()),
+            raw::ReplyType::Null => RedisValue::Null,
+        }
     }
 }
 
