@@ -1,7 +1,7 @@
 use crate::utils::{get_redis_connection, start_redis_server_with_module};
 use anyhow::Context;
 use anyhow::Result;
-use redis::RedisError;
+use redis::{RedisError, RedisResult};
 
 mod utils;
 
@@ -266,3 +266,25 @@ fn test_ctx_flags() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_key_miss_event() -> Result<()> {
+    let port: u16 = 6490;
+    let _guards = vec![start_redis_server_with_module("events", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: usize = redis::cmd("events.num_key_miss").query(&mut con)?;
+    assert_eq!(res, 0);
+
+    let _: RedisResult<String> = redis::cmd("GET")
+        .arg(&["x"])
+        .query(&mut con);
+
+    let res: usize = redis::cmd("events.num_key_miss").query(&mut con)?;
+    assert_eq!(res, 1);
+
+    Ok(())
+}
+
