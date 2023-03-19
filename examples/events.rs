@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{Context, NotifyEvent, RedisError, RedisResult, RedisString, Status, RedisValue};
+use redis_module::{
+    Context, NotifyEvent, RedisError, RedisResult, RedisString, RedisValue, Status,
+};
 use std::sync::atomic::{AtomicI64, Ordering};
 
 static NUM_KEY_MISSES: AtomicI64 = AtomicI64::new(0);
