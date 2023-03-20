@@ -291,25 +291,35 @@ fn test_verify_acl_on_user() -> Result<()> {
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
-    let res: String = redis::cmd("verify_key_access_for_user").arg(&["default", "x"]).query(&mut con)?;
+    let res: String = redis::cmd("verify_key_access_for_user")
+        .arg(&["default", "x"])
+        .query(&mut con)?;
 
     assert_eq!(&res, "OK");
 
-    let res: String = redis::cmd("ACL").arg(&["SETUSER", "alice", "on", ">pass", "~cached:*", "+get"]).query(&mut con)?;
+    let res: String = redis::cmd("ACL")
+        .arg(&["SETUSER", "alice", "on", ">pass", "~cached:*", "+get"])
+        .query(&mut con)?;
 
     assert_eq!(&res, "OK");
 
-    let res: String = redis::cmd("verify_key_access_for_user").arg(&["alice", "cached:1"]).query(&mut con)?;
+    let res: String = redis::cmd("verify_key_access_for_user")
+        .arg(&["alice", "cached:1"])
+        .query(&mut con)?;
 
     assert_eq!(&res, "OK");
 
-    let res: RedisResult<String> = redis::cmd("verify_key_access_for_user").arg(&["alice", "not_allow"]).query(&mut con);
+    let res: RedisResult<String> = redis::cmd("verify_key_access_for_user")
+        .arg(&["alice", "not_allow"])
+        .query(&mut con);
 
     assert!(res.is_err());
     if let Err(res) = res {
-        assert_eq!(res.to_string(), "Err: User does not have permissions on key");
+        assert_eq!(
+            res.to_string(),
+            "Err: User does not have permissions on key"
+        );
     }
 
     Ok(())
 }
-

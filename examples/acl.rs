@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{Context, RedisResult, RedisError, RedisString, RedisValue, NextArg, AclPermissions};
+use redis_module::{
+    AclPermissions, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue,
+};
 
 fn verify_key_access_for_user(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let mut args = args.into_iter().skip(1);

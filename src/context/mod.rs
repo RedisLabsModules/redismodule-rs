@@ -423,7 +423,6 @@ impl Context {
         })
     }
 
-
     /// Return the current user name attached to the context
     pub fn get_current_user(&self) -> RedisString {
         let user = unsafe { raw::RedisModule_GetCurrentUserName.unwrap()(self.ctx) };
