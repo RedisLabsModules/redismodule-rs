@@ -3,6 +3,7 @@ use std::convert::TryFrom;
 use std::ffi::CString;
 use std::fmt;
 use std::fmt::Display;
+use std::ops::Deref;
 use std::os::raw::{c_char, c_int, c_void};
 use std::slice;
 use std::str;
@@ -294,6 +295,14 @@ impl Clone for RedisString {
 impl From<RedisString> for String {
     fn from(rs: RedisString) -> Self {
         rs.to_string_lossy()
+    }
+}
+
+impl Deref for RedisString {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
     }
 }
 
