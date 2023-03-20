@@ -277,7 +277,7 @@ fn test_server_event() -> Result<()> {
 
     redis::cmd("flushall")
         .query(&mut con)
-        .with_context(|| "failed to run string.set")?;
+        .with_context(|| "failed to run flushall")?;
 
     let res: i64 = redis::cmd("num_flushed").query(&mut con)?;
 
