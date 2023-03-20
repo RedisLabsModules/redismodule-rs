@@ -1,4 +1,5 @@
 use bitflags::bitflags;
+use std::borrow::Borrow;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr;
@@ -420,6 +421,82 @@ impl Context {
         ContextFlags::from_bits_truncate(unsafe {
             raw::RedisModule_GetContextFlags.unwrap()(self.ctx)
         })
+    }
+
+
+    /// Return the current user name attached to the context
+    pub fn get_current_user(&self) -> RedisString {
+        let user = unsafe { raw::RedisModule_GetCurrentUserName.unwrap()(self.ctx) };
+        RedisString::from_redis_module_string(ptr::null_mut(), user)
+    }
+
+    /// Attach the given user to the current context so each operation performed from
+    /// now on using this context will be validated againts this new user.
+    /// Return Status::Ok on success and Status::Err or failure.
+    pub fn autenticate_user<T: Borrow<[u8]>>(&self, user_name: T) -> raw::Status {
+        let user_name_blob: &[u8] = user_name.borrow();
+        if unsafe {
+            raw::RedisModule_AuthenticateClientWithACLUser.unwrap()(
+                self.ctx,
+                user_name_blob.as_ptr() as *const c_char,
+                user_name_blob.len(),
+                None,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        } == raw::REDISMODULE_OK as i32
+        {
+            raw::Status::Ok
+        } else {
+            raw::Status::Err
+        }
+    }
+
+    /// Verify the the given user has the give ACL permission on the given key.
+    /// Return Ok(()) if the user has the permissions or error (with relevant error message)
+    /// if the validation failed.
+    pub fn acl_check_key_permission(
+        &self,
+        user_name: &RedisString,
+        key_name: &RedisString,
+        permissions: &AclPermissions,
+    ) -> Result<(), RedisError> {
+        let user = unsafe { raw::RedisModule_GetModuleUserFromUserName.unwrap()(user_name.inner) };
+        if user.is_null() {
+            return Err(RedisError::Str("User does not exists or disabled"));
+        }
+        if unsafe {
+            raw::RedisModule_ACLCheckKeyPermissions.unwrap()(
+                user,
+                key_name.inner,
+                permissions.bits(),
+            )
+        } == raw::REDISMODULE_OK as i32
+        {
+            unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
+            Ok(())
+        } else {
+            unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
+            Err(RedisError::Str("User does not have permissions on key"))
+        }
+    }
+}
+
+bitflags! {
+    /// An object represent ACL permissions.
+    /// Used to check ACL permission using `acl_check_key_permission`.
+    pub struct AclPermissions : c_int {
+        /// User can look at the content of the value, either return it or copy it.
+        const ACCESS = raw::REDISMODULE_CMD_KEY_ACCESS as c_int;
+
+        /// User can insert more data to the key, without deleting or modify existing data.
+        const INSERT = raw::REDISMODULE_CMD_KEY_INSERT as c_int;
+
+        /// User can delete content from the key.
+        const DELETE = raw::REDISMODULE_CMD_KEY_DELETE as c_int;
+
+        /// User can update existing data inside the key.
+        const UPDATE = raw::REDISMODULE_CMD_KEY_UPDATE as c_int;
     }
 }
 

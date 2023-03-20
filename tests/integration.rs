@@ -2,6 +2,7 @@ use crate::utils::{get_redis_connection, start_redis_server_with_module};
 use anyhow::Context;
 use anyhow::Result;
 use redis::RedisError;
+use redis::RedisResult;
 
 mod utils;
 
@@ -266,3 +267,49 @@ fn test_ctx_flags() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_get_current_user() -> Result<()> {
+    let port: u16 = 6490;
+    let _guards = vec![start_redis_server_with_module("acl", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: String = redis::cmd("get_current_user").query(&mut con)?;
+
+    assert_eq!(&res, "default");
+
+    Ok(())
+}
+
+#[test]
+fn test_verify_acl_on_user() -> Result<()> {
+    let port: u16 = 6491;
+    let _guards = vec![start_redis_server_with_module("acl", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: String = redis::cmd("verify_key_access_for_user").arg(&["default", "x"]).query(&mut con)?;
+
+    assert_eq!(&res, "OK");
+
+    let res: String = redis::cmd("ACL").arg(&["SETUSER", "alice", "on", ">pass", "~cached:*", "+get"]).query(&mut con)?;
+
+    assert_eq!(&res, "OK");
+
+    let res: String = redis::cmd("verify_key_access_for_user").arg(&["alice", "cached:1"]).query(&mut con)?;
+
+    assert_eq!(&res, "OK");
+
+    let res: RedisResult<String> = redis::cmd("verify_key_access_for_user").arg(&["alice", "not_allow"]).query(&mut con);
+
+    assert!(res.is_err());
+    if let Err(res) = res {
+        assert_eq!(res.to_string(), "Err: User does not have permissions on key");
+    }
+
+    Ok(())
+}
+

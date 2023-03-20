@@ -30,6 +30,7 @@ pub use crate::raw::NotifyEvent;
 pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::Context;
 pub use crate::context::ContextFlags;
+pub use crate::context::AclPermissions;
 pub use crate::raw::*;
 pub use crate::redismodule::*;
 use backtrace::Backtrace;
