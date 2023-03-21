@@ -20,6 +20,10 @@ name = "string"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "acl"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "call"
 crate-type = ["cdylib"]
 
@@ -99,6 +103,7 @@ linkme = "0.3"
 [dev-dependencies]
 anyhow = "1.0.38"
 redis = "0.22.1"
+lazy_static = "1.4.0"
 redis-module-derive = { path = "./redismodule-rs-derive"}
 
 [build-dependencies]
@@ -106,7 +111,7 @@ bindgen = "0.64"
 cc = "1.0"
 
 [features]
-default = []
+default = ["experimental-api"]
 experimental-api = []
 
 # Workaround to allow cfg(feature = "test") in dependencies:
