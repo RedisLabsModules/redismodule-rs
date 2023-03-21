@@ -49,7 +49,7 @@ fn get_static_data(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
 
 fn get_static_data_on_thread(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     let blocked_client = ctx.block_client();
-    thread::spawn(move || {
+    let _ = thread::spawn(move || {
         let thread_ctx = ThreadSafeContext::with_blocked_client(blocked_client);
         let ctx = thread_ctx.lock();
         let static_data = STATIC_DATA.lock(&ctx);
