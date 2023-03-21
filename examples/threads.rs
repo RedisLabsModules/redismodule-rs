@@ -3,7 +3,7 @@ extern crate redis_module;
 
 use lazy_static::lazy_static;
 use redis_module::{
-    Context, ContextMutex, NextArg, RedisResult, RedisString, RedisValue, ThreadSafeContext,
+    Context, NextArg, RedisGILGuard, RedisResult, RedisString, RedisValue, ThreadSafeContext,
 };
 use std::mem::drop;
 use std::thread;
@@ -31,7 +31,7 @@ struct StaticData {
 }
 
 lazy_static! {
-    static ref STATIC_DATA: ContextMutex<StaticData> = ContextMutex::default();
+    static ref STATIC_DATA: RedisGILGuard<StaticData> = RedisGILGuard::default();
 }
 
 fn set_static_data(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
