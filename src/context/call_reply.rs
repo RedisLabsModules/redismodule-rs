@@ -1,4 +1,4 @@
-use std::ffi::c_longlong;
+use std::{ffi::c_longlong, ptr::NonNull};
 
 use crate::raw::*;
 
@@ -47,46 +47,37 @@ pub trait CallReply {
 }
 
 pub struct RootCallReply {
-    reply: *mut RedisModuleCallReply,
+    reply: Option<NonNull<RedisModuleCallReply>>,
 }
 
 impl RootCallReply {
     pub(crate) fn new(reply: *mut RedisModuleCallReply) -> RootCallReply {
-        RootCallReply { reply }
+        RootCallReply {
+            reply: NonNull::new(reply),
+        }
     }
 }
 
 impl CallReply for RootCallReply {
     fn get_type(&self) -> ReplyType {
-        if self.reply.is_null() {
-            return ReplyType::Unknown;
-        }
-        call_reply_type(self.reply)
+        self.reply
+            .map_or(ReplyType::Unknown, |e| call_reply_type(e.as_ptr()))
     }
 
     fn get_string(&self) -> Option<String> {
-        if self.reply.is_null() {
-            return None;
-        }
-        call_reply_string(self.reply)
+        self.reply.map_or(None, |e| call_reply_string(e.as_ptr()))
     }
 
     fn len(&self) -> usize {
-        if self.reply.is_null() {
-            return 0;
-        }
-        call_reply_length(self.reply)
+        self.reply.map_or(0, |e| call_reply_length(e.as_ptr()))
     }
 
     fn get(&self, index: usize) -> Option<InnerCallReply> {
-        if self.len() >= index {
-            return None;
-        }
-        let res = call_reply_array_element(self.reply, index);
-        if res.is_null() {
-            return None;
-        }
-        Some(InnerCallReply::new(self, res))
+        // Redis will verify array boundaries so no need to veirfy it here.
+        let res = self.reply.map_or(None, |e| {
+            NonNull::new(call_reply_array_element(e.as_ptr(), index))
+        })?;
+        Some(InnerCallReply::new(self, res.as_ptr()))
     }
 
     fn iter(&self) -> Box<dyn Iterator<Item = InnerCallReply> + '_> {
@@ -97,18 +88,13 @@ impl CallReply for RootCallReply {
     }
 
     fn get_int(&self) -> c_longlong {
-        if self.reply.is_null() {
-            return 0;
-        }
-        call_reply_integer(self.reply)
+        self.reply.map_or(0, |e| call_reply_integer(e.as_ptr()))
     }
 }
 
 impl Drop for RootCallReply {
     fn drop(&mut self) {
-        if !self.reply.is_null() {
-            free_call_reply(self.reply)
-        }
+        self.reply.map(|e| free_call_reply(e.as_ptr()));
     }
 }
 
@@ -157,14 +143,9 @@ impl<'a> CallReply for InnerCallReply<'a> {
     }
 
     fn get(&self, index: usize) -> Option<Self> {
-        if self.len() >= index {
-            return None;
-        }
-        let res = call_reply_array_element(self.reply, index);
-        if res.is_null() {
-            return None;
-        }
-        Some(Self::new(self.root, res))
+        // Redis will verify array boundaries so no need to veirfy it here.
+        let res = NonNull::new(call_reply_array_element(self.reply, index))?;
+        Some(Self::new(self.root, res.as_ptr()))
     }
 
     fn iter(&self) -> Box<dyn Iterator<Item = InnerCallReply> + '_> {

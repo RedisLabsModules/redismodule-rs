@@ -19,7 +19,7 @@ pub type RedisResult = Result<RedisValue, RedisError>;
 
 impl From<RootCallReply> for RedisResult {
     fn from(reply: RootCallReply) -> Self {
-        let redis_value: RedisValue = reply.into();
+        let redis_value: RedisValue = (&reply).into();
         match redis_value {
             RedisValue::Error(s) => Err(RedisError::String(s)),
             RedisValue::StaticError(s) => Err(RedisError::Str(s)),
@@ -30,7 +30,7 @@ impl From<RootCallReply> for RedisResult {
 
 impl<'root> From<InnerCallReply<'root>> for RedisResult {
     fn from(reply: InnerCallReply) -> Self {
-        let redis_value: RedisValue = reply.into();
+        let redis_value: RedisValue = (&reply).into();
         match redis_value {
             RedisValue::Error(s) => Err(RedisError::String(s)),
             RedisValue::StaticError(s) => Err(RedisError::Str(s)),

@@ -66,8 +66,7 @@ fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
     }
 
     let call_options = CallOptionsBuilder::new().script_mode().errors_as_replies();
-    let res: RootCallReply =
-        ctx.call_ext::<&[&str; 0], _>("SHUTDOWN", &call_options.constract(), &[]);
+    let res: RootCallReply = ctx.call_ext::<&[&str; 0], _>("SHUTDOWN", &call_options.build(), &[]);
     if res.get_type() != ReplyType::Error {
         return Err(RedisError::Str("Failed to set script mode on call_ext"));
     }

@@ -34,7 +34,7 @@ pub struct CallOptionsBuilder {
 }
 
 pub struct CallOptions {
-    options: String,
+    options: CString,
 }
 
 pub enum CallOptionResp {
@@ -106,12 +106,10 @@ impl CallOptionsBuilder {
     }
 
     /// Construct a CallOption object that can be used to run commands using call_ext
-    pub fn constract(&self) -> CallOptions {
-        let mut res = CallOptions {
-            options: self.options.to_string(),
-        };
-        res.options.push_str("\0"); /* make it C string */
-        res
+    pub fn build(self) -> CallOptions {
+        CallOptions {
+            options: CString::new(self.options).unwrap(), // the data will never contains internal \0 so it is safe to unwrap.
+        }
     }
 }
 

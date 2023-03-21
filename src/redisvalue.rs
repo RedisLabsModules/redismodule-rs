@@ -102,12 +102,12 @@ impl<T: Into<Self>> From<Vec<T>> for RedisValue {
     }
 }
 
-impl<T: CallReply> From<T> for RedisValue {
-    fn from(reply: T) -> Self {
+impl<T: CallReply> From<&T> for RedisValue {
+    fn from(reply: &T) -> Self {
         match reply.get_type() {
             raw::ReplyType::Error => RedisValue::Error(reply.get_string().unwrap()),
             raw::ReplyType::Unknown => RedisValue::StaticError("Error on method call"),
-            raw::ReplyType::Array => RedisValue::Array(reply.iter().map(|v| v.into()).collect()),
+            raw::ReplyType::Array => RedisValue::Array(reply.iter().map(|v| (&v).into()).collect()),
             raw::ReplyType::Integer => RedisValue::Integer(reply.get_int()),
             raw::ReplyType::String => RedisValue::SimpleString(reply.get_string().unwrap()),
             raw::ReplyType::Null => RedisValue::Null,
