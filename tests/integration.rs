@@ -266,3 +266,25 @@ fn test_ctx_flags() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_context_mutex() -> Result<()> {
+    let port: u16 = 6490;
+    let _guards = vec![start_redis_server_with_module("threads", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: String = redis::cmd("set_static_data")
+        .arg(&["foo"])
+        .query(&mut con)?;
+    assert_eq!(&res, "OK");
+
+    let res: String = redis::cmd("get_static_data").query(&mut con)?;
+    assert_eq!(&res, "foo");
+
+    let res: String = redis::cmd("get_static_data_on_thread").query(&mut con)?;
+    assert_eq!(&res, "foo");
+
+    Ok(())
+}

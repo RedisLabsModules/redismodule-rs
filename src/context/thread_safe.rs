@@ -1,8 +1,55 @@
-use std::ops::Deref;
+use std::borrow::Borrow;
+use std::cell::UnsafeCell;
+use std::ops::{Deref, DerefMut};
 use std::ptr;
 
 use crate::context::blocked::BlockedClient;
 use crate::{raw, Context, RedisResult};
+
+pub struct ContextMutexGuard<'ctx, 'mutex, T: Default> {
+    _context: &'ctx Context,
+    mutex: &'mutex ContextMutex<T>,
+}
+
+impl<'ctx, 'mutex, T: Default> Deref for ContextMutexGuard<'ctx, 'mutex, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*self.mutex.obj.get() }
+    }
+}
+
+impl<'ctx, 'mutex, T: Default> DerefMut for ContextMutexGuard<'ctx, 'mutex, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *self.mutex.obj.get() }
+    }
+}
+
+#[derive(Default)]
+pub struct ContextMutex<T: Default> {
+    obj: UnsafeCell<T>,
+}
+
+impl<T: Default> ContextMutex<T> {
+    pub fn new(obj: T) -> ContextMutex<T> {
+        ContextMutex {
+            obj: UnsafeCell::new(obj),
+        }
+    }
+
+    pub fn lock<'mutex, 'ctx>(
+        &'mutex self,
+        context: &'ctx Context,
+    ) -> ContextMutexGuard<'ctx, 'mutex, T> {
+        ContextMutexGuard {
+            _context: context,
+            mutex: self,
+        }
+    }
+}
+
+unsafe impl<T: Default> Sync for ContextMutex<T> {}
+unsafe impl<T: Default> Send for ContextMutex<T> {}
 
 pub struct ContextGuard {
     ctx: Context,
@@ -18,6 +65,12 @@ impl Deref for ContextGuard {
     type Target = Context;
 
     fn deref(&self) -> &Self::Target {
+        &self.ctx
+    }
+}
+
+impl Borrow<Context> for ContextGuard {
+    fn borrow(&self) -> &Context {
         &self.ctx
     }
 }
