@@ -434,7 +434,7 @@ impl Context {
     /// Return Status::Ok on success and Status::Err or failure.
     pub fn autenticate_user<T: Borrow<[u8]>>(&self, user_name: T) -> raw::Status {
         let user_name_blob: &[u8] = user_name.borrow();
-        if unsafe {
+        unsafe {
             raw::RedisModule_AuthenticateClientWithACLUser.unwrap()(
                 self.ctx,
                 user_name_blob.as_ptr() as *const c_char,
@@ -443,12 +443,7 @@ impl Context {
                 ptr::null_mut(),
                 ptr::null_mut(),
             )
-        } == raw::REDISMODULE_OK as i32
-        {
-            raw::Status::Ok
-        } else {
-            raw::Status::Err
-        }
+        }.into()
     }
 
     /// Verify the the given user has the give ACL permission on the given key.
@@ -464,20 +459,16 @@ impl Context {
         if user.is_null() {
             return Err(RedisError::Str("User does not exists or disabled"));
         }
-        if unsafe {
+        let acl_permission_result: raw::Status = unsafe {
             raw::RedisModule_ACLCheckKeyPermissions.unwrap()(
                 user,
                 key_name.inner,
                 permissions.bits(),
             )
-        } == raw::REDISMODULE_OK as i32
-        {
-            unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
-            Ok(())
-        } else {
-            unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
-            Err(RedisError::Str("User does not have permissions on key"))
-        }
+        }.into();
+        unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
+        let acl_permission_result: Result<(), &str> =acl_permission_result.into();
+        acl_permission_result.map_err(|_e| RedisError::Str("User does not have permissions on key"))
     }
 }
 
