@@ -24,6 +24,8 @@ pub mod blocked;
 
 pub mod info;
 
+pub mod server_events;
+
 pub mod keys_cursor;
 
 /// `Context` is a structure that's designed to give us a high-level interface to
