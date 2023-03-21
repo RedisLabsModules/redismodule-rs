@@ -29,6 +29,9 @@ pub use crate::raw::NotifyEvent;
 
 pub use crate::context::call_reply::{CallReply, InnerCallReply, RootCallReply};
 pub use crate::context::keys_cursor::KeysCursor;
+pub use crate::context::server_events;
+pub use crate::context::thread_safe::RedisGILGuard;
+pub use crate::context::AclPermissions;
 pub use crate::context::CallOptions;
 pub use crate::context::CallOptionsBuilder;
 pub use crate::context::Context;
