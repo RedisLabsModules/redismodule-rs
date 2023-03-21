@@ -443,7 +443,8 @@ impl Context {
                 ptr::null_mut(),
                 ptr::null_mut(),
             )
-        }.into()
+        }
+        .into()
     }
 
     /// Verify the the given user has the give ACL permission on the given key.
@@ -465,9 +466,10 @@ impl Context {
                 key_name.inner,
                 permissions.bits(),
             )
-        }.into();
+        }
+        .into();
         unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
-        let acl_permission_result: Result<(), &str> =acl_permission_result.into();
+        let acl_permission_result: Result<(), &str> = acl_permission_result.into();
         acl_permission_result.map_err(|_e| RedisError::Str("User does not have permissions on key"))
     }
 }
