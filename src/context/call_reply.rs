@@ -65,7 +65,7 @@ impl CallReply for RootCallReply {
     }
 
     fn get_string(&self) -> Option<String> {
-        self.reply.map_or(None, |e| call_reply_string(e.as_ptr()))
+        call_reply_string(self.reply?.as_ptr())
     }
 
     fn len(&self) -> usize {
@@ -74,10 +74,8 @@ impl CallReply for RootCallReply {
 
     fn get(&self, index: usize) -> Option<InnerCallReply> {
         // Redis will verify array boundaries so no need to veirfy it here.
-        let res = self.reply.map_or(None, |e| {
-            NonNull::new(call_reply_array_element(e.as_ptr(), index))
-        })?;
-        Some(InnerCallReply::new(self, res.as_ptr()))
+        NonNull::new(call_reply_array_element(self.reply?.as_ptr(), index))
+            .map(|inner_reply| InnerCallReply::new(self, inner_reply))
     }
 
     fn iter(&self) -> Box<dyn Iterator<Item = InnerCallReply> + '_> {
@@ -117,13 +115,13 @@ impl<'root> Iterator for RootCallReplyIterator<'root> {
 
 pub struct InnerCallReply<'root> {
     root: &'root RootCallReply,
-    reply: *mut RedisModuleCallReply,
+    reply: NonNull<RedisModuleCallReply>,
 }
 
 impl<'root> InnerCallReply<'root> {
     pub(crate) fn new(
         root: &'root RootCallReply,
-        reply: *mut RedisModuleCallReply,
+        reply: NonNull<RedisModuleCallReply>,
     ) -> InnerCallReply<'root> {
         InnerCallReply { root, reply }
     }
@@ -131,21 +129,21 @@ impl<'root> InnerCallReply<'root> {
 
 impl<'a> CallReply for InnerCallReply<'a> {
     fn get_type(&self) -> ReplyType {
-        call_reply_type(self.reply)
+        call_reply_type(self.reply.as_ptr())
     }
 
     fn get_string(&self) -> Option<String> {
-        call_reply_string(self.reply)
+        call_reply_string(self.reply.as_ptr())
     }
 
     fn len(&self) -> usize {
-        call_reply_length(self.reply)
+        call_reply_length(self.reply.as_ptr())
     }
 
     fn get(&self, index: usize) -> Option<Self> {
         // Redis will verify array boundaries so no need to veirfy it here.
-        let res = NonNull::new(call_reply_array_element(self.reply, index))?;
-        Some(Self::new(self.root, res.as_ptr()))
+        NonNull::new(call_reply_array_element(self.reply.as_ptr(), index))
+            .map(|inner_reply| Self::new(self.root, inner_reply))
     }
 
     fn iter(&self) -> Box<dyn Iterator<Item = InnerCallReply> + '_> {
@@ -156,7 +154,7 @@ impl<'a> CallReply for InnerCallReply<'a> {
     }
 
     fn get_int(&self) -> c_longlong {
-        call_reply_integer(self.reply)
+        call_reply_integer(self.reply.as_ptr())
     }
 }
 
