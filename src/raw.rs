@@ -221,12 +221,15 @@ pub fn call_reply_string_ptr(reply: *mut RedisModuleCallReply, len: *mut size_t)
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> String {
+pub fn call_reply_string(reply: *mut RedisModuleCallReply) -> Option<String> {
     unsafe {
         let mut len: size_t = 0;
         let reply_string: *mut u8 =
             RedisModule_CallReplyStringPtr.unwrap()(reply, &mut len) as *mut u8;
-        String::from_utf8(slice::from_raw_parts(reply_string, len).to_vec()).unwrap()
+        if reply_string.is_null() {
+            return None;
+        }
+        String::from_utf8(slice::from_raw_parts(reply_string, len).to_vec()).ok()
     }
 }
 
