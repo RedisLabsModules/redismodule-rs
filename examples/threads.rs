@@ -31,7 +31,7 @@ struct StaticData {
 }
 
 lazy_static! {
-    static ref STATIC_DATA: RedisGILGuard<StaticData> = RedisGILGuard::default();
+    static ref STATIC_DATA: RedisGILGuard<StaticData> = RedisGILGuard::new(StaticData::default());
 }
 
 fn set_static_data(ctx: &Context, args: Vec<RedisString>) -> RedisResult {

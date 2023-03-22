@@ -6,12 +6,12 @@ use std::ptr;
 use crate::context::blocked::BlockedClient;
 use crate::{raw, Context, RedisResult};
 
-pub struct RedisGILGuardScope<'ctx, 'mutex, T: Default> {
+pub struct RedisGILGuardScope<'ctx, 'mutex, T> {
     _context: &'ctx Context,
     mutex: &'mutex RedisGILGuard<T>,
 }
 
-impl<'ctx, 'mutex, T: Default> Deref for RedisGILGuardScope<'ctx, 'mutex, T> {
+impl<'ctx, 'mutex, T> Deref for RedisGILGuardScope<'ctx, 'mutex, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -19,18 +19,24 @@ impl<'ctx, 'mutex, T: Default> Deref for RedisGILGuardScope<'ctx, 'mutex, T> {
     }
 }
 
-impl<'ctx, 'mutex, T: Default> DerefMut for RedisGILGuardScope<'ctx, 'mutex, T> {
+impl<'ctx, 'mutex, T> DerefMut for RedisGILGuardScope<'ctx, 'mutex, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { &mut *self.mutex.obj.get() }
     }
 }
 
-#[derive(Default)]
-pub struct RedisGILGuard<T: Default> {
+/// This struct allows to guard some data and makes sure
+/// the data is only access when the Redis GIL is locked.
+/// From example, assuming you module want to save some
+/// statistics inside some global variable, but without the
+/// need to protect this variable with some mutex (because
+/// we know this variable is protected by Redis lock).
+/// For example, look at examples/threads.rs
+pub struct RedisGILGuard<T> {
     obj: UnsafeCell<T>,
 }
 
-impl<T: Default> RedisGILGuard<T> {
+impl<T> RedisGILGuard<T> {
     pub fn new(obj: T) -> RedisGILGuard<T> {
         RedisGILGuard {
             obj: UnsafeCell::new(obj),
@@ -48,8 +54,14 @@ impl<T: Default> RedisGILGuard<T> {
     }
 }
 
-unsafe impl<T: Default> Sync for RedisGILGuard<T> {}
-unsafe impl<T: Default> Send for RedisGILGuard<T> {}
+impl<T: Default> Default for RedisGILGuard<T> {
+    fn default() -> Self {
+        Self::new(T::default())
+    }
+}
+
+unsafe impl<T> Sync for RedisGILGuard<T> {}
+unsafe impl<T> Send for RedisGILGuard<T> {}
 
 pub struct ContextGuard {
     ctx: Context,

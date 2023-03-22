@@ -3,6 +3,7 @@ use std::borrow::Borrow;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr;
+use std::ptr::NonNull;
 
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::raw::{ModuleOptions, Version};
@@ -412,7 +413,7 @@ impl Context {
 
     #[must_use]
     pub fn create_string(&self, s: &str) -> RedisString {
-        RedisString::create(self.ctx, s)
+        RedisString::create(NonNull::new(self.ctx), s)
     }
 
     #[must_use]
