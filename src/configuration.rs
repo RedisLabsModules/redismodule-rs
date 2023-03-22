@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::Mutex;
 
 bitflags! {
+    /// Configuration options
     pub struct ConfigurationFlags : c_int {
         /// The default flags for a config. This creates a config that can be modified after startup.
         const DEFAULT = raw::REDISMODULE_CONFIG_DEFAULT as c_int;
@@ -92,6 +93,18 @@ impl<T: Clone> ConfigurationValue<T> for RedisGILGuard<T> {
     }
     fn set(&self, ctx: &Context, val: T) -> Result<(), RedisError> {
         let mut value = self.lock(ctx);
+        *value = val;
+        Ok(())
+    }
+}
+
+impl<T: Clone + Send> ConfigurationValue<T> for Mutex<T> {
+    fn get(&self, _ctx: &Context) -> T {
+        let value = self.lock().unwrap();
+        value.clone()
+    }
+    fn set(&self, _ctx: &Context, val: T) -> Result<(), RedisError> {
+        let mut value = self.lock().unwrap();
         *value = val;
         Ok(())
     }

@@ -390,3 +390,69 @@ fn test_server_event() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_configuration() -> Result<()> {
+    let port: u16 = 6495;
+    let _guards = vec![start_redis_server_with_module("configuration", port)
+        .with_context(|| "failed to start redis server")?];
+
+    let config_get = |config: &str| -> Result<String> {
+        let mut con =
+            get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+        let res: Vec<String> = redis::cmd("config")
+            .arg(&["get", config])
+            .query(&mut con)
+            .with_context(|| "failed to run flushall")?;
+        Ok(res[1].clone())
+    };
+
+    let config_set = |config: &str, val: &str| -> Result<()> {
+        let mut con =
+            get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+        let res: String = redis::cmd("config")
+            .arg(&["set", config, val])
+            .query(&mut con)
+            .with_context(|| "failed to run flushall")?;
+        assert_eq!(res, "OK");
+        Ok(())
+    };
+
+    assert_eq!(config_get("configuration.i64")?, "10");
+    config_set("configuration.i64", "100")?;
+    assert_eq!(config_get("configuration.i64")?, "100");
+
+    assert_eq!(config_get("configuration.atomic_i64")?, "10");
+    config_set("configuration.atomic_i64", "100")?;
+    assert_eq!(config_get("configuration.atomic_i64")?, "100");
+
+    assert_eq!(config_get("configuration.redis_string")?, "default");
+    config_set("configuration.redis_string", "new")?;
+    assert_eq!(config_get("configuration.redis_string")?, "new");
+
+    assert_eq!(config_get("configuration.string")?, "default");
+    config_set("configuration.string", "new")?;
+    assert_eq!(config_get("configuration.string")?, "new");
+
+    assert_eq!(config_get("configuration.mutex_string")?, "default");
+    config_set("configuration.mutex_string", "new")?;
+    assert_eq!(config_get("configuration.mutex_string")?, "new");
+
+    assert_eq!(config_get("configuration.atomic_bool")?, "yes");
+    config_set("configuration.atomic_bool", "no")?;
+    assert_eq!(config_get("configuration.atomic_bool")?, "no");
+
+    assert_eq!(config_get("configuration.bool")?, "yes");
+    config_set("configuration.bool", "no")?;
+    assert_eq!(config_get("configuration.bool")?, "no");
+
+    assert_eq!(config_get("configuration.enum")?, "Val1");
+    config_set("configuration.enum", "Val2")?;
+    assert_eq!(config_get("configuration.enum")?, "Val2");
+
+    assert_eq!(config_get("configuration.enum_mutex")?, "Val1");
+    config_set("configuration.enum_mutex", "Val2")?;
+    assert_eq!(config_get("configuration.enum_mutex")?, "Val2");
+
+    Ok(())
+}

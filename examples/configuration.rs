@@ -29,6 +29,8 @@ lazy_static! {
     static ref CONFIGURATION_BOOL: RedisGILGuard<bool> = RedisGILGuard::default();
     static ref CONFIGURATION_ENUM: RedisGILGuard<EnumConfiguration> =
         RedisGILGuard::new(EnumConfiguration::Val1);
+    static ref CONFIGURATION_MUTEX_ENUM: Mutex<EnumConfiguration> =
+        Mutex::new(EnumConfiguration::Val1);
 }
 
 //////////////////////////////////////////////////////
@@ -54,6 +56,7 @@ redis_module! {
         ],
         enum: [
             ["enum", &*CONFIGURATION_ENUM, EnumConfiguration::Val1, ConfigurationFlags::DEFAULT],
+            ["enum_mutex", &*CONFIGURATION_MUTEX_ENUM, EnumConfiguration::Val1, ConfigurationFlags::DEFAULT],
         ],
     ]
 }
