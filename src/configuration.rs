@@ -424,3 +424,23 @@ pub fn register_enum_configuration<G: EnumConfigurationValue, T: ConfigurationVa
         );
     }
 }
+
+pub fn apply_module_args_as_configuration(
+    ctx: &Context,
+    mut args: Vec<RedisString>,
+) -> Result<(), RedisError> {
+    if args.len() == 0 {
+        return Ok(());
+    }
+    if args.len() % 2 != 0 {
+        return Err(RedisError::Str(
+            "Arguments lenght is not devided by 2 (require to be read as module configuration).",
+        ));
+    }
+    args.insert(0, ctx.create_string("set"));
+    ctx.call(
+        "config",
+        args.iter().collect::<Vec<&RedisString>>().as_slice(),
+    )?;
+    Ok(())
+}

@@ -140,6 +140,7 @@ macro_rules! redis_module {
                 $enum_flags_options:expr,
                 $enum_on_changed:expr
             ]),* $(,)*],)?
+            $(module_args_as_configuration:$use_module_args:expr,)?
         ])?
     ) => {
         extern "C" fn __info_func(
@@ -169,6 +170,7 @@ macro_rules! redis_module {
             use $crate::configuration::register_string_configuration;
             use $crate::configuration::register_bool_configuration;
             use $crate::configuration::register_enum_configuration;
+            use $crate::configuration::apply_module_args_as_configuration;
 
             // We use a statically sized buffer to avoid allocating.
             // This is needed since we use a custom allocator that relies on the Redis allocator,
@@ -237,9 +239,16 @@ macro_rules! redis_module {
                         register_enum_configuration(&context, $enum_configuration_name, $enum_configuration_val, $enum_default, $enum_flags_options, $enum_on_changed);
                     )*
                 )?
+                raw::RedisModule_LoadConfigs.unwrap()(ctx);
+                $(
+                    if $use_module_args {
+                        if let Err(e) = apply_module_args_as_configuration(&context, args) {
+                            context.log_warning(&e.to_string());
+                            return raw::Status::Err as c_int;
+                        }
+                    }
+                )?
             )?
-
-            raw::RedisModule_LoadConfigs.map(|callback| callback(ctx));
 
             raw::register_info_function(ctx, Some(__info_func));
 
