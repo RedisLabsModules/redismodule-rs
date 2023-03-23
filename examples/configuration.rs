@@ -21,7 +21,7 @@ enum_configuration! {
 }
 
 lazy_static! {
-    static ref NUM_OF_CONFIGERATION_CHANGES: RedisGILGuard<i64> = RedisGILGuard::default();
+    static ref NUM_OF_CONFIGURATION_CHANGES: RedisGILGuard<i64> = RedisGILGuard::default();
     static ref CONFIGURATION_I64: RedisGILGuard<i64> = RedisGILGuard::default();
     static ref CONFIGURATION_ATOMIC_I64: AtomicI64 = AtomicI64::new(1);
     static ref CONFIGURATION_REDIS_STRING: RedisGILGuard<RedisString> =
@@ -41,12 +41,12 @@ fn on_configuration_changed<G, T: ConfigurationValue<G>>(
     _name: &str,
     _val: &'static T,
 ) {
-    let mut val = NUM_OF_CONFIGERATION_CHANGES.lock(config_ctx);
+    let mut val = NUM_OF_CONFIGURATION_CHANGES.lock(config_ctx);
     *val += 1
 }
 
 fn num_changes(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
-    let val = NUM_OF_CONFIGERATION_CHANGES.lock(ctx);
+    let val = NUM_OF_CONFIGURATION_CHANGES.lock(ctx);
     Ok(RedisValue::Integer(*val))
 }
 

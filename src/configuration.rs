@@ -79,9 +79,9 @@ macro_rules! enum_configuration {
     }
 }
 
-/// ConfigurationContext is used as a special context that indicate that we are
+/// [`ConfigurationContext`] is used as a special context that indicate that we are
 /// running with the Redis GIL is held but we should not perform all the regular
-/// operation we can perfrom use the regular Context.
+/// operation we can perfrom on the regular Context.
 pub struct ConfigurationContext {
     _dummy: usize, // We set some none public vairable here so user will not be able to construct such object
 }
