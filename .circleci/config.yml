@@ -314,4 +314,5 @@ workflows:
       - build-macos-x64:
           <<: *always
       - build-macos-m1:
-          <<: *on-integ-and-version-tags
+          #@@<<: *on-integ-and-version-tags
+          <<: *always
