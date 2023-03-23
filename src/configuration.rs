@@ -9,30 +9,30 @@ use std::sync::Mutex;
 
 bitflags! {
     /// Configuration options
-    pub struct ConfigurationFlags : c_int {
+    pub struct ConfigurationFlags : u32 {
         /// The default flags for a config. This creates a config that can be modified after startup.
-        const DEFAULT = raw::REDISMODULE_CONFIG_DEFAULT as c_int;
+        const DEFAULT = raw::REDISMODULE_CONFIG_DEFAULT;
 
         /// This config can only be provided loading time.
-        const IMMUTABLE = raw::REDISMODULE_CONFIG_IMMUTABLE as c_int;
+        const IMMUTABLE = raw::REDISMODULE_CONFIG_IMMUTABLE;
 
         /// The value stored in this config is redacted from all logging.
-        const SENSITIVE = raw::REDISMODULE_CONFIG_SENSITIVE as c_int;
+        const SENSITIVE = raw::REDISMODULE_CONFIG_SENSITIVE;
 
         /// The name is hidden from `CONFIG GET` with pattern matching.
-        const HIDDEN = raw::REDISMODULE_CONFIG_HIDDEN as c_int;
+        const HIDDEN = raw::REDISMODULE_CONFIG_HIDDEN;
 
         /// This config will be only be modifiable based off the value of enable-protected-configs.
-        const PROTECTED = raw::REDISMODULE_CONFIG_PROTECTED as c_int;
+        const PROTECTED = raw::REDISMODULE_CONFIG_PROTECTED;
 
         /// This config is not modifiable while the server is loading data.
-        const DENY_LOADING = raw::REDISMODULE_CONFIG_DENY_LOADING as c_int;
+        const DENY_LOADING = raw::REDISMODULE_CONFIG_DENY_LOADING;
 
         /// For numeric configs, this config will convert data unit notations into their byte equivalent.
-        const MEMORY = raw::REDISMODULE_CONFIG_MEMORY as c_int;
+        const MEMORY = raw::REDISMODULE_CONFIG_MEMORY;
 
         /// For enum configs, this config will allow multiple entries to be combined as bit flags.
-        const BITFLAGS = raw::REDISMODULE_CONFIG_BITFLAGS as c_int;
+        const BITFLAGS = raw::REDISMODULE_CONFIG_BITFLAGS;
     }
 }
 
