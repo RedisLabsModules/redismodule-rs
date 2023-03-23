@@ -57,13 +57,14 @@ commands:
           command: |
             export HOMEBREW_NO_AUTO_UPDATE=1
             git submodule update --init deps/readies
+            if [[ $(uname -s) == Darwin ]]; then rm -f /usr/local/bin/python3; fi
             ./deps/readies/bin/getpy3
 
   install-prerequisites:
     parameters:
       redis_version:
         type: string
-        default: "6"
+        default: "7"
       getredis_params:
         type: string
         default: ""
@@ -79,6 +80,7 @@ commands:
           name: Install Redis
           shell: /bin/bash -l -eo pipefail
           command: |
+            export HOMEBREW_NO_AUTO_UPDATE=1
             ./deps/readies/bin/getredis -v '<<parameters.redis_version>>' --force <<parameters.getredis_params>>
             redis-server --version
 
@@ -92,7 +94,7 @@ commands:
         default: ""
       redis_version:
         type: string
-        default: "6"
+        default: "7"
       getredis_params:
         type: string
         default: ""
@@ -284,11 +286,12 @@ workflows:
           name: build
           <<: *not-on-integ-branch
       - build-platforms:
-          <<: *on-integ-and-version-tags
+          #@@<<: *on-integ-and-version-tags
+          <<: *always
           context: common
           matrix:
             parameters:
-              platform: [jammy, focal, bionic, xenial, rocky8, centos7, bullseye]
+              platform: [jammy, focal, bionic, xenial, rocky8, centos7, bullseye, amzn2]
       - build-arm-platforms:
           <<: *on-integ-and-version-tags
           context: common
@@ -296,4 +299,4 @@ workflows:
             parameters:
               platform: [jammy, bionic, focal]
       - build-macos:
-          <<: *on-any-branch
+          <<: *always
