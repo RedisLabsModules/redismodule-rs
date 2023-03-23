@@ -10,26 +10,15 @@ use std::str;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
 
-use crate::context::call_reply::{InnerCallReply, RootCallReply};
+use crate::context::call_reply::{CallReply};
 pub use crate::raw;
 pub use crate::rediserror::RedisError;
 pub use crate::redisvalue::RedisValue;
 
 pub type RedisResult = Result<RedisValue, RedisError>;
 
-impl From<RootCallReply> for RedisResult {
-    fn from(reply: RootCallReply) -> Self {
-        let redis_value: RedisValue = (&reply).into();
-        match redis_value {
-            RedisValue::Error(s) => Err(RedisError::String(s)),
-            RedisValue::StaticError(s) => Err(RedisError::Str(s)),
-            _ => Ok(redis_value),
-        }
-    }
-}
-
-impl<'root> From<InnerCallReply<'root>> for RedisResult {
-    fn from(reply: InnerCallReply) -> Self {
+impl<'root> From<CallReply<'root>> for RedisResult {
+    fn from(reply: CallReply) -> Self {
         let redis_value: RedisValue = (&reply).into();
         match redis_value {
             RedisValue::Error(s) => Err(RedisError::String(s)),

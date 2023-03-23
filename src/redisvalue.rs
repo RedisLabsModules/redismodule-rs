@@ -1,8 +1,8 @@
+use crate::{CallReply, RedisError, RedisString};
 use std::{
     collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
 };
-use crate::{raw, CallReply, RedisError, RedisString};
 
 #[derive(Debug, PartialEq)]
 pub enum RedisValue {
@@ -14,6 +14,8 @@ pub enum RedisValue {
     Integer(i64),
     Bool(bool),
     Float(f64),
+    BigNumber(String),
+    VerbatimString((String, Vec<u8>)),
     Array(Vec<RedisValue>),
     Error(String),
     StaticError(&'static str),
@@ -38,6 +40,8 @@ impl Hash for RedisValue {
             RedisValue::Bool(b) => b.hash(state),
             RedisValue::Float(f) => f.to_bits().hash(state),
             RedisValue::Array(a) => a.hash(state),
+            RedisValue::Error(a) => a.hash(state),
+            RedisValue::StaticError(a) => a.hash(state),
             RedisValue::Map(m) => {
                 for (k, v) in m {
                     k.hash(state);
@@ -49,6 +53,11 @@ impl Hash for RedisValue {
                     v.hash(state);
                 }
             }
+            RedisValue::BigNumber(a) => a.hash(state),
+            RedisValue::VerbatimString((format, data)) => {
+                format.hash(state);
+                data.hash(state);
+            },
             RedisValue::Null => 0.hash(state),
             RedisValue::NoReply => 0.hash(state),
         }
@@ -141,15 +150,28 @@ impl<T: Into<Self>> From<Vec<T>> for RedisValue {
     }
 }
 
-impl<T: CallReply> From<&T> for RedisValue {
-    fn from(reply: &T) -> Self {
-        match reply.get_type() {
-            raw::ReplyType::Error => RedisValue::Error(reply.get_string().unwrap()),
-            raw::ReplyType::Unknown => RedisValue::StaticError("Error on method call"),
-            raw::ReplyType::Array => RedisValue::Array(reply.iter().map(|v| (&v).into()).collect()),
-            raw::ReplyType::Integer => RedisValue::Integer(reply.get_int()),
-            raw::ReplyType::String => RedisValue::SimpleString(reply.get_string().unwrap()),
-            raw::ReplyType::Null => RedisValue::Null,
+impl<'root> From<&CallReply<'root>> for RedisValue {
+    fn from(reply: &CallReply<'root>) -> Self {
+        match reply {
+            CallReply::Error(reply) => RedisValue::Error(reply.to_string().unwrap()),
+            CallReply::Unknown => RedisValue::StaticError("Error on method call"),
+            CallReply::Array(reply) => RedisValue::Array(reply.iter().map(|v| (&v).into()).collect()),
+            CallReply::I64(reply) => RedisValue::Integer(reply.to_i64()),
+            CallReply::String(reply) => RedisValue::SimpleString(reply.to_string().unwrap()),
+            CallReply::Null(_) => RedisValue::Null,
+            CallReply::Map(reply) => RedisValue::Map(
+                reply
+                    .iter()
+                    .fold(HashMap::new(), |mut acc, (key, val)| {
+                        acc.insert((&key).into(), (&val).into());
+                        acc
+                    })
+            ),
+            CallReply::Set(reply) => RedisValue::Set(reply.iter().map(|v| (&v).into()).collect()),
+            CallReply::Bool(reply) => RedisValue::Bool(reply.to_bool()),
+            CallReply::Double(reply) => RedisValue::Float(reply.to_double()),
+            CallReply::BigNumber(reply) => RedisValue::BigNumber(reply.to_string().unwrap()),
+            CallReply::VerbatimString(reply) => RedisValue::VerbatimString(reply.to_parts().unwrap())
         }
     }
 }

@@ -2,7 +2,7 @@ use bitflags::bitflags;
 use std::borrow::Borrow;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
-use std::ptr;
+use std::ptr::{self, NonNull};
 
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::raw::{ModuleOptions, Version};
@@ -13,7 +13,7 @@ use crate::{RedisError, RedisResult, RedisString, RedisValue};
 #[cfg(feature = "experimental-api")]
 use std::ffi::CStr;
 
-use self::call_reply::RootCallReply;
+use self::call_reply::CallReply;
 
 #[cfg(feature = "experimental-api")]
 mod timer;
@@ -244,7 +244,7 @@ impl Context {
         }
     }
 
-    fn call_internal<'a, T: Into<StrCallArgs<'a>>, R: From<RootCallReply>>(
+    fn call_internal<'a, T: Into<StrCallArgs<'a>>, R: From<CallReply<'static>>>(
         &self,
         command: &str,
         fmt: *const c_char,
@@ -264,7 +264,7 @@ impl Context {
                 final_args.len(),
             )
         };
-        R::from(RootCallReply::new(reply))
+        R::from(call_reply::create_root_call_reply(NonNull::new(reply)))
     }
 
     pub fn call<'a, T: Into<StrCallArgs<'a>>>(&self, command: &str, args: T) -> RedisResult {
@@ -274,7 +274,7 @@ impl Context {
     /// Invoke a command on Redis and return the result
     /// Unlike 'call' this API also allow to pass a CallOption to control different aspects
     /// of the command invocation.
-    pub fn call_ext<'a, T: Into<StrCallArgs<'a>>, R: From<RootCallReply>>(
+    pub fn call_ext<'a, T: Into<StrCallArgs<'a>>, R: From<CallReply<'static>>>(
         &self,
         command: &str,
         options: &CallOptions,
@@ -329,6 +329,16 @@ impl Context {
 
             Ok(RedisValue::BulkString(s)) => {
                 raw::reply_with_string_buffer(self.ctx, s.as_ptr().cast::<c_char>(), s.len())
+            }
+
+            Ok(RedisValue::BigNumber(s)) =>{
+                raw::reply_with_big_number(self.ctx, s.as_ptr().cast::<c_char>(), s.len())
+            }
+
+            Ok(RedisValue::VerbatimString((format, mut data))) =>{
+                let mut final_data = format.as_bytes().to_vec();
+                final_data.append(&mut data);
+                raw::reply_with_verbatim_string(self.ctx, final_data.as_ptr().cast::<c_char>(), final_data.len())
             }
 
             Ok(RedisValue::BulkRedisString(s)) => raw::reply_with_string(self.ctx, s.inner),

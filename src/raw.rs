@@ -68,6 +68,12 @@ pub enum ReplyType {
     Integer = REDISMODULE_REPLY_INTEGER,
     Array = REDISMODULE_REPLY_ARRAY,
     Null = REDISMODULE_REPLY_NULL,
+    Map = REDISMODULE_REPLY_MAP,
+    Set = REDISMODULE_REPLY_SET,
+    Bool = REDISMODULE_REPLY_BOOL,
+    Double = REDISMODULE_REPLY_DOUBLE,
+    BigNumber = REDISMODULE_REPLY_BIG_NUMBER,
+    VerbatimString = REDISMODULE_REPLY_VERBATIM_STRING,
 }
 
 impl From<c_int> for ReplyType {
@@ -203,11 +209,69 @@ pub fn call_reply_integer(reply: *mut RedisModuleCallReply) -> c_longlong {
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn call_reply_bool(reply: *mut RedisModuleCallReply) -> bool {
+    (unsafe { RedisModule_CallReplyBool.unwrap()(reply) } != 0)
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn call_reply_double(reply: *mut RedisModuleCallReply) -> f64 {
+    unsafe { RedisModule_CallReplyDouble.unwrap()(reply) }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn call_reply_big_number(reply: *mut RedisModuleCallReply) -> Option<String> {
+    unsafe {
+        let mut len: size_t = 0;
+        let reply_string: *mut u8 =
+            RedisModule_CallReplyBigNumber.unwrap()(reply, &mut len) as *mut u8;
+        if reply_string.is_null() {
+            return None;
+        }
+        String::from_utf8(slice::from_raw_parts(reply_string, len).to_vec()).ok()
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn call_reply_verbatim_string(reply: *mut RedisModuleCallReply) -> Option<(String, Vec<u8>)> {
+    unsafe {
+        let mut len: size_t = 0;
+        let format: *const u8 = ptr::null();
+        let reply_string: *mut u8 =
+            RedisModule_CallReplyVerbatim.unwrap()(reply, &mut len, &mut (format as *const c_char))
+                as *mut u8;
+        if reply_string.is_null() {
+            return None;
+        }
+        Some((
+            String::from_utf8(slice::from_raw_parts(format, 3).to_vec()).ok()?,
+            slice::from_raw_parts(reply_string, len).to_vec(),
+        ))
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_array_element(
     reply: *mut RedisModuleCallReply,
     idx: usize,
 ) -> *mut RedisModuleCallReply {
     unsafe { RedisModule_CallReplyArrayElement.unwrap()(reply, idx) }
+}
+
+pub fn call_reply_set_element(
+    reply: *mut RedisModuleCallReply,
+    idx: usize,
+) -> *mut RedisModuleCallReply {
+    unsafe { RedisModule_CallReplySetElement.unwrap()(reply, idx) }
+}
+
+pub fn call_reply_map_element(
+    reply: *mut RedisModuleCallReply,
+    idx: usize,
+) -> (*mut RedisModuleCallReply, *mut RedisModuleCallReply) {
+    let mut key: *mut RedisModuleCallReply = ptr::null_mut();
+    let mut val: *mut RedisModuleCallReply = ptr::null_mut();
+    unsafe { RedisModule_CallReplyMapElement.unwrap()(reply, idx, &mut key, &mut val) };
+    (key, val)
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -335,6 +399,18 @@ pub fn reply_with_simple_string(ctx: *mut RedisModuleCtx, s: *const c_char) -> S
 #[inline]
 pub fn reply_with_string_buffer(ctx: *mut RedisModuleCtx, s: *const c_char, len: size_t) -> Status {
     unsafe { RedisModule_ReplyWithStringBuffer.unwrap()(ctx, s, len).into() }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[inline]
+pub fn reply_with_big_number(ctx: *mut RedisModuleCtx, s: *const c_char, len: size_t) -> Status {
+    unsafe { RedisModule_ReplyWithBigNumber.unwrap()(ctx, s, len).into() }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[inline]
+pub fn reply_with_verbatim_string(ctx: *mut RedisModuleCtx, s: *const c_char, len: size_t) -> Status {
+    unsafe { RedisModule_ReplyWithVerbatimString.unwrap()(ctx, s, len).into() }
 }
 
 // Sets the expiry on a key.
