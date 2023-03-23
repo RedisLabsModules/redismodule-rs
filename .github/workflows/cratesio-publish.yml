@@ -28,7 +28,22 @@ jobs:
           key: "package.version"
           value: "${{ steps.get_version.outputs.VERSION }}"
 
-      - uses: katyo/publish-crates@v1
+      - name: Set the version for publishing on derive crate
+        uses: ciiiii/toml-editor@1.0.0
+        with:
+          file: "redismodule-rs-derive/Cargo.toml"
+          key: "package.version"
+          value: "${{ steps.get_version.outputs.VERSION }}"
+
+      - name: Publishing redismodule-rs
+        uses: katyo/publish-crates@v1
         with:
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          args: --allow-dirty
+
+      - name: Publishing redismodule-rs-derive
+        uses: katyo/publish-crates@v1
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          path: './redismodule-rs-derive'
           args: --allow-dirty

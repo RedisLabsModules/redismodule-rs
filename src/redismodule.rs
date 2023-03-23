@@ -3,17 +3,41 @@ use std::convert::TryFrom;
 use std::ffi::CString;
 use std::fmt;
 use std::fmt::Display;
+use std::ops::Deref;
 use std::os::raw::{c_char, c_int, c_void};
 use std::slice;
 use std::str;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
 
+use crate::context::call_reply::{InnerCallReply, RootCallReply};
 pub use crate::raw;
 pub use crate::rediserror::RedisError;
 pub use crate::redisvalue::RedisValue;
 
 pub type RedisResult = Result<RedisValue, RedisError>;
+
+impl From<RootCallReply> for RedisResult {
+    fn from(reply: RootCallReply) -> Self {
+        let redis_value: RedisValue = (&reply).into();
+        match redis_value {
+            RedisValue::Error(s) => Err(RedisError::String(s)),
+            RedisValue::StaticError(s) => Err(RedisError::Str(s)),
+            _ => Ok(redis_value),
+        }
+    }
+}
+
+impl<'root> From<InnerCallReply<'root>> for RedisResult {
+    fn from(reply: InnerCallReply) -> Self {
+        let redis_value: RedisValue = (&reply).into();
+        match redis_value {
+            RedisValue::Error(s) => Err(RedisError::String(s)),
+            RedisValue::StaticError(s) => Err(RedisError::Str(s)),
+            _ => Ok(redis_value),
+        }
+    }
+}
 
 pub const REDIS_OK: RedisResult = Ok(RedisValue::SimpleStringStatic("OK"));
 pub const TYPE_METHOD_VERSION: u64 = raw::REDISMODULE_TYPE_METHOD_VERSION as u64;
@@ -271,6 +295,14 @@ impl Clone for RedisString {
 impl From<RedisString> for String {
     fn from(rs: RedisString) -> Self {
         rs.to_string_lossy()
+    }
+}
+
+impl Deref for RedisString {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
     }
 }
 
