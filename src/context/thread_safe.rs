@@ -1,8 +1,55 @@
-use std::ops::Deref;
+use std::borrow::Borrow;
+use std::cell::UnsafeCell;
+use std::ops::{Deref, DerefMut};
 use std::ptr;
 
 use crate::context::blocked::BlockedClient;
 use crate::{raw, Context, RedisResult};
+
+pub struct RedisGILGuardScope<'ctx, 'mutex, T: Default> {
+    _context: &'ctx Context,
+    mutex: &'mutex RedisGILGuard<T>,
+}
+
+impl<'ctx, 'mutex, T: Default> Deref for RedisGILGuardScope<'ctx, 'mutex, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*self.mutex.obj.get() }
+    }
+}
+
+impl<'ctx, 'mutex, T: Default> DerefMut for RedisGILGuardScope<'ctx, 'mutex, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *self.mutex.obj.get() }
+    }
+}
+
+#[derive(Default)]
+pub struct RedisGILGuard<T: Default> {
+    obj: UnsafeCell<T>,
+}
+
+impl<T: Default> RedisGILGuard<T> {
+    pub fn new(obj: T) -> RedisGILGuard<T> {
+        RedisGILGuard {
+            obj: UnsafeCell::new(obj),
+        }
+    }
+
+    pub fn lock<'mutex, 'ctx>(
+        &'mutex self,
+        context: &'ctx Context,
+    ) -> RedisGILGuardScope<'ctx, 'mutex, T> {
+        RedisGILGuardScope {
+            _context: context,
+            mutex: self,
+        }
+    }
+}
+
+unsafe impl<T: Default> Sync for RedisGILGuard<T> {}
+unsafe impl<T: Default> Send for RedisGILGuard<T> {}
 
 pub struct ContextGuard {
     ctx: Context,
@@ -18,6 +65,12 @@ impl Deref for ContextGuard {
     type Target = Context;
 
     fn deref(&self) -> &Self::Target {
+        &self.ctx
+    }
+}
+
+impl Borrow<Context> for ContextGuard {
+    fn borrow(&self) -> &Context {
         &self.ctx
     }
 }
