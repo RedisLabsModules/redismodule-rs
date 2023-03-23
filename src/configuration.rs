@@ -2,7 +2,8 @@ use crate::context::thread_safe::RedisLockIndicator;
 use crate::{raw, RedisGILGuard};
 use crate::{Context, RedisError, RedisString};
 use bitflags::bitflags;
-use std::ffi::{c_char, c_int, c_longlong, c_void, CString};
+use std::ffi::{c_char, c_int, c_longlong, c_void, CStr, CString};
+use std::marker::PhantomData;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::Mutex;
 
@@ -81,13 +82,13 @@ macro_rules! enum_configuration {
 /// ConfigurationContext is used as a special context that indicate that we are
 /// running with the Redis GIL is held but we should not perform all the regular
 /// operation we can perfrom use the regular Context.
-pub struct ConfigurationContext { 
+pub struct ConfigurationContext {
     _dummy: usize, // We set some none public vairable here so user will not be able to construct such object
 }
 
 impl ConfigurationContext {
     fn new() -> ConfigurationContext {
-        ConfigurationContext{ _dummy: 0 }
+        ConfigurationContext { _dummy: 0 }
     }
 }
 
@@ -170,29 +171,55 @@ impl ConfigurationValue<bool> for AtomicBool {
     }
 }
 
-extern "C" fn i64_configuration_set<T: ConfigurationValue<i64>>(
-    _name: *const c_char,
+type OnUpdatedCallback<T> = Box<dyn Fn(&ConfigurationContext, &str, &'static T)>;
+
+struct ConfigrationPrivateData<G, T: ConfigurationValue<G> + 'static> {
+    variable: &'static T,
+    on_changed: Option<OnUpdatedCallback<T>>,
+    phantom: PhantomData<G>,
+}
+
+impl<G, T: ConfigurationValue<G> + 'static> ConfigrationPrivateData<G, T> {
+    fn set_val(&self, name: *const c_char, val: G, err: *mut *mut raw::RedisModuleString) -> c_int {
+        // we know the GIL is held so it is safe to use Context::dummy().
+        let configuration_ctx = ConfigurationContext::new();
+        if let Err(e) = self.variable.set(&configuration_ctx, val) {
+            let error_msg = RedisString::create(None, &e.to_string());
+            unsafe { *err = error_msg.take() };
+            return raw::REDISMODULE_ERR as i32;
+        }
+        let c_str_name = unsafe { CStr::from_ptr(name) };
+        self.on_changed.as_ref().map(|v| {
+            v(
+                &configuration_ctx,
+                c_str_name.to_str().unwrap(),
+                self.variable,
+            )
+        });
+        raw::REDISMODULE_OK as i32
+    }
+
+    fn get_val(&self) -> G {
+        self.variable.get(&ConfigurationContext::new())
+    }
+}
+
+extern "C" fn i64_configuration_set<T: ConfigurationValue<i64> + 'static>(
+    name: *const c_char,
     val: c_longlong,
     privdata: *mut c_void,
     err: *mut *mut raw::RedisModuleString,
 ) -> c_int {
-    let variable = unsafe { &*(privdata as *const T) };
-    // we know the GIL is held so it is safe to use Context::dummy().
-    if let Err(e) = variable.set(&ConfigurationContext::new(), val) {
-        let error_msg = RedisString::create(None, &e.to_string());
-        unsafe { *err = error_msg.take() };
-        return raw::REDISMODULE_ERR as i32;
-    }
-    raw::REDISMODULE_OK as i32
+    let private_data = unsafe { &*(privdata as *const ConfigrationPrivateData<i64, T>) };
+    private_data.set_val(name, val, err)
 }
 
-extern "C" fn i64_configuration_get<T: ConfigurationValue<i64>>(
+extern "C" fn i64_configuration_get<T: ConfigurationValue<i64> + 'static>(
     _name: *const c_char,
     privdata: *mut c_void,
 ) -> c_longlong {
-    let variable = unsafe { &*(privdata as *const T) };
-    // we know the GIL is held so it is safe to use Context::dummy().
-    variable.get(&ConfigurationContext::new())
+    let private_data = unsafe { &*(privdata as *const ConfigrationPrivateData<i64, T>) };
+    private_data.get_val()
 }
 
 pub fn register_i64_configuration<T: ConfigurationValue<i64>>(
@@ -203,8 +230,14 @@ pub fn register_i64_configuration<T: ConfigurationValue<i64>>(
     min: i64,
     max: i64,
     flags: ConfigurationFlags,
+    on_changed: Option<OnUpdatedCallback<T>>,
 ) {
     let name = CString::new(name).unwrap();
+    let config_private_data = ConfigrationPrivateData {
+        variable: variable,
+        on_changed: on_changed,
+        phantom: PhantomData::<i64>,
+    };
     unsafe {
         raw::RedisModule_RegisterNumericConfig.unwrap()(
             ctx.ctx,
@@ -216,35 +249,32 @@ pub fn register_i64_configuration<T: ConfigurationValue<i64>>(
             Some(i64_configuration_get::<T>),
             Some(i64_configuration_set::<T>),
             None,
-            variable as *const T as *mut c_void,
+            Box::into_raw(Box::new(config_private_data)) as *mut c_void,
         );
     }
 }
 
-extern "C" fn string_configuration_set<T: ConfigurationValue<RedisString>>(
-    _name: *const c_char,
+extern "C" fn string_configuration_set<T: ConfigurationValue<RedisString> + 'static>(
+    name: *const c_char,
     val: *mut raw::RedisModuleString,
     privdata: *mut c_void,
     err: *mut *mut raw::RedisModuleString,
 ) -> c_int {
     let new_val = RedisString::new(None, val);
-    let variable = unsafe { &*(privdata as *const T) };
-    // we know the GIL is held so it is safe to use Context::dummy().
-    if let Err(e) = variable.set(&ConfigurationContext::new(), new_val) {
-        let error_msg = RedisString::create(None, &e.to_string());
-        unsafe { *err = error_msg.take() };
-        return raw::REDISMODULE_ERR as i32;
-    }
-    raw::REDISMODULE_OK as i32
+    let private_data = unsafe { &*(privdata as *const ConfigrationPrivateData<RedisString, T>) };
+    private_data.set_val(name, new_val, err)
 }
 
-extern "C" fn string_configuration_get<T: ConfigurationValue<RedisString>>(
+extern "C" fn string_configuration_get<T: ConfigurationValue<RedisString> + 'static>(
     _name: *const c_char,
     privdata: *mut c_void,
 ) -> *mut raw::RedisModuleString {
-    let variable = unsafe { &*(privdata as *const T) };
+    let private_data = unsafe { &*(privdata as *const ConfigrationPrivateData<RedisString, T>) };
     // we know the GIL is held so it is safe to use Context::dummy().
-    variable.get(&ConfigurationContext::new()).take()
+    private_data
+        .variable
+        .get(&ConfigurationContext::new())
+        .take()
 }
 
 pub fn register_string_configuration<T: ConfigurationValue<RedisString>>(
@@ -253,9 +283,15 @@ pub fn register_string_configuration<T: ConfigurationValue<RedisString>>(
     variable: &'static T,
     default: &str,
     flags: ConfigurationFlags,
+    on_changed: Option<OnUpdatedCallback<T>>,
 ) {
     let name = CString::new(name).unwrap();
     let default = CString::new(default).unwrap();
+    let config_private_data = ConfigrationPrivateData {
+        variable: variable,
+        on_changed: on_changed,
+        phantom: PhantomData::<RedisString>,
+    };
     unsafe {
         raw::RedisModule_RegisterStringConfig.unwrap()(
             ctx.ctx,
@@ -265,34 +301,27 @@ pub fn register_string_configuration<T: ConfigurationValue<RedisString>>(
             Some(string_configuration_get::<T>),
             Some(string_configuration_set::<T>),
             None,
-            variable as *const T as *mut c_void,
+            Box::into_raw(Box::new(config_private_data)) as *mut c_void,
         );
     }
 }
 
-extern "C" fn bool_configuration_set<T: ConfigurationValue<bool>>(
-    _name: *const c_char,
+extern "C" fn bool_configuration_set<T: ConfigurationValue<bool> + 'static>(
+    name: *const c_char,
     val: i32,
     privdata: *mut c_void,
     err: *mut *mut raw::RedisModuleString,
 ) -> c_int {
-    let variable = unsafe { &*(privdata as *const T) };
-    // we know the GIL is held so it is safe to use Context::dummy().
-    if let Err(e) = variable.set(&ConfigurationContext::new(), val != 0) {
-        let error_msg = RedisString::create(None, &e.to_string());
-        unsafe { *err = error_msg.take() };
-        return raw::REDISMODULE_ERR as i32;
-    }
-    raw::REDISMODULE_OK as i32
+    let private_data = unsafe { &*(privdata as *const ConfigrationPrivateData<bool, T>) };
+    private_data.set_val(name, val != 0, err)
 }
 
-extern "C" fn bool_configuration_get<T: ConfigurationValue<bool>>(
+extern "C" fn bool_configuration_get<T: ConfigurationValue<bool> + 'static>(
     _name: *const c_char,
     privdata: *mut c_void,
 ) -> c_int {
-    let variable = unsafe { &*(privdata as *const T) };
-    // we know the GIL is held so it is safe to use Context::dummy().
-    variable.get(&ConfigurationContext::new()) as i32
+    let private_data = unsafe { &*(privdata as *const ConfigrationPrivateData<bool, T>) };
+    private_data.get_val() as i32
 }
 
 pub fn register_bool_configuration<T: ConfigurationValue<bool>>(
@@ -301,8 +330,14 @@ pub fn register_bool_configuration<T: ConfigurationValue<bool>>(
     variable: &'static T,
     default: bool,
     flags: ConfigurationFlags,
+    on_changed: Option<OnUpdatedCallback<T>>,
 ) {
     let name = CString::new(name).unwrap();
+    let config_private_data = ConfigrationPrivateData {
+        variable: variable,
+        on_changed: on_changed,
+        phantom: PhantomData::<bool>,
+    };
     unsafe {
         raw::RedisModule_RegisterBoolConfig.unwrap()(
             ctx.ctx,
@@ -312,37 +347,41 @@ pub fn register_bool_configuration<T: ConfigurationValue<bool>>(
             Some(bool_configuration_get::<T>),
             Some(bool_configuration_set::<T>),
             None,
-            variable as *const T as *mut c_void,
+            Box::into_raw(Box::new(config_private_data)) as *mut c_void,
         );
     }
 }
 
-extern "C" fn enum_configuration_set<G: EnumConfigurationValue, T: ConfigurationValue<G>>(
-    _name: *const c_char,
+extern "C" fn enum_configuration_set<
+    G: EnumConfigurationValue,
+    T: ConfigurationValue<G> + 'static,
+>(
+    name: *const c_char,
     val: i32,
     privdata: *mut c_void,
     err: *mut *mut raw::RedisModuleString,
 ) -> c_int {
-    let variable = unsafe { &*(privdata as *const T) };
-    // we know the GIL is held so it is safe to use Context::dummy().
-    if let Err(e) = val
-        .try_into()
-        .and_then(|v| variable.set(&ConfigurationContext::new(), v))
-    {
-        let error_msg = RedisString::create(None, &e.to_string());
-        unsafe { *err = error_msg.take() };
-        return raw::REDISMODULE_ERR as i32;
+    let private_data = unsafe { &*(privdata as *const ConfigrationPrivateData<G, T>) };
+    let val: Result<G, _> = val.try_into();
+    match val {
+        Ok(val) => private_data.set_val(name, val, err),
+        Err(e) => {
+            let error_msg = RedisString::create(None, &e.to_string());
+            unsafe { *err = error_msg.take() };
+            raw::REDISMODULE_ERR as i32
+        }
     }
-    raw::REDISMODULE_OK as i32
 }
 
-extern "C" fn enum_configuration_get<G: EnumConfigurationValue, T: ConfigurationValue<G>>(
+extern "C" fn enum_configuration_get<
+    G: EnumConfigurationValue,
+    T: ConfigurationValue<G> + 'static,
+>(
     _name: *const c_char,
     privdata: *mut c_void,
 ) -> c_int {
-    let variable = unsafe { &*(privdata as *const T) };
-    // we know the GIL is held so it is safe to use Context::dummy().
-    variable.get(&ConfigurationContext::new()).into()
+    let private_data = unsafe { &*(privdata as *const ConfigrationPrivateData<G, T>) };
+    private_data.get_val().into()
 }
 
 pub fn register_enum_configuration<G: EnumConfigurationValue, T: ConfigurationValue<G>>(
@@ -351,6 +390,7 @@ pub fn register_enum_configuration<G: EnumConfigurationValue, T: ConfigurationVa
     variable: &'static T,
     default: G,
     flags: ConfigurationFlags,
+    on_changed: Option<OnUpdatedCallback<T>>,
 ) {
     let name = CString::new(name).unwrap();
     let (names, vals) = default.get_options();
@@ -359,6 +399,11 @@ pub fn register_enum_configuration<G: EnumConfigurationValue, T: ConfigurationVa
         .into_iter()
         .map(|v| CString::new(v).unwrap())
         .collect();
+    let config_private_data = ConfigrationPrivateData {
+        variable: variable,
+        on_changed: on_changed,
+        phantom: PhantomData::<G>,
+    };
     unsafe {
         raw::RedisModule_RegisterEnumConfig.unwrap()(
             ctx.ctx,
@@ -375,7 +420,7 @@ pub fn register_enum_configuration<G: EnumConfigurationValue, T: ConfigurationVa
             Some(enum_configuration_get::<G, T>),
             Some(enum_configuration_set::<G, T>),
             None,
-            variable as *const T as *mut c_void,
+            Box::into_raw(Box::new(config_private_data)) as *mut c_void,
         );
     }
 }

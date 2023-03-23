@@ -454,5 +454,12 @@ fn test_configuration() -> Result<()> {
     config_set("configuration.enum_mutex", "Val2")?;
     assert_eq!(config_get("configuration.enum_mutex")?, "Val2");
 
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let res: i64 = redis::cmd("configuration.num_changes")
+        .query(&mut con)
+        .with_context(|| "failed to run flushall")?;
+    assert_eq!(res, 18); // the first configuration initialisation is counted as well, so we will get 18 changes.
+
     Ok(())
 }

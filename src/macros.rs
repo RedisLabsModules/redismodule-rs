@@ -116,25 +116,29 @@ macro_rules! redis_module {
                 $i64_default:expr,
                 $i64_min:expr,
                 $i64_max:expr,
-                $i64_flags_options:expr
+                $i64_flags_options:expr,
+                $i64_on_changed:expr
             ]),* $(,)*],)?
             $(string:[$([
                 $string_configuration_name:expr,
                 $string_configuration_val:expr,
                 $string_default:expr,
-                $string_flags_options:expr
+                $string_flags_options:expr,
+                $string_on_changed:expr
             ]),* $(,)*],)?
             $(bool:[$([
                 $bool_configuration_name:expr,
                 $bool_configuration_val:expr,
                 $bool_default:expr,
-                $bool_flags_options:expr
+                $bool_flags_options:expr,
+                $bool_on_changed:expr
             ]),* $(,)*],)?
             $(enum:[$([
                 $enum_configuration_name:expr,
                 $enum_configuration_val:expr,
                 $enum_default:expr,
-                $enum_flags_options:expr
+                $enum_flags_options:expr,
+                $enum_on_changed:expr
             ]),* $(,)*],)?
         ])?
     ) => {
@@ -215,22 +219,22 @@ macro_rules! redis_module {
             $(
                 $(
                     $(
-                        register_i64_configuration(&context, $i64_configuration_name, $i64_configuration_val, $i64_default, $i64_min, $i64_max, $i64_flags_options);
+                        register_i64_configuration(&context, $i64_configuration_name, $i64_configuration_val, $i64_default, $i64_min, $i64_max, $i64_flags_options, $i64_on_changed);
                     )*
                 )?
                 $(
                     $(
-                        register_string_configuration(&context, $string_configuration_name, $string_configuration_val, $string_default, $string_flags_options);
+                        register_string_configuration(&context, $string_configuration_name, $string_configuration_val, $string_default, $string_flags_options, $string_on_changed);
                     )*
                 )?
                 $(
                     $(
-                        register_bool_configuration(&context, $bool_configuration_name, $bool_configuration_val, $bool_default, $bool_flags_options);
+                        register_bool_configuration(&context, $bool_configuration_name, $bool_configuration_val, $bool_default, $bool_flags_options, $bool_on_changed);
                     )*
                 )?
                 $(
                     $(
-                        register_enum_configuration(&context, $enum_configuration_name, $enum_configuration_val, $enum_default, $enum_flags_options);
+                        register_enum_configuration(&context, $enum_configuration_name, $enum_configuration_val, $enum_default, $enum_flags_options, $enum_on_changed);
                     )*
                 )?
             )?

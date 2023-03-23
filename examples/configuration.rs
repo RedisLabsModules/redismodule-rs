@@ -8,7 +8,9 @@ use std::sync::{
 
 use lazy_static::lazy_static;
 use redis_module::{
-    configuration::ConfigurationFlags, EnumConfigurationValue, RedisGILGuard, RedisString,
+    configuration::{ConfigurationContext, ConfigurationFlags},
+    ConfigurationValue, Context, EnumConfigurationValue, RedisGILGuard, RedisResult, RedisString,
+    RedisValue,
 };
 
 enum_configuration! {
@@ -19,6 +21,7 @@ enum_configuration! {
 }
 
 lazy_static! {
+    static ref NUM_OF_CONFIGERATION_CHANGES: RedisGILGuard<i64> = RedisGILGuard::default();
     static ref CONFIGURATION_I64: RedisGILGuard<i64> = RedisGILGuard::default();
     static ref CONFIGURATION_ATOMIC_I64: AtomicI64 = AtomicI64::new(1);
     static ref CONFIGURATION_REDIS_STRING: RedisGILGuard<RedisString> =
@@ -33,30 +36,46 @@ lazy_static! {
         Mutex::new(EnumConfiguration::Val1);
 }
 
+fn on_configuration_changed<G, T: ConfigurationValue<G>>(
+    config_ctx: &ConfigurationContext,
+    _name: &str,
+    _val: &'static T,
+) {
+    let mut val = NUM_OF_CONFIGERATION_CHANGES.lock(config_ctx);
+    *val += 1
+}
+
+fn num_changes(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
+    let val = NUM_OF_CONFIGERATION_CHANGES.lock(ctx);
+    Ok(RedisValue::Integer(*val))
+}
+
 //////////////////////////////////////////////////////
 
 redis_module! {
     name: "configuration",
     version: 1,
     data_types: [],
-    commands: [],
+    commands: [
+        ["configuration.num_changes", num_changes, "", 0, 0, 0],
+    ],
     configurations: [
         i64: [
-            ["i64", &*CONFIGURATION_I64, 10, 0, 1000, ConfigurationFlags::DEFAULT],
-            ["atomic_i64", &*CONFIGURATION_ATOMIC_I64, 10, 0, 1000, ConfigurationFlags::DEFAULT],
+            ["i64", &*CONFIGURATION_I64, 10, 0, 1000, ConfigurationFlags::DEFAULT, Some(Box::new(on_configuration_changed))],
+            ["atomic_i64", &*CONFIGURATION_ATOMIC_I64, 10, 0, 1000, ConfigurationFlags::DEFAULT, Some(Box::new(on_configuration_changed))],
         ],
         string: [
-            ["redis_string", &*CONFIGURATION_REDIS_STRING, "default", ConfigurationFlags::DEFAULT],
-            ["string", &*CONFIGURATION_STRING, "default", ConfigurationFlags::DEFAULT],
-            ["mutex_string", &*CONFIGURATION_MUTEX_STRING, "default", ConfigurationFlags::DEFAULT],
+            ["redis_string", &*CONFIGURATION_REDIS_STRING, "default", ConfigurationFlags::DEFAULT, Some(Box::new(on_configuration_changed))],
+            ["string", &*CONFIGURATION_STRING, "default", ConfigurationFlags::DEFAULT, Some(Box::new(on_configuration_changed::<String, _>))],
+            ["mutex_string", &*CONFIGURATION_MUTEX_STRING, "default", ConfigurationFlags::DEFAULT, Some(Box::new(on_configuration_changed::<String, _>))],
         ],
         bool: [
-            ["atomic_bool", &*CONFIGURATION_ATOMIC_BOOL, true, ConfigurationFlags::DEFAULT],
-            ["bool", &*CONFIGURATION_BOOL, true, ConfigurationFlags::DEFAULT],
+            ["atomic_bool", &*CONFIGURATION_ATOMIC_BOOL, true, ConfigurationFlags::DEFAULT, Some(Box::new(on_configuration_changed))],
+            ["bool", &*CONFIGURATION_BOOL, true, ConfigurationFlags::DEFAULT, Some(Box::new(on_configuration_changed))],
         ],
         enum: [
-            ["enum", &*CONFIGURATION_ENUM, EnumConfiguration::Val1, ConfigurationFlags::DEFAULT],
-            ["enum_mutex", &*CONFIGURATION_MUTEX_ENUM, EnumConfiguration::Val1, ConfigurationFlags::DEFAULT],
+            ["enum", &*CONFIGURATION_ENUM, EnumConfiguration::Val1, ConfigurationFlags::DEFAULT, Some(Box::new(on_configuration_changed))],
+            ["enum_mutex", &*CONFIGURATION_MUTEX_ENUM, EnumConfiguration::Val1, ConfigurationFlags::DEFAULT, Some(Box::new(on_configuration_changed))],
         ],
     ]
 }
