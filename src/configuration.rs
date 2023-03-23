@@ -1,3 +1,4 @@
+use crate::context::thread_safe::RedisLockIndicator;
 use crate::{raw, RedisGILGuard};
 use crate::{Context, RedisError, RedisString};
 use bitflags::bitflags;
@@ -77,9 +78,24 @@ macro_rules! enum_configuration {
     }
 }
 
+/// ConfigurationContext is used as a special context that indicate that we are
+/// running with the Redis GIL is held but we should not perform all the regular
+/// operation we can perfrom use the regular Context.
+pub struct ConfigurationContext { 
+    _dummy: usize, // We set some none public vairable here so user will not be able to construct such object
+}
+
+impl ConfigurationContext {
+    fn new() -> ConfigurationContext {
+        ConfigurationContext{ _dummy: 0 }
+    }
+}
+
+unsafe impl RedisLockIndicator for ConfigurationContext {}
+
 pub trait ConfigurationValue<T>: Sync + Send {
-    fn get(&self, ctx: &Context) -> T;
-    fn set(&self, ctx: &Context, val: T) -> Result<(), RedisError>;
+    fn get(&self, ctx: &ConfigurationContext) -> T;
+    fn set(&self, ctx: &ConfigurationContext, val: T) -> Result<(), RedisError>;
 }
 
 pub trait EnumConfigurationValue: TryFrom<i32, Error = RedisError> + Into<i32> + Clone {
@@ -87,11 +103,11 @@ pub trait EnumConfigurationValue: TryFrom<i32, Error = RedisError> + Into<i32> +
 }
 
 impl<T: Clone> ConfigurationValue<T> for RedisGILGuard<T> {
-    fn get(&self, ctx: &Context) -> T {
+    fn get(&self, ctx: &ConfigurationContext) -> T {
         let value = self.lock(ctx);
         value.clone()
     }
-    fn set(&self, ctx: &Context, val: T) -> Result<(), RedisError> {
+    fn set(&self, ctx: &ConfigurationContext, val: T) -> Result<(), RedisError> {
         let mut value = self.lock(ctx);
         *value = val;
         Ok(())
@@ -99,11 +115,11 @@ impl<T: Clone> ConfigurationValue<T> for RedisGILGuard<T> {
 }
 
 impl<T: Clone + Send> ConfigurationValue<T> for Mutex<T> {
-    fn get(&self, _ctx: &Context) -> T {
+    fn get(&self, _ctx: &ConfigurationContext) -> T {
         let value = self.lock().unwrap();
         value.clone()
     }
-    fn set(&self, _ctx: &Context, val: T) -> Result<(), RedisError> {
+    fn set(&self, _ctx: &ConfigurationContext, val: T) -> Result<(), RedisError> {
         let mut value = self.lock().unwrap();
         *value = val;
         Ok(())
@@ -111,21 +127,21 @@ impl<T: Clone + Send> ConfigurationValue<T> for Mutex<T> {
 }
 
 impl ConfigurationValue<i64> for AtomicI64 {
-    fn get(&self, _ctx: &Context) -> i64 {
+    fn get(&self, _ctx: &ConfigurationContext) -> i64 {
         self.load(Ordering::Relaxed)
     }
-    fn set(&self, _ctx: &Context, val: i64) -> Result<(), RedisError> {
+    fn set(&self, _ctx: &ConfigurationContext, val: i64) -> Result<(), RedisError> {
         self.store(val, Ordering::Relaxed);
         Ok(())
     }
 }
 
 impl ConfigurationValue<RedisString> for RedisGILGuard<String> {
-    fn get(&self, ctx: &Context) -> RedisString {
+    fn get(&self, ctx: &ConfigurationContext) -> RedisString {
         let value = self.lock(ctx);
         RedisString::create(None, &value)
     }
-    fn set(&self, ctx: &Context, val: RedisString) -> Result<(), RedisError> {
+    fn set(&self, ctx: &ConfigurationContext, val: RedisString) -> Result<(), RedisError> {
         let mut value = self.lock(ctx);
         *value = val.try_as_str()?.to_string();
         Ok(())
@@ -133,11 +149,11 @@ impl ConfigurationValue<RedisString> for RedisGILGuard<String> {
 }
 
 impl ConfigurationValue<RedisString> for Mutex<String> {
-    fn get(&self, _ctx: &Context) -> RedisString {
+    fn get(&self, _ctx: &ConfigurationContext) -> RedisString {
         let value = self.lock().unwrap();
         RedisString::create(None, &value)
     }
-    fn set(&self, _ctx: &Context, val: RedisString) -> Result<(), RedisError> {
+    fn set(&self, _ctx: &ConfigurationContext, val: RedisString) -> Result<(), RedisError> {
         let mut value = self.lock().unwrap();
         *value = val.try_as_str()?.to_string();
         Ok(())
@@ -145,10 +161,10 @@ impl ConfigurationValue<RedisString> for Mutex<String> {
 }
 
 impl ConfigurationValue<bool> for AtomicBool {
-    fn get(&self, _ctx: &Context) -> bool {
+    fn get(&self, _ctx: &ConfigurationContext) -> bool {
         self.load(Ordering::Relaxed)
     }
-    fn set(&self, _ctx: &Context, val: bool) -> Result<(), RedisError> {
+    fn set(&self, _ctx: &ConfigurationContext, val: bool) -> Result<(), RedisError> {
         self.store(val, Ordering::Relaxed);
         Ok(())
     }
@@ -162,7 +178,7 @@ extern "C" fn i64_configuration_set<T: ConfigurationValue<i64>>(
 ) -> c_int {
     let variable = unsafe { &*(privdata as *const T) };
     // we know the GIL is held so it is safe to use Context::dummy().
-    if let Err(e) = variable.set(&Context::dummy(), val) {
+    if let Err(e) = variable.set(&ConfigurationContext::new(), val) {
         let error_msg = RedisString::create(None, &e.to_string());
         unsafe { *err = error_msg.take() };
         return raw::REDISMODULE_ERR as i32;
@@ -176,7 +192,7 @@ extern "C" fn i64_configuration_get<T: ConfigurationValue<i64>>(
 ) -> c_longlong {
     let variable = unsafe { &*(privdata as *const T) };
     // we know the GIL is held so it is safe to use Context::dummy().
-    variable.get(&Context::dummy())
+    variable.get(&ConfigurationContext::new())
 }
 
 pub fn register_i64_configuration<T: ConfigurationValue<i64>>(
@@ -214,7 +230,7 @@ extern "C" fn string_configuration_set<T: ConfigurationValue<RedisString>>(
     let new_val = RedisString::new(None, val);
     let variable = unsafe { &*(privdata as *const T) };
     // we know the GIL is held so it is safe to use Context::dummy().
-    if let Err(e) = variable.set(&Context::dummy(), new_val) {
+    if let Err(e) = variable.set(&ConfigurationContext::new(), new_val) {
         let error_msg = RedisString::create(None, &e.to_string());
         unsafe { *err = error_msg.take() };
         return raw::REDISMODULE_ERR as i32;
@@ -228,7 +244,7 @@ extern "C" fn string_configuration_get<T: ConfigurationValue<RedisString>>(
 ) -> *mut raw::RedisModuleString {
     let variable = unsafe { &*(privdata as *const T) };
     // we know the GIL is held so it is safe to use Context::dummy().
-    variable.get(&Context::dummy()).take()
+    variable.get(&ConfigurationContext::new()).take()
 }
 
 pub fn register_string_configuration<T: ConfigurationValue<RedisString>>(
@@ -262,7 +278,7 @@ extern "C" fn bool_configuration_set<T: ConfigurationValue<bool>>(
 ) -> c_int {
     let variable = unsafe { &*(privdata as *const T) };
     // we know the GIL is held so it is safe to use Context::dummy().
-    if let Err(e) = variable.set(&Context::dummy(), val != 0) {
+    if let Err(e) = variable.set(&ConfigurationContext::new(), val != 0) {
         let error_msg = RedisString::create(None, &e.to_string());
         unsafe { *err = error_msg.take() };
         return raw::REDISMODULE_ERR as i32;
@@ -276,7 +292,7 @@ extern "C" fn bool_configuration_get<T: ConfigurationValue<bool>>(
 ) -> c_int {
     let variable = unsafe { &*(privdata as *const T) };
     // we know the GIL is held so it is safe to use Context::dummy().
-    variable.get(&Context::dummy()) as i32
+    variable.get(&ConfigurationContext::new()) as i32
 }
 
 pub fn register_bool_configuration<T: ConfigurationValue<bool>>(
@@ -311,7 +327,7 @@ extern "C" fn enum_configuration_set<G: EnumConfigurationValue, T: Configuration
     // we know the GIL is held so it is safe to use Context::dummy().
     if let Err(e) = val
         .try_into()
-        .and_then(|v| variable.set(&Context::dummy(), v))
+        .and_then(|v| variable.set(&ConfigurationContext::new(), v))
     {
         let error_msg = RedisString::create(None, &e.to_string());
         unsafe { *err = error_msg.take() };
@@ -326,7 +342,7 @@ extern "C" fn enum_configuration_get<G: EnumConfigurationValue, T: Configuration
 ) -> c_int {
     let variable = unsafe { &*(privdata as *const T) };
     // we know the GIL is held so it is safe to use Context::dummy().
-    variable.get(&Context::dummy()).into()
+    variable.get(&ConfigurationContext::new()).into()
 }
 
 pub fn register_enum_configuration<G: EnumConfigurationValue, T: ConfigurationValue<G>>(

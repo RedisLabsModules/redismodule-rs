@@ -6,12 +6,12 @@ use std::ptr;
 use crate::context::blocked::BlockedClient;
 use crate::{raw, Context, RedisResult};
 
-pub struct RedisGILGuardScope<'ctx, 'mutex, T> {
-    _context: &'ctx Context,
+pub struct RedisGILGuardScope<'ctx, 'mutex, T, G: RedisLockIndicator> {
+    _context: &'ctx G,
     mutex: &'mutex RedisGILGuard<T>,
 }
 
-impl<'ctx, 'mutex, T> Deref for RedisGILGuardScope<'ctx, 'mutex, T> {
+impl<'ctx, 'mutex, T, G: RedisLockIndicator> Deref for RedisGILGuardScope<'ctx, 'mutex, T, G> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -19,11 +19,13 @@ impl<'ctx, 'mutex, T> Deref for RedisGILGuardScope<'ctx, 'mutex, T> {
     }
 }
 
-impl<'ctx, 'mutex, T> DerefMut for RedisGILGuardScope<'ctx, 'mutex, T> {
+impl<'ctx, 'mutex, T, G: RedisLockIndicator> DerefMut for RedisGILGuardScope<'ctx, 'mutex, T, G> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { &mut *self.mutex.obj.get() }
     }
 }
+
+pub unsafe trait RedisLockIndicator {}
 
 /// This struct allows to guard some data and makes sure
 /// the data is only access when the Redis GIL is locked.
@@ -43,10 +45,10 @@ impl<T> RedisGILGuard<T> {
         }
     }
 
-    pub fn lock<'mutex, 'ctx>(
+    pub fn lock<'mutex, 'ctx, G: RedisLockIndicator>(
         &'mutex self,
-        context: &'ctx Context,
-    ) -> RedisGILGuardScope<'ctx, 'mutex, T> {
+        context: &'ctx G,
+    ) -> RedisGILGuardScope<'ctx, 'mutex, T, G> {
         RedisGILGuardScope {
             _context: context,
             mutex: self,
@@ -66,6 +68,8 @@ unsafe impl<T> Send for RedisGILGuard<T> {}
 pub struct ContextGuard {
     ctx: Context,
 }
+
+unsafe impl RedisLockIndicator for ContextGuard {}
 
 impl Drop for ContextGuard {
     fn drop(&mut self) {

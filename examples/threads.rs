@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate redis_module;
 
-use lazy_static::lazy_static;
+use lazy_static::{lazy_static};
 use redis_module::{
     Context, NextArg, RedisGILGuard, RedisResult, RedisString, RedisValue, ThreadSafeContext,
 };
