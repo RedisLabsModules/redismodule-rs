@@ -57,7 +57,7 @@ impl Hash for RedisValue {
             RedisValue::VerbatimString((format, data)) => {
                 format.hash(state);
                 data.hash(state);
-            },
+            }
             RedisValue::Null => 0.hash(state),
             RedisValue::NoReply => 0.hash(state),
         }
@@ -155,23 +155,25 @@ impl<'root> From<&CallReply<'root>> for RedisValue {
         match reply {
             CallReply::Error(reply) => RedisValue::Error(reply.to_string().unwrap()),
             CallReply::Unknown => RedisValue::StaticError("Error on method call"),
-            CallReply::Array(reply) => RedisValue::Array(reply.iter().map(|v| (&v).into()).collect()),
+            CallReply::Array(reply) => {
+                RedisValue::Array(reply.iter().map(|v| (&v).into()).collect())
+            }
             CallReply::I64(reply) => RedisValue::Integer(reply.to_i64()),
             CallReply::String(reply) => RedisValue::SimpleString(reply.to_string().unwrap()),
             CallReply::Null(_) => RedisValue::Null,
-            CallReply::Map(reply) => RedisValue::Map(
-                reply
-                    .iter()
-                    .fold(HashMap::new(), |mut acc, (key, val)| {
-                        acc.insert((&key).into(), (&val).into());
-                        acc
-                    })
-            ),
+            CallReply::Map(reply) => {
+                RedisValue::Map(reply.iter().fold(HashMap::new(), |mut acc, (key, val)| {
+                    acc.insert((&key).into(), (&val).into());
+                    acc
+                }))
+            }
             CallReply::Set(reply) => RedisValue::Set(reply.iter().map(|v| (&v).into()).collect()),
             CallReply::Bool(reply) => RedisValue::Bool(reply.to_bool()),
             CallReply::Double(reply) => RedisValue::Float(reply.to_double()),
             CallReply::BigNumber(reply) => RedisValue::BigNumber(reply.to_string().unwrap()),
-            CallReply::VerbatimString(reply) => RedisValue::VerbatimString(reply.to_parts().unwrap())
+            CallReply::VerbatimString(reply) => {
+                RedisValue::VerbatimString(reply.to_parts().unwrap())
+            }
         }
     }
 }

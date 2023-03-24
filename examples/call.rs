@@ -2,7 +2,7 @@
 extern crate redis_module;
 
 use redis_module::{
-    CallOptionsBuilder, CallReply, Context, RedisError, RedisResult, RedisString, CallOptionResp,
+    CallOptionResp, CallOptionsBuilder, CallReply, Context, RedisError, RedisResult, RedisString,
 };
 
 fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
@@ -78,21 +78,27 @@ fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
     }
 
     // test resp3 on call_ext
-    let call_options = CallOptionsBuilder::new().script_mode().resp_3(CallOptionResp::Resp3).errors_as_replies().build();
+    let call_options = CallOptionsBuilder::new()
+        .script_mode()
+        .resp_3(CallOptionResp::Resp3)
+        .errors_as_replies()
+        .build();
     let res: CallReply = ctx.call_ext("HSET", &call_options, &["x", "foo", "bar"]);
     if let CallReply::Error(err) = res {
         return Err(RedisError::String(format!(
-            "Failed setting value on hset, error message: '{}'", err.to_string().unwrap(),
+            "Failed setting value on hset, error message: '{}'",
+            err.to_string().unwrap(),
         )));
     }
     let res: CallReply = ctx.call_ext("HGETALL", &call_options, &["x"]);
     if let CallReply::Error(err) = res {
         return Err(RedisError::String(format!(
-            "Failed performing hgetall, error message: '{}'", err.to_string().unwrap(),
+            "Failed performing hgetall, error message: '{}'",
+            err.to_string().unwrap(),
         )));
     }
     if let CallReply::Map(map) = res {
-        let res = map.iter().fold(Vec::new(), |mut vec, (key, val)|{
+        let res = map.iter().fold(Vec::new(), |mut vec, (key, val)| {
             if let CallReply::String(key) = key {
                 vec.push(key.to_string().unwrap());
             }
@@ -103,12 +109,12 @@ fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
         });
         if res != vec!["foo".to_string(), "bar".to_string()] {
             return Err(RedisError::String(
-                "Reply of hgetall does not match expected value".into()
+                "Reply of hgetall does not match expected value".into(),
             ));
         }
-    }else {
+    } else {
         return Err(RedisError::String(
-            "Did not get a set type on hgetall".into()
+            "Did not get a set type on hgetall".into(),
         ));
     }
 

@@ -409,7 +409,11 @@ pub fn reply_with_big_number(ctx: *mut RedisModuleCtx, s: *const c_char, len: si
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
-pub fn reply_with_verbatim_string(ctx: *mut RedisModuleCtx, s: *const c_char, len: size_t) -> Status {
+pub fn reply_with_verbatim_string(
+    ctx: *mut RedisModuleCtx,
+    s: *const c_char,
+    len: size_t,
+) -> Status {
     unsafe { RedisModule_ReplyWithVerbatimString.unwrap()(ctx, s, len).into() }
 }
 

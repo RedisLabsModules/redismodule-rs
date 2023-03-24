@@ -10,7 +10,7 @@ use std::str;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
 
-use crate::context::call_reply::{CallReply};
+use crate::context::call_reply::CallReply;
 pub use crate::raw;
 pub use crate::rediserror::RedisError;
 pub use crate::redisvalue::RedisValue;
