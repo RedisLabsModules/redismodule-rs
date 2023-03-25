@@ -1,4 +1,4 @@
-use crate::{CallReply, RedisError, RedisString};
+use crate::{context::call_reply::CallResult, CallReply, RedisError, RedisString};
 use std::{
     collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
@@ -17,7 +17,6 @@ pub enum RedisValue {
     BigNumber(String),
     VerbatimString((String, Vec<u8>)),
     Array(Vec<RedisValue>),
-    Error(String),
     StaticError(&'static str),
     Map(HashMap<RedisValue, RedisValue>),
     Set(HashSet<RedisValue>),
@@ -40,7 +39,6 @@ impl Hash for RedisValue {
             RedisValue::Bool(b) => b.hash(state),
             RedisValue::Float(f) => f.to_bits().hash(state),
             RedisValue::Array(a) => a.hash(state),
-            RedisValue::Error(a) => a.hash(state),
             RedisValue::StaticError(a) => a.hash(state),
             RedisValue::Map(m) => {
                 for (k, v) in m {
@@ -153,7 +151,6 @@ impl<T: Into<Self>> From<Vec<T>> for RedisValue {
 impl<'root> From<&CallReply<'root>> for RedisValue {
     fn from(reply: &CallReply<'root>) -> Self {
         match reply {
-            CallReply::Error(reply) => RedisValue::Error(reply.to_string().unwrap()),
             CallReply::Unknown => RedisValue::StaticError("Error on method call"),
             CallReply::Array(reply) => {
                 RedisValue::Array(reply.iter().map(|v| (&v).into()).collect())
@@ -161,12 +158,12 @@ impl<'root> From<&CallReply<'root>> for RedisValue {
             CallReply::I64(reply) => RedisValue::Integer(reply.to_i64()),
             CallReply::String(reply) => RedisValue::SimpleString(reply.to_string().unwrap()),
             CallReply::Null(_) => RedisValue::Null,
-            CallReply::Map(reply) => {
-                RedisValue::Map(reply.iter().fold(HashMap::new(), |mut acc, (key, val)| {
-                    acc.insert((&key).into(), (&val).into());
-                    acc
-                }))
-            }
+            CallReply::Map(reply) => RedisValue::Map(
+                reply
+                    .iter()
+                    .map(|(key, val)| ((&key).into(), (&val).into()))
+                    .collect(),
+            ),
             CallReply::Set(reply) => RedisValue::Set(reply.iter().map(|v| (&v).into()).collect()),
             CallReply::Bool(reply) => RedisValue::Bool(reply.to_bool()),
             CallReply::Double(reply) => RedisValue::Float(reply.to_double()),
@@ -175,6 +172,20 @@ impl<'root> From<&CallReply<'root>> for RedisValue {
                 RedisValue::VerbatimString(reply.to_parts().unwrap())
             }
         }
+    }
+}
+
+impl<'root> From<&CallResult<'root>> for RedisValue {
+    fn from(reply: &CallResult<'root>) -> Self {
+        reply.as_ref().map_or_else(
+            |e| {
+                // RedisValue does not support error, we can change that but to avoid.
+                // drastic changes and try to keep backword compatability, currently
+                // we will stansform the error into a simple String.
+                RedisValue::SimpleString(e.to_string().unwrap())
+            },
+            |v| (v).into(),
+        )
     }
 }
 

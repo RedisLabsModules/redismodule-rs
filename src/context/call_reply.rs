@@ -1,11 +1,17 @@
 use core::slice;
-use std::{ffi::c_char, marker::PhantomData, ptr::NonNull};
+use std::{
+    ffi::c_char,
+    fmt,
+    fmt::{Debug, Formatter},
+    marker::PhantomData,
+    ptr::NonNull,
+};
 
 use crate::raw::*;
 
 pub struct StringCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
-    _dummy: PhantomData<&'root i64>,
+    _dummy: PhantomData<&'root ()>,
 }
 
 impl<'root> StringCallReply<'root> {
@@ -33,7 +39,7 @@ impl<'root> Drop for StringCallReply<'root> {
 
 pub struct ErrorCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
-    _dummy: PhantomData<&'root i64>,
+    _dummy: PhantomData<&'root ()>,
 }
 
 impl<'root> ErrorCallReply<'root> {
@@ -53,6 +59,17 @@ impl<'root> ErrorCallReply<'root> {
     }
 }
 
+impl<'root> Debug for ErrorCallReply<'root> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "ErrorCallReply: {}.",
+            self.to_string()
+                .unwrap_or("can not transform data into String".to_string())
+        )
+    }
+}
+
 impl<'root> Drop for ErrorCallReply<'root> {
     fn drop(&mut self) {
         free_call_reply(self.reply.as_ptr());
@@ -61,7 +78,7 @@ impl<'root> Drop for ErrorCallReply<'root> {
 
 pub struct I64CallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
-    _dummy: PhantomData<&'root i64>,
+    _dummy: PhantomData<&'root ()>,
 }
 
 impl<'root> I64CallReply<'root> {
@@ -79,7 +96,7 @@ impl<'root> Drop for I64CallReply<'root> {
 
 pub struct ArrayCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
-    _dummy: PhantomData<&'root i64>,
+    _dummy: PhantomData<&'root ()>,
 }
 
 impl<'root> Drop for ArrayCallReply<'root> {
@@ -99,7 +116,7 @@ impl<'root> ArrayCallReply<'root> {
     }
 
     /// Return the array element on the given index.
-    pub fn get(&self, idx: usize) -> Option<CallReply<'_>> {
+    pub fn get(&self, idx: usize) -> Option<CallResult<'_>> {
         let res = NonNull::new(call_reply_array_element(self.reply.as_ptr(), idx))?;
         Some(create_call_reply(res))
     }
@@ -116,7 +133,7 @@ pub struct ArrayCallReplyIterator<'root, 'curr> {
 }
 
 impl<'root, 'curr> Iterator for ArrayCallReplyIterator<'root, 'curr> {
-    type Item = CallReply<'curr>;
+    type Item = CallResult<'curr>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let res = self.reply.get(self.index);
@@ -129,7 +146,7 @@ impl<'root, 'curr> Iterator for ArrayCallReplyIterator<'root, 'curr> {
 
 pub struct NullCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
-    _dummy: PhantomData<&'root i64>,
+    _dummy: PhantomData<&'root ()>,
 }
 
 impl<'root> Drop for NullCallReply<'root> {
@@ -140,7 +157,7 @@ impl<'root> Drop for NullCallReply<'root> {
 
 pub struct MapCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
-    _dummy: PhantomData<&'root i64>,
+    _dummy: PhantomData<&'root ()>,
 }
 
 impl<'root> MapCallReply<'root> {
@@ -155,7 +172,7 @@ impl<'root> MapCallReply<'root> {
     }
 
     /// Return the map element on the given index.
-    pub fn get(&self, idx: usize) -> Option<(CallReply<'_>, CallReply<'_>)> {
+    pub fn get(&self, idx: usize) -> Option<(CallResult<'_>, CallResult<'_>)> {
         let (key, val) = call_reply_map_element(self.reply.as_ptr(), idx);
         Some((
             create_call_reply(NonNull::new(key)?),
@@ -175,7 +192,7 @@ pub struct MapCallReplyIterator<'root, 'curr> {
 }
 
 impl<'root, 'curr> Iterator for MapCallReplyIterator<'root, 'curr> {
-    type Item = (CallReply<'curr>, CallReply<'curr>);
+    type Item = (CallResult<'curr>, CallResult<'curr>);
 
     fn next(&mut self) -> Option<Self::Item> {
         let res = self.reply.get(self.index);
@@ -194,7 +211,7 @@ impl<'root> Drop for MapCallReply<'root> {
 
 pub struct SetCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
-    _dummy: PhantomData<&'root i64>,
+    _dummy: PhantomData<&'root ()>,
 }
 
 impl<'root> SetCallReply<'root> {
@@ -207,7 +224,7 @@ impl<'root> SetCallReply<'root> {
     }
 
     /// Return the set element on the given index.
-    pub fn get(&self, idx: usize) -> Option<CallReply<'_>> {
+    pub fn get(&self, idx: usize) -> Option<CallResult<'_>> {
         let res = NonNull::new(call_reply_set_element(self.reply.as_ptr(), idx))?;
         Some(create_call_reply(res))
     }
@@ -224,7 +241,7 @@ pub struct SetCallReplyIterator<'root, 'curr> {
 }
 
 impl<'root, 'curr> Iterator for SetCallReplyIterator<'root, 'curr> {
-    type Item = CallReply<'curr>;
+    type Item = CallResult<'curr>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let res = self.reply.get(self.index);
@@ -243,7 +260,7 @@ impl<'root> Drop for SetCallReply<'root> {
 
 pub struct BoolCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
-    _dummy: PhantomData<&'root i64>,
+    _dummy: PhantomData<&'root ()>,
 }
 
 impl<'root> BoolCallReply<'root> {
@@ -261,7 +278,7 @@ impl<'root> Drop for BoolCallReply<'root> {
 
 pub struct DoubleCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
-    _dummy: PhantomData<&'root i64>,
+    _dummy: PhantomData<&'root ()>,
 }
 
 impl<'root> DoubleCallReply<'root> {
@@ -279,7 +296,7 @@ impl<'root> Drop for DoubleCallReply<'root> {
 
 pub struct BigNumberCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
-    _dummy: PhantomData<&'root i64>,
+    _dummy: PhantomData<&'root ()>,
 }
 
 impl<'root> BigNumberCallReply<'root> {
@@ -298,7 +315,7 @@ impl<'root> Drop for BigNumberCallReply<'root> {
 
 pub struct VerbatimStringCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
-    _dummy: PhantomData<&'root i64>,
+    _dummy: PhantomData<&'root ()>,
 }
 
 impl<'root> VerbatimStringCallReply<'root> {
@@ -342,7 +359,6 @@ pub enum CallReply<'root> {
     Unknown,
     I64(I64CallReply<'root>),
     String(StringCallReply<'root>),
-    Error(ErrorCallReply<'root>),
     Array(ArrayCallReply<'root>),
     Null(NullCallReply<'root>),
     Map(MapCallReply<'root>),
@@ -353,59 +369,61 @@ pub enum CallReply<'root> {
     VerbatimString(VerbatimStringCallReply<'root>),
 }
 
-fn create_call_reply<'root>(reply: NonNull<RedisModuleCallReply>) -> CallReply<'root> {
+fn create_call_reply<'root>(reply: NonNull<RedisModuleCallReply>) -> CallResult<'root> {
     let ty = call_reply_type(reply.as_ptr());
     match ty {
-        ReplyType::Unknown => CallReply::Unknown, // unknown means NULL so no need to free free anything
-        ReplyType::Integer => CallReply::I64(I64CallReply {
+        ReplyType::Unknown => Ok(CallReply::Unknown), // unknown means NULL so no need to free free anything
+        ReplyType::Integer => Ok(CallReply::I64(I64CallReply {
+            reply: reply,
+            _dummy: PhantomData,
+        })),
+        ReplyType::String => Ok(CallReply::String(StringCallReply {
+            reply: reply,
+            _dummy: PhantomData,
+        })),
+        ReplyType::Error => Err(ErrorCallReply {
             reply: reply,
             _dummy: PhantomData,
         }),
-        ReplyType::String => CallReply::String(StringCallReply {
+        ReplyType::Array => Ok(CallReply::Array(ArrayCallReply {
             reply: reply,
             _dummy: PhantomData,
-        }),
-        ReplyType::Error => CallReply::Error(ErrorCallReply {
+        })),
+        ReplyType::Null => Ok(CallReply::Null(NullCallReply {
             reply: reply,
             _dummy: PhantomData,
-        }),
-        ReplyType::Array => CallReply::Array(ArrayCallReply {
+        })),
+        ReplyType::Map => Ok(CallReply::Map(MapCallReply {
             reply: reply,
             _dummy: PhantomData,
-        }),
-        ReplyType::Null => CallReply::Null(NullCallReply {
+        })),
+        ReplyType::Set => Ok(CallReply::Set(SetCallReply {
             reply: reply,
             _dummy: PhantomData,
-        }),
-        ReplyType::Map => CallReply::Map(MapCallReply {
+        })),
+        ReplyType::Bool => Ok(CallReply::Bool(BoolCallReply {
             reply: reply,
             _dummy: PhantomData,
-        }),
-        ReplyType::Set => CallReply::Set(SetCallReply {
+        })),
+        ReplyType::Double => Ok(CallReply::Double(DoubleCallReply {
             reply: reply,
             _dummy: PhantomData,
-        }),
-        ReplyType::Bool => CallReply::Bool(BoolCallReply {
+        })),
+        ReplyType::BigNumber => Ok(CallReply::BigNumber(BigNumberCallReply {
             reply: reply,
             _dummy: PhantomData,
-        }),
-        ReplyType::Double => CallReply::Double(DoubleCallReply {
+        })),
+        ReplyType::VerbatimString => Ok(CallReply::VerbatimString(VerbatimStringCallReply {
             reply: reply,
             _dummy: PhantomData,
-        }),
-        ReplyType::BigNumber => CallReply::BigNumber(BigNumberCallReply {
-            reply: reply,
-            _dummy: PhantomData,
-        }),
-        ReplyType::VerbatimString => CallReply::VerbatimString(VerbatimStringCallReply {
-            reply: reply,
-            _dummy: PhantomData,
-        }),
+        })),
     }
 }
 
 pub(crate) fn create_root_call_reply<'root>(
     reply: Option<NonNull<RedisModuleCallReply>>,
-) -> CallReply<'root> {
-    reply.map_or(CallReply::Unknown, |v| create_call_reply(v))
+) -> CallResult<'root> {
+    reply.map_or(Ok(CallReply::Unknown), |v| create_call_reply(v))
 }
+
+pub type CallResult<'root> = Result<CallReply<'root>, ErrorCallReply<'root>>;

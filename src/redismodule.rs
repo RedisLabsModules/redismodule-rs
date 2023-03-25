@@ -10,23 +10,11 @@ use std::str;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
 
-use crate::context::call_reply::CallReply;
 pub use crate::raw;
 pub use crate::rediserror::RedisError;
 pub use crate::redisvalue::RedisValue;
 
 pub type RedisResult = Result<RedisValue, RedisError>;
-
-impl<'root> From<CallReply<'root>> for RedisResult {
-    fn from(reply: CallReply) -> Self {
-        let redis_value: RedisValue = (&reply).into();
-        match redis_value {
-            RedisValue::Error(s) => Err(RedisError::String(s)),
-            RedisValue::StaticError(s) => Err(RedisError::Str(s)),
-            _ => Ok(redis_value),
-        }
-    }
-}
 
 pub const REDIS_OK: RedisResult = Ok(RedisValue::SimpleStringStatic("OK"));
 pub const TYPE_METHOD_VERSION: u64 = raw::REDISMODULE_TYPE_METHOD_VERSION as u64;

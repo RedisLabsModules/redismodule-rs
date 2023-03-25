@@ -27,7 +27,7 @@ pub use crate::context::thread_safe::{DetachedFromClient, ThreadSafeContext};
 #[cfg(feature = "experimental-api")]
 pub use crate::raw::NotifyEvent;
 
-pub use crate::context::call_reply::CallReply;
+pub use crate::context::call_reply::{CallReply, CallResult};
 pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::server_events;
 pub use crate::context::thread_safe::RedisGILGuard;

@@ -2,7 +2,8 @@
 extern crate redis_module;
 
 use redis_module::{
-    CallOptionResp, CallOptionsBuilder, CallReply, Context, RedisError, RedisResult, RedisString,
+    CallOptionResp, CallOptionsBuilder, CallReply, CallResult, Context, RedisError, RedisResult,
+    RedisString,
 };
 
 fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
@@ -65,8 +66,8 @@ fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
     }
 
     let call_options = CallOptionsBuilder::new().script_mode().errors_as_replies();
-    let res: CallReply = ctx.call_ext::<&[&str; 0], _>("SHUTDOWN", &call_options.build(), &[]);
-    if let CallReply::Error(err) = res {
+    let res: CallResult = ctx.call_ext::<&[&str; 0], _>("SHUTDOWN", &call_options.build(), &[]);
+    if let Err(err) = res {
         let error_msg = err.to_string().unwrap();
         if !error_msg.contains("not allow") {
             return Err(RedisError::String(format!(
@@ -83,26 +84,17 @@ fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
         .resp_3(CallOptionResp::Resp3)
         .errors_as_replies()
         .build();
-    let res: CallReply = ctx.call_ext("HSET", &call_options, &["x", "foo", "bar"]);
-    if let CallReply::Error(err) = res {
-        return Err(RedisError::String(format!(
-            "Failed setting value on hset, error message: '{}'",
-            err.to_string().unwrap(),
-        )));
-    }
-    let res: CallReply = ctx.call_ext("HGETALL", &call_options, &["x"]);
-    if let CallReply::Error(err) = res {
-        return Err(RedisError::String(format!(
-            "Failed performing hgetall, error message: '{}'",
-            err.to_string().unwrap(),
-        )));
-    }
+    ctx.call_ext::<_, CallResult>("HSET", &call_options, &["x", "foo", "bar"])
+        .map_err(|e| -> RedisError { e.into() })?;
+    let res: CallReply = ctx
+        .call_ext::<_, CallResult>("HGETALL", &call_options, &["x"])
+        .map_err(|e| -> RedisError { e.into() })?;
     if let CallReply::Map(map) = res {
         let res = map.iter().fold(Vec::new(), |mut vec, (key, val)| {
-            if let CallReply::String(key) = key {
+            if let CallReply::String(key) = key.unwrap() {
                 vec.push(key.to_string().unwrap());
             }
-            if let CallReply::String(val) = val {
+            if let CallReply::String(val) = val.unwrap() {
                 vec.push(val.to_string().unwrap());
             }
             vec

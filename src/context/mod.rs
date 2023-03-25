@@ -13,7 +13,7 @@ use crate::{RedisError, RedisResult, RedisString, RedisValue};
 #[cfg(feature = "experimental-api")]
 use std::ffi::CStr;
 
-use self::call_reply::CallReply;
+use self::call_reply::CallResult;
 
 #[cfg(feature = "experimental-api")]
 mod timer;
@@ -244,7 +244,7 @@ impl Context {
         }
     }
 
-    fn call_internal<'a, T: Into<StrCallArgs<'a>>, R: From<CallReply<'static>>>(
+    fn call_internal<'a, T: Into<StrCallArgs<'a>>, R: From<CallResult<'static>>>(
         &self,
         command: &str,
         fmt: *const c_char,
@@ -268,13 +268,14 @@ impl Context {
     }
 
     pub fn call<'a, T: Into<StrCallArgs<'a>>>(&self, command: &str, args: T) -> RedisResult {
-        self.call_internal::<_, RedisResult>(command, raw::FMT, args)
+        self.call_internal::<_, CallResult>(command, raw::FMT, args)
+            .map_or_else(|e| Err(e.into()), |v| Ok((&v).into()))
     }
 
     /// Invoke a command on Redis and return the result
     /// Unlike 'call' this API also allow to pass a CallOption to control different aspects
     /// of the command invocation.
-    pub fn call_ext<'a, T: Into<StrCallArgs<'a>>, R: From<CallReply<'static>>>(
+    pub fn call_ext<'a, T: Into<StrCallArgs<'a>>, R: From<CallResult<'static>>>(
         &self,
         command: &str,
         options: &CallOptions,
@@ -374,10 +375,9 @@ impl Context {
 
             Ok(RedisValue::Set(set)) => {
                 raw::reply_with_set(self.ctx, set.len() as c_long);
-
-                for elem in set {
-                    self.reply(Ok(elem));
-                }
+                set.into_iter().for_each(|e| {
+                    self.reply(Ok(e));
+                });
 
                 raw::Status::Ok
             }
@@ -386,7 +386,6 @@ impl Context {
 
             Ok(RedisValue::NoReply) => raw::Status::Ok,
 
-            Ok(RedisValue::Error(s)) => self.reply_error_string(&s),
             Ok(RedisValue::StaticError(s)) => self.reply_error_string(s),
 
             Err(RedisError::WrongArity) => unsafe {
