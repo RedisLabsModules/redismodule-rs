@@ -10,6 +10,7 @@ use std::cmp::Ordering;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
 use std::ptr;
+use std::ptr::NonNull;
 use std::slice;
 
 use bitflags::bitflags;
@@ -501,8 +502,10 @@ pub fn load_string_buffer(rdb: *mut RedisModuleIO) -> Result<RedisBuffer, Error>
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Status {
-    let terminated_args: Vec<RedisString> =
-        args.iter().map(|s| RedisString::create(ctx, s)).collect();
+    let terminated_args: Vec<RedisString> = args
+        .iter()
+        .map(|s| RedisString::create(NonNull::new(ctx), s))
+        .collect();
 
     let inner_args: Vec<*mut RedisModuleString> = terminated_args.iter().map(|s| s.inner).collect();
 
@@ -597,7 +600,7 @@ pub fn add_info_section(ctx: *mut RedisModuleInfoCtx, name: Option<&str>) -> Sta
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn add_info_field_str(ctx: *mut RedisModuleInfoCtx, name: &str, content: &str) -> Status {
     let name = CString::new(name).unwrap();
-    let content = RedisString::create(ptr::null_mut(), content);
+    let content = RedisString::create(None, content);
     unsafe { RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr(), content.inner).into() }
 }
 

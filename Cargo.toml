@@ -20,6 +20,10 @@ name = "string"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "configuration"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "acl"
 crate-type = ["cdylib"]
 
