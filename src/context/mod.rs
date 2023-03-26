@@ -1,4 +1,5 @@
 use bitflags::bitflags;
+use std::borrow::Borrow;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr;
@@ -12,6 +13,8 @@ use crate::{RedisError, RedisResult, RedisString, RedisValue};
 #[cfg(feature = "experimental-api")]
 use std::ffi::CStr;
 
+use self::call_reply::RootCallReply;
+
 #[cfg(feature = "experimental-api")]
 mod timer;
 
@@ -23,7 +26,95 @@ pub mod blocked;
 
 pub mod info;
 
+pub mod server_events;
+
 pub mod keys_cursor;
+
+pub mod call_reply;
+
+pub struct CallOptionsBuilder {
+    options: String,
+}
+
+pub struct CallOptions {
+    options: CString,
+}
+
+pub enum CallOptionResp {
+    Resp2,
+    Resp3,
+    Auto,
+}
+
+impl CallOptionsBuilder {
+    pub fn new() -> CallOptionsBuilder {
+        CallOptionsBuilder {
+            options: "v".to_string(),
+        }
+    }
+
+    fn add_flag(&mut self, flag: &str) {
+        self.options.push_str(flag);
+    }
+
+    /// Enable this option will not allow RM_Call to perform write commands
+    pub fn no_writes(mut self) -> CallOptionsBuilder {
+        self.add_flag("W");
+        self
+    }
+
+    /// Enable this option will run RM_Call is script mode.
+    /// This mean that Redis will enable the following protections:
+    /// 1. Not allow running dangerous commands like 'shutdown'
+    /// 2. Not allow running write commands on OOM or if there are not enough good replica's connected
+    pub fn script_mode(mut self) -> CallOptionsBuilder {
+        self.add_flag("S");
+        self
+    }
+
+    /// Enable this option will perform ACL validation on the user attached to the context that
+    /// is used to invoke the call.
+    pub fn verify_acl(mut self) -> CallOptionsBuilder {
+        self.add_flag("C");
+        self
+    }
+
+    /// Enable this option will OOM validation before running the command
+    pub fn verify_oom(mut self) -> CallOptionsBuilder {
+        self.add_flag("M");
+        self
+    }
+
+    /// Enable this option will return error as CallReply object instead of setting errno (it is
+    /// usually recommend to enable it)
+    pub fn errors_as_replies(mut self) -> CallOptionsBuilder {
+        self.add_flag("E");
+        self
+    }
+
+    /// Enable this option will cause the command to be replicaed to the replica and AOF
+    pub fn replicate(mut self) -> CallOptionsBuilder {
+        self.add_flag("!");
+        self
+    }
+
+    /// Allow control the protocol version in which the replies will be returned.
+    pub fn resp_3(mut self, resp: CallOptionResp) -> CallOptionsBuilder {
+        match resp {
+            CallOptionResp::Auto => self.add_flag("0"),
+            CallOptionResp::Resp2 => (),
+            CallOptionResp::Resp3 => self.add_flag("3"),
+        }
+        self
+    }
+
+    /// Construct a CallOption object that can be used to run commands using call_ext
+    pub fn build(self) -> CallOptions {
+        CallOptions {
+            options: CString::new(self.options).unwrap(), // the data will never contains internal \0 so it is safe to unwrap.
+        }
+    }
+}
 
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
@@ -153,7 +244,12 @@ impl Context {
         }
     }
 
-    pub fn call<'a, T: Into<StrCallArgs<'a>>>(&self, command: &str, args: T) -> RedisResult {
+    fn call_internal<'a, T: Into<StrCallArgs<'a>>, R: From<RootCallReply>>(
+        &self,
+        command: &str,
+        fmt: *const c_char,
+        args: T,
+    ) -> R {
         let mut call_args: StrCallArgs = args.into();
         let final_args = call_args.args_mut();
 
@@ -163,36 +259,28 @@ impl Context {
             p_call(
                 self.ctx,
                 cmd.as_ptr(),
-                raw::FMT,
+                fmt,
                 final_args.as_mut_ptr(),
                 final_args.len(),
             )
         };
-        let result = Self::parse_call_reply(reply);
-        if !reply.is_null() {
-            raw::free_call_reply(reply);
-        }
-        result
+        R::from(RootCallReply::new(reply))
     }
 
-    fn parse_call_reply(reply: *mut raw::RedisModuleCallReply) -> RedisResult {
-        match raw::call_reply_type(reply) {
-            raw::ReplyType::Error => Err(RedisError::String(raw::call_reply_string(reply))),
-            raw::ReplyType::Unknown => Err(RedisError::Str("Error on method call")),
-            raw::ReplyType::Array => {
-                let length = raw::call_reply_length(reply);
-                let mut vec = Vec::with_capacity(length);
-                for i in 0..length {
-                    vec.push(Self::parse_call_reply(raw::call_reply_array_element(
-                        reply, i,
-                    ))?);
-                }
-                Ok(RedisValue::Array(vec))
-            }
-            raw::ReplyType::Integer => Ok(RedisValue::Integer(raw::call_reply_integer(reply))),
-            raw::ReplyType::String => Ok(RedisValue::SimpleString(raw::call_reply_string(reply))),
-            raw::ReplyType::Null => Ok(RedisValue::Null),
-        }
+    pub fn call<'a, T: Into<StrCallArgs<'a>>>(&self, command: &str, args: T) -> RedisResult {
+        self.call_internal::<_, RedisResult>(command, raw::FMT, args)
+    }
+
+    /// Invoke a command on Redis and return the result
+    /// Unlike 'call' this API also allow to pass a CallOption to control different aspects
+    /// of the command invocation.
+    pub fn call_ext<'a, T: Into<StrCallArgs<'a>>, R: From<RootCallReply>>(
+        &self,
+        command: &str,
+        options: &CallOptions,
+        args: T,
+    ) -> R {
+        self.call_internal(command, options.options.as_ptr() as *const c_char, args)
     }
 
     #[must_use]
@@ -285,6 +373,9 @@ impl Context {
             },
 
             Ok(RedisValue::NoReply) => raw::Status::Ok,
+
+            Ok(RedisValue::Error(s)) => self.reply_error_string(&s),
+            Ok(RedisValue::StaticError(s)) => self.reply_error_string(s),
 
             Err(RedisError::WrongArity) => unsafe {
                 if self.is_keys_position_request() {
@@ -420,6 +511,74 @@ impl Context {
         ContextFlags::from_bits_truncate(unsafe {
             raw::RedisModule_GetContextFlags.unwrap()(self.ctx)
         })
+    }
+
+    /// Return the current user name attached to the context
+    pub fn get_current_user(&self) -> RedisString {
+        let user = unsafe { raw::RedisModule_GetCurrentUserName.unwrap()(self.ctx) };
+        RedisString::from_redis_module_string(ptr::null_mut(), user)
+    }
+
+    /// Attach the given user to the current context so each operation performed from
+    /// now on using this context will be validated againts this new user.
+    /// Return Status::Ok on success and Status::Err or failure.
+    pub fn autenticate_user<T: Borrow<[u8]>>(&self, user_name: T) -> raw::Status {
+        let user_name_blob: &[u8] = user_name.borrow();
+        unsafe {
+            raw::RedisModule_AuthenticateClientWithACLUser.unwrap()(
+                self.ctx,
+                user_name_blob.as_ptr() as *const c_char,
+                user_name_blob.len(),
+                None,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        }
+        .into()
+    }
+
+    /// Verify the the given user has the give ACL permission on the given key.
+    /// Return Ok(()) if the user has the permissions or error (with relevant error message)
+    /// if the validation failed.
+    pub fn acl_check_key_permission(
+        &self,
+        user_name: &RedisString,
+        key_name: &RedisString,
+        permissions: &AclPermissions,
+    ) -> Result<(), RedisError> {
+        let user = unsafe { raw::RedisModule_GetModuleUserFromUserName.unwrap()(user_name.inner) };
+        if user.is_null() {
+            return Err(RedisError::Str("User does not exists or disabled"));
+        }
+        let acl_permission_result: raw::Status = unsafe {
+            raw::RedisModule_ACLCheckKeyPermissions.unwrap()(
+                user,
+                key_name.inner,
+                permissions.bits(),
+            )
+        }
+        .into();
+        unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
+        let acl_permission_result: Result<(), &str> = acl_permission_result.into();
+        acl_permission_result.map_err(|_e| RedisError::Str("User does not have permissions on key"))
+    }
+}
+
+bitflags! {
+    /// An object represent ACL permissions.
+    /// Used to check ACL permission using `acl_check_key_permission`.
+    pub struct AclPermissions : c_int {
+        /// User can look at the content of the value, either return it or copy it.
+        const ACCESS = raw::REDISMODULE_CMD_KEY_ACCESS as c_int;
+
+        /// User can insert more data to the key, without deleting or modify existing data.
+        const INSERT = raw::REDISMODULE_CMD_KEY_INSERT as c_int;
+
+        /// User can delete content from the key.
+        const DELETE = raw::REDISMODULE_CMD_KEY_DELETE as c_int;
+
+        /// User can update existing data inside the key.
+        const UPDATE = raw::REDISMODULE_CMD_KEY_UPDATE as c_int;
     }
 }
 
