@@ -14,6 +14,7 @@ use crate::{RedisError, RedisResult, RedisString, RedisValue};
 use std::ffi::CStr;
 
 use self::call_reply::CallResult;
+use self::thread_safe::RedisLockIndicator;
 
 #[cfg(feature = "experimental-api")]
 mod timer;
@@ -423,7 +424,7 @@ impl Context {
 
     #[must_use]
     pub fn create_string(&self, s: &str) -> RedisString {
-        RedisString::create(self.ctx, s)
+        RedisString::create(NonNull::new(self.ctx), s)
     }
 
     #[must_use]
@@ -574,6 +575,8 @@ impl Context {
         acl_permission_result.map_err(|_e| RedisError::Str("User does not have permissions on key"))
     }
 }
+
+unsafe impl RedisLockIndicator for Context {}
 
 bitflags! {
     /// An object represent ACL permissions.

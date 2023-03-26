@@ -14,6 +14,7 @@ pub mod redisraw;
 pub mod redisvalue;
 pub mod stream;
 
+pub mod configuration;
 mod context;
 pub mod key;
 pub mod logging;
@@ -28,6 +29,8 @@ pub use crate::context::thread_safe::{DetachedFromClient, ThreadSafeContext};
 pub use crate::raw::NotifyEvent;
 
 pub use crate::context::call_reply::{CallReply, CallResult};
+pub use crate::configuration::ConfigurationValue;
+pub use crate::configuration::EnumConfigurationValue;
 pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::server_events;
 pub use crate::context::thread_safe::RedisGILGuard;

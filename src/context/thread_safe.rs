@@ -6,12 +6,12 @@ use std::ptr;
 use crate::context::blocked::BlockedClient;
 use crate::{raw, Context, RedisResult};
 
-pub struct RedisGILGuardScope<'ctx, 'mutex, T: Default> {
-    _context: &'ctx Context,
+pub struct RedisGILGuardScope<'ctx, 'mutex, T, G: RedisLockIndicator> {
+    _context: &'ctx G,
     mutex: &'mutex RedisGILGuard<T>,
 }
 
-impl<'ctx, 'mutex, T: Default> Deref for RedisGILGuardScope<'ctx, 'mutex, T> {
+impl<'ctx, 'mutex, T, G: RedisLockIndicator> Deref for RedisGILGuardScope<'ctx, 'mutex, T, G> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -19,28 +19,54 @@ impl<'ctx, 'mutex, T: Default> Deref for RedisGILGuardScope<'ctx, 'mutex, T> {
     }
 }
 
-impl<'ctx, 'mutex, T: Default> DerefMut for RedisGILGuardScope<'ctx, 'mutex, T> {
+impl<'ctx, 'mutex, T, G: RedisLockIndicator> DerefMut for RedisGILGuardScope<'ctx, 'mutex, T, G> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { &mut *self.mutex.obj.get() }
     }
 }
 
-#[derive(Default)]
-pub struct RedisGILGuard<T: Default> {
+/// Whenever the user gets a reference to a struct that
+/// implements this trait, it can assume that the Redis GIL
+/// is held. Any struct that implements this trait can be
+/// used to retrieve objects which are GIL protected (see
+/// [RedisGILGuard] for more information)
+///
+/// Notice that this trait only gives indication that the
+/// GIL is locked, unlike [RedisGILGuard] which protect data
+/// access and make sure the protected data is only accesses
+/// when the GIL is locked.
+///
+/// In general this trait should not be implemented by the
+/// user, the crate knows when the Redis GIL is held and will
+/// make sure to implement this trait correctly on different
+/// struct (such as [Context], [ConfigurationContext], [ContextGuard]).
+/// User might also decide to implement this trait but he should
+/// carefully consider that because it is easy to make mistakes,
+/// this is why the trait is marked as unsafe.
+pub unsafe trait RedisLockIndicator {}
+
+/// This struct allows to guard some data and makes sure
+/// the data is only access when the Redis GIL is locked.
+/// From example, assuming you module want to save some
+/// statistics inside some global variable, but without the
+/// need to protect this variable with some mutex (because
+/// we know this variable is protected by Redis lock).
+/// For example, look at examples/threads.rs
+pub struct RedisGILGuard<T> {
     obj: UnsafeCell<T>,
 }
 
-impl<T: Default> RedisGILGuard<T> {
+impl<T> RedisGILGuard<T> {
     pub fn new(obj: T) -> RedisGILGuard<T> {
         RedisGILGuard {
             obj: UnsafeCell::new(obj),
         }
     }
 
-    pub fn lock<'mutex, 'ctx>(
+    pub fn lock<'mutex, 'ctx, G: RedisLockIndicator>(
         &'mutex self,
-        context: &'ctx Context,
-    ) -> RedisGILGuardScope<'ctx, 'mutex, T> {
+        context: &'ctx G,
+    ) -> RedisGILGuardScope<'ctx, 'mutex, T, G> {
         RedisGILGuardScope {
             _context: context,
             mutex: self,
@@ -48,12 +74,20 @@ impl<T: Default> RedisGILGuard<T> {
     }
 }
 
-unsafe impl<T: Default> Sync for RedisGILGuard<T> {}
-unsafe impl<T: Default> Send for RedisGILGuard<T> {}
+impl<T: Default> Default for RedisGILGuard<T> {
+    fn default() -> Self {
+        Self::new(T::default())
+    }
+}
+
+unsafe impl<T> Sync for RedisGILGuard<T> {}
+unsafe impl<T> Send for RedisGILGuard<T> {}
 
 pub struct ContextGuard {
     ctx: Context,
 }
+
+unsafe impl RedisLockIndicator for ContextGuard {}
 
 impl Drop for ContextGuard {
     fn drop(&mut self) {

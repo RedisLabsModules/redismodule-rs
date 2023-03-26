@@ -5,6 +5,7 @@ use std::fmt;
 use std::fmt::Display;
 use std::ops::Deref;
 use std::os::raw::{c_char, c_int, c_void};
+use std::ptr::NonNull;
 use std::slice;
 use std::str;
 use std::str::Utf8Error;
@@ -95,7 +96,7 @@ pub fn decode_args(
 ) -> Vec<RedisString> {
     unsafe { slice::from_raw_parts(argv, argc as usize) }
         .iter()
-        .map(|&arg| RedisString::new(ctx, arg))
+        .map(|&arg| RedisString::new(NonNull::new(ctx), arg))
         .collect()
 }
 
@@ -114,13 +115,18 @@ impl RedisString {
         inner
     }
 
-    pub fn new(ctx: *mut raw::RedisModuleCtx, inner: *mut raw::RedisModuleString) -> Self {
+    pub fn new(
+        ctx: Option<NonNull<raw::RedisModuleCtx>>,
+        inner: *mut raw::RedisModuleString,
+    ) -> Self {
+        let ctx = ctx.map_or(std::ptr::null_mut(), |v| v.as_ptr());
         raw::string_retain_string(ctx, inner);
         Self { ctx, inner }
     }
 
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
-    pub fn create(ctx: *mut raw::RedisModuleCtx, s: &str) -> Self {
+    pub fn create(ctx: Option<NonNull<raw::RedisModuleCtx>>, s: &str) -> Self {
+        let ctx = ctx.map_or(std::ptr::null_mut(), |v| v.as_ptr());
         let str = CString::new(s).unwrap();
         let inner = unsafe { raw::RedisModule_CreateString.unwrap()(ctx, str.as_ptr(), s.len()) };
 
@@ -277,7 +283,7 @@ impl Clone for RedisString {
     fn clone(&self) -> Self {
         let inner =
             unsafe { raw::RedisModule_CreateStringFromString.unwrap()(self.ctx, self.inner) };
-        Self::new(self.ctx, inner)
+        Self::new(NonNull::new(self.ctx), inner)
     }
 }
 

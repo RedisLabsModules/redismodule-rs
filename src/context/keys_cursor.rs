@@ -3,6 +3,7 @@ use crate::key::RedisKey;
 use crate::raw;
 use crate::redismodule::RedisString;
 use std::ffi::c_void;
+use std::ptr::NonNull;
 
 pub struct KeysCursor {
     inner_cursor: *mut raw::RedisModuleScanCursor,
@@ -15,7 +16,7 @@ extern "C" fn scan_callback<C: FnMut(&Context, RedisString, Option<&RedisKey>)>(
     private_data: *mut ::std::os::raw::c_void,
 ) {
     let context = Context::new(ctx);
-    let key_name = RedisString::new(ctx, key_name);
+    let key_name = RedisString::new(NonNull::new(ctx), key_name);
     let redis_key = if key.is_null() {
         None
     } else {

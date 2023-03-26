@@ -1,4 +1,5 @@
 use std::ffi::CString;
+use std::ptr::NonNull;
 
 use crate::Context;
 use crate::{raw, RedisString};
@@ -23,7 +24,7 @@ impl ServerInfo {
         if value.is_null() {
             None
         } else {
-            Some(RedisString::new(self.ctx, value))
+            Some(RedisString::new(NonNull::new(self.ctx), value))
         }
     }
 }
