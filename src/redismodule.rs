@@ -16,6 +16,18 @@ pub use crate::redisvalue::RedisValue;
 
 pub type RedisResult = Result<RedisValue, RedisError>;
 
+impl From<RedisValue> for RedisResult {
+    fn from(v: RedisValue) -> Self {
+        Ok(v)
+    }
+}
+
+impl From<RedisError> for RedisResult {
+    fn from(v: RedisError) -> Self {
+        Err(v)
+    }
+}
+
 pub const REDIS_OK: RedisResult = Ok(RedisValue::SimpleStringStatic("OK"));
 pub const TYPE_METHOD_VERSION: u64 = raw::REDISMODULE_TYPE_METHOD_VERSION as u64;
 
