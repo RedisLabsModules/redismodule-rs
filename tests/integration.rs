@@ -51,8 +51,8 @@ fn test_keys_pos() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_test_helper_version() -> Result<()> {
+#[cfg_attr(feature = "experimental-api", test)]
+fn test_helper_version() -> Result<()> {
     let port: u16 = 6481;
     let _guards = vec![start_redis_server_with_module("test_helper", port)
         .with_context(|| "failed to start redis server")?];
@@ -73,8 +73,7 @@ fn test_test_helper_version() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "experimental-api")]
-#[test]
+#[cfg_attr(feature = "experimental-api", test)]
 fn test_command_name() -> Result<()> {
     use redis_module::RedisValue;
 
@@ -111,8 +110,8 @@ fn test_command_name() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_test_helper_info() -> Result<()> {
+#[cfg_attr(feature = "experimental-api", test)]
+fn test_helper_info() -> Result<()> {
     let port: u16 = 6483;
     let _guards = vec![start_redis_server_with_module("test_helper", port)
         .with_context(|| "failed to start redis server")?];
@@ -130,7 +129,7 @@ fn test_test_helper_info() -> Result<()> {
 
 #[allow(unused_must_use)]
 #[test]
-fn test_test_helper_err() -> Result<()> {
+fn test_helper_err() -> Result<()> {
     let port: u16 = 6484;
     let _guards = vec![start_redis_server_with_module("hello", port)
         .with_context(|| "failed to start redis server")?];
@@ -149,7 +148,7 @@ fn test_test_helper_err() -> Result<()> {
     Ok(())
 }
 
-#[test]
+#[cfg_attr(feature = "experimental-api", test)]
 fn test_stream_reader() -> Result<()> {
     let port: u16 = 6485;
     let _guards = vec![start_redis_server_with_module("stream", port)
@@ -189,7 +188,7 @@ fn test_stream_reader() -> Result<()> {
     Ok(())
 }
 
-#[test]
+#[cfg_attr(feature = "experimental-api", test)]
 fn test_flush_events() -> Result<()> {
     let port: u16 = 6486;
     let _guards = vec![start_redis_server_with_module("server_events", port)
@@ -218,7 +217,7 @@ fn test_flush_events() -> Result<()> {
     Ok(())
 }
 
-#[test]
+#[cfg_attr(feature = "experimental-api", test)]
 fn test_role_changed_events() -> Result<()> {
     let port: u16 = 6487;
     let _guards = vec![start_redis_server_with_module("server_events", port)
@@ -249,7 +248,7 @@ fn test_role_changed_events() -> Result<()> {
     Ok(())
 }
 
-#[test]
+#[cfg_attr(feature = "experimental-api", test)]
 fn test_loading_events() -> Result<()> {
     let port: u16 = 6488;
     let _guards = vec![start_redis_server_with_module("server_events", port)
@@ -285,7 +284,7 @@ fn test_loading_events() -> Result<()> {
     Ok(())
 }
 
-#[test]
+#[cfg_attr(feature = "experimental-api", test)]
 fn test_key_scan() -> Result<()> {
     let port: u16 = 6489;
     let _guards = vec![start_redis_server_with_module("scan", port)

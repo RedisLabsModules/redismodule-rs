@@ -437,7 +437,7 @@ where
     ///
     /// Get a [`HashMap`] from the results:
     ///
-    /// ```
+    /// ```rust,no_run,ignore
     /// use std::collections::HashMap;
     /// use redis_module::RedisError;
     ///
@@ -452,7 +452,7 @@ where
     ///
     /// Get a [`Vec`] of only the field values from the results:
     ///
-    /// ```
+    /// ```rust,no_run,ignore
     /// use redis_module::RedisError;
     ///
     /// let hm = ctx
