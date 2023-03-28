@@ -30,13 +30,15 @@ unsafe impl GlobalAlloc for RedisAlloc {
         match raw::RedisModule_Alloc {
             Some(alloc) => {
                 /*
-                 * To make sure the memory allocation by Redis is aligned to the according to the layout,
-                 * we need to align the size of the allocation to the layout.
+                 * To make sure the memory allocation by Redis is aligned to the
+                 * according to the layout, we need to align the size of the
+                 * allocation to the layout.
                  *
                  * "Memory is conceptually broken into equal-sized chunks,
-                 * where the chunk size is a power of two that is greater than the page size.
-                 * Chunks are always aligned to multiples of the chunk size.
-                 * This alignment makes it possible to find metadata for user objects very quickly."
+                 * where the chunk size is a power of two that is greater than
+                 * the page size. Chunks are always aligned to multiples of the
+                 * chunk size. This alignment makes it possible to find metadata
+                 * for user objects very quickly."
                  *
                  * From: https://linux.die.net/man/3/jemalloc
                  */

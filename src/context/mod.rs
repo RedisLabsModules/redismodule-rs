@@ -35,7 +35,7 @@ pub struct CallOptions {
     options: String,
 }
 
-// TODO rewrite as a bitfield which is serialiable to a string.
+// TODO rewrite as a bitfield which is serializable to a string.
 // This will help a lot to simplify the code and make it more developer-
 // friendly, also will avoid possible duplicates and will consume less
 // space, also will be allocated on stack instead of the heap.
