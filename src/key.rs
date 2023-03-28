@@ -316,9 +316,9 @@ impl RedisKeyWritable {
 
     /// # Panics
     ///
-    /// Will panic if `RedisModule_ModuleTypeGetValue` is missing in redismodule.h    
-    pub fn get_value<'a, 'b, T>(
-        &'a self,
+    /// Will panic if `RedisModule_ModuleTypeGetValue` is missing in redismodule.h
+    pub fn get_value<'b, T>(
+        &self,
         redis_type: &RedisType,
     ) -> Result<Option<&'b mut T>, RedisError> {
         verify_type(self.key_inner, redis_type)?;
@@ -431,7 +431,7 @@ where
     /// Provides an iterator over the multi-get results in the form of (field-name, field-value)
     /// pairs. The type of field-name elements is the same as that passed to the original multi-
     /// get call, while the field-value elements may be of any type for which a `RedisString` `Into`
-    /// conversion is implemented.  
+    /// conversion is implemented.
     ///
     /// # Examples
     ///

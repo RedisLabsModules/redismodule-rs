@@ -35,15 +35,26 @@ pub struct CallOptions {
     options: String,
 }
 
+// TODO rewrite as a bitfield which is serialiable to a string.
+// This will help a lot to simplify the code and make it more developer-
+// friendly, also will avoid possible duplicates and will consume less
+// space, also will be allocated on stack instead of the heap.
+#[derive(Debug, Clone)]
 pub struct CallOptionsBuilder {
     options: String,
 }
 
-impl CallOptionsBuilder {
-    pub fn new() -> CallOptionsBuilder {
+impl Default for CallOptionsBuilder {
+    fn default() -> Self {
         CallOptionsBuilder {
             options: "v".to_string(),
         }
+    }
+}
+
+impl CallOptionsBuilder {
+    pub fn new() -> CallOptionsBuilder {
+        Self::default()
     }
 
     fn add_flag(&mut self, flag: &str) {
@@ -89,18 +100,21 @@ impl CallOptionsBuilder {
         let mut res = CallOptions {
             options: self.options.to_string(),
         };
-        res.options.push_str("\0"); /* make it C string */
+        // TODO don't "make" it a C string, just use a [CString].
+        res.options.push('\0'); /* make it C string */
         res
     }
 }
 
+// TODO rewrite using the bit_fields crate.
+#[derive(Debug, Default, Copy, Clone)]
 pub struct AclPermissions {
     flags: u32,
 }
 
 impl AclPermissions {
     pub fn new() -> AclPermissions {
-        AclPermissions { flags: 0 }
+        Self::default()
     }
 
     pub fn add_access_permission(&mut self) {
@@ -200,6 +214,13 @@ impl Context {
         }
     }
 
+    // The lint is disabled since all the behaviour is controlled via Redis,
+    // and all the pointers if dereferenced will be dereferenced by the module.
+    //
+    // Since we can't know the logic of Redis when it comes to pointers, we
+    // can't say whether passing a null pointer is okay to a redis function
+    // or not. So we can neither deny it is valid nor confirm.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn call_internal(
         &self,
         command: &str,
@@ -272,31 +293,16 @@ impl Context {
                     let (key, val) = raw::call_reply_map_element(reply, i);
                     let key = Self::parse_call_reply(key)?;
                     let val = Self::parse_call_reply(val)?;
+                    // The numbers are converted to a string, it is probably
+                    // good enough for most usecases and the effort to support
+                    // it as number is big.
                     let key = match key {
-                        RedisValue::SimpleString(s) => {
-                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
-                        }
-                        RedisValue::SimpleStringStatic(s) => {
-                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
-                        }
-                        RedisValue::BulkString(s) => {
-                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
-                        }
-                        RedisValue::BulkRedisString(s) => {
-                            s.as_slice().into_iter().map(|v| *v).collect::<Vec<u8>>()
-                        }
-                        RedisValue::Integer(i) => i
-                            .to_string()
-                            .as_bytes()
-                            .into_iter()
-                            .map(|v| *v)
-                            .collect::<Vec<u8>>(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
-                        RedisValue::Float(f) => f
-                            .to_string()
-                            .as_bytes()
-                            .into_iter()
-                            .map(|v| *v)
-                            .collect::<Vec<u8>>(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::SimpleString(s) => s.as_bytes().to_vec(),
+                        RedisValue::SimpleStringStatic(s) => s.as_bytes().to_vec(),
+                        RedisValue::BulkString(s) => s.as_bytes().to_vec(),
+                        RedisValue::BulkRedisString(s) => s.as_slice().to_vec(),
+                        RedisValue::Integer(i) => i.to_string().as_bytes().to_vec(),
+                        RedisValue::Float(f) => f.to_string().as_bytes().to_vec(),
                         RedisValue::StringBuffer(b) => b,
                         _ => return Err(RedisError::Str("type is not supported as map key")),
                     };
@@ -310,31 +316,16 @@ impl Context {
                 for i in 0..length {
                     let val = raw::call_reply_set_element(reply, i);
                     let val = Self::parse_call_reply(val)?;
+                    // The numbers are converted to a string, it is probably
+                    // good enough for most usecases and the effort to support
+                    // it as number is big.
                     let val = match val {
-                        RedisValue::SimpleString(s) => {
-                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
-                        }
-                        RedisValue::SimpleStringStatic(s) => {
-                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
-                        }
-                        RedisValue::BulkString(s) => {
-                            s.as_bytes().into_iter().map(|v| *v).collect::<Vec<u8>>()
-                        }
-                        RedisValue::BulkRedisString(s) => {
-                            s.as_slice().into_iter().map(|v| *v).collect::<Vec<u8>>()
-                        }
-                        RedisValue::Integer(i) => i
-                            .to_string()
-                            .as_bytes()
-                            .into_iter()
-                            .map(|v| *v)
-                            .collect::<Vec<u8>>(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
-                        RedisValue::Float(f) => f
-                            .to_string()
-                            .as_bytes()
-                            .into_iter()
-                            .map(|v| *v)
-                            .collect::<Vec<u8>>(), // convert to string, it is probably good enough for most usecases and the effort to support it as number is big.
+                        RedisValue::SimpleString(s) => s.as_bytes().to_vec(),
+                        RedisValue::SimpleStringStatic(s) => s.as_bytes().to_vec(),
+                        RedisValue::BulkString(s) => s.as_bytes().to_vec(),
+                        RedisValue::BulkRedisString(s) => s.as_slice().to_vec(),
+                        RedisValue::Integer(i) => i.to_string().as_bytes().to_vec(),
+                        RedisValue::Float(f) => f.to_string().as_bytes().to_vec(),
                         RedisValue::StringBuffer(b) => b,
                         _ => return Err(RedisError::Str("type is not supported on set")),
                     };
@@ -449,8 +440,8 @@ impl Context {
             Ok(RedisValue::BulkString(s)) => unsafe {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
-                    s.as_ptr().cast::<c_char>(),
-                    s.len() as usize,
+                    s.as_ptr().cast(),
+                    s.len(),
                 )
                 .into()
             },
@@ -462,8 +453,8 @@ impl Context {
             Ok(RedisValue::StringBuffer(s)) => unsafe {
                 raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                     self.ctx,
-                    s.as_ptr().cast::<c_char>(),
-                    s.len() as usize,
+                    s.as_ptr().cast(),
+                    s.len(),
                 )
                 .into()
             },
@@ -491,8 +482,8 @@ impl Context {
                     unsafe {
                         raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                             self.ctx,
-                            key.as_ptr().cast::<c_char>(),
-                            key.len() as usize,
+                            key.as_ptr().cast(),
+                            key.len(),
                         );
                     };
                     self.reply(Ok(val));
@@ -510,8 +501,8 @@ impl Context {
                     unsafe {
                         raw::RedisModule_ReplyWithStringBuffer.unwrap()(
                             self.ctx,
-                            val.as_ptr().cast::<c_char>(),
-                            val.len() as usize,
+                            val.as_ptr().cast(),
+                            val.len(),
                         );
                     };
                 }

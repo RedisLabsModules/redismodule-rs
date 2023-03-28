@@ -567,6 +567,13 @@ pub fn replicate_slices(ctx: *mut RedisModuleCtx, command: &str, args: &[&[u8]])
     replicate_redis_strings(ctx, command, &terminated_args)
 }
 
+// The lint is disabled since all the behaviour is controlled via Redis,
+// and all the pointers if dereferenced will be dereferenced by the module.
+//
+// Since we can't know the logic of Redis when it comes to pointers, we
+// can't say whether passing a null pointer is okay to a redis function
+// or not. So we can neither deny it is valid nor confirm.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn replicate_redis_strings(
     ctx: *mut RedisModuleCtx,
     command: &str,
