@@ -36,12 +36,8 @@ pub use crate::raw::*;
 pub use crate::redismodule::*;
 use backtrace::Backtrace;
 
-/// Ideally this would be `#[cfg(not(test))]`, but that doesn't work:
-/// [59168#issuecomment-472653680](https://github.com/rust-lang/rust/issues/59168#issuecomment-472653680)
-/// The workaround is to use the `test` feature instead.
-#[cfg(not(feature = "test"))]
 #[global_allocator]
-pub static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc;
+pub static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc::new();
 
 /// `LogLevel` is a level of logging to be specified with a Redis log directive.
 #[derive(Clone, Copy, Debug, AsRefStr)]
