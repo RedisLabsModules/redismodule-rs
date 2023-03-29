@@ -157,6 +157,13 @@ impl RedisString {
         Self::string_as_slice(self.inner)
     }
 
+    // The lint is disabled since all the behaviour is controlled via Redis,
+    // and all the pointers if dereferenced will be dereferenced by the module.
+    //
+    // Since we can't know the logic of Redis when it comes to pointers, we
+    // can't say whether passing a null pointer is okay to a redis function
+    // or not. So we can neither deny it is valid nor confirm.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn string_as_slice<'a>(ptr: *const raw::RedisModuleString) -> &'a [u8] {
         let mut len: libc::size_t = 0;
         let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(ptr, &mut len) };

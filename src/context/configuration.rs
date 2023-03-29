@@ -4,15 +4,22 @@ use crate::{RedisError, RedisString};
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_longlong, c_void};
 
+#[derive(Debug, Copy, Clone)]
 pub struct ConfigFlags {
     flags: u32,
 }
 
-impl ConfigFlags {
-    pub fn new() -> Self {
+impl Default for ConfigFlags {
+    fn default() -> Self {
         ConfigFlags {
             flags: raw::REDISMODULE_CONFIG_DEFAULT,
         }
+    }
+}
+
+impl ConfigFlags {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn immutable(mut self) -> Self {
@@ -387,7 +394,7 @@ pub fn register_enum_configuration<C: RedisEnumConfigCtx>(
         raw::RedisModule_RegisterEnumConfig.unwrap()(
             ctx.ctx,
             name.as_ptr(),
-            redis_config_ctx.default() as i32,
+            redis_config_ctx.default(),
             redis_config_ctx.flags().flags,
             enum_strings
                 .iter()

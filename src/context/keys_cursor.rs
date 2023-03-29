@@ -8,6 +8,13 @@ pub struct KeysCursor {
     inner_cursor: *mut raw::RedisModuleScanCursor,
 }
 
+impl Default for KeysCursor {
+    fn default() -> Self {
+        let inner_cursor = unsafe { raw::RedisModule_ScanCursorCreate.unwrap()() };
+        Self { inner_cursor }
+    }
+}
+
 extern "C" fn scan_callback<C: FnMut(&Context, RedisString, Option<&RedisKey>)>(
     ctx: *mut raw::RedisModuleCtx,
     keyname: *mut raw::RedisModuleString,
@@ -18,7 +25,7 @@ extern "C" fn scan_callback<C: FnMut(&Context, RedisString, Option<&RedisKey>)>(
     let key_name = RedisString::new(ctx, keyname);
     let mut redis_key = if !key.is_null() {
         Some(RedisKey {
-            ctx: ctx,
+            ctx,
             key_inner: key,
         })
     } else {
@@ -35,8 +42,7 @@ extern "C" fn scan_callback<C: FnMut(&Context, RedisString, Option<&RedisKey>)>(
 
 impl KeysCursor {
     pub fn new() -> KeysCursor {
-        let inner_cursor = unsafe { raw::RedisModule_ScanCursorCreate.unwrap()() };
-        KeysCursor { inner_cursor }
+        Self::default()
     }
 
     pub fn scan<C: FnMut(&Context, RedisString, Option<&RedisKey>)>(
