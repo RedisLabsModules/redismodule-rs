@@ -12,7 +12,6 @@ fn test_helper_version(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     Ok(response.into())
 }
 
-#[cfg(feature = "test")]
 fn test_helper_version_rm_call(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     let ver = ctx.get_redis_version_rm_call()?;
     let response: Vec<i64> = vec![ver.major.into(), ver.minor.into(), ver.patch.into()];
@@ -43,7 +42,6 @@ fn add_info(ctx: &InfoContext, _for_crash_report: bool) {
 
 //////////////////////////////////////////////////////
 
-#[cfg(feature = "test")]
 redis_module! {
     name: "test_helper",
     version: 1,

@@ -36,8 +36,11 @@ pub use crate::raw::*;
 pub use crate::redismodule::*;
 use backtrace::Backtrace;
 
-#[global_allocator]
-pub static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc::new();
+#[cfg_attr(
+    not(any(test, feature = "fallback_to_system_allocator")),
+    global_allocator
+)]
+pub static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc;
 
 /// `LogLevel` is a level of logging to be specified with a Redis log directive.
 #[derive(Clone, Copy, Debug, AsRefStr)]

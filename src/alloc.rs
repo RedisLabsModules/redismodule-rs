@@ -2,28 +2,30 @@ use std::alloc::{GlobalAlloc, Layout};
 
 use crate::raw;
 
+/// Panics with a message without using an allocator.
+/// Useful when using the allocator should be avoided or it is
+/// inaccessible. The default [std::panic] performs allocations and so
+/// will cause a double panic without a meaningful message if the
+/// allocator can't be used. This function makes sure we can panic with
+/// a reasonable message even without the allocator working.
+fn allocation_free_panic(message: &'static str) -> ! {
+    use std::os::fd::AsRawFd;
+
+    let _ = nix::unistd::write(std::io::stderr().as_raw_fd(), message.as_bytes());
+
+    std::process::abort();
+}
+
+const REDIS_ALLOCATOR_NOT_AVAILABLE_MESSAGE: &str =
+    "Critical error: the Redis Allocator isn't available.
+Consider enabling the \"fallback_to_system_allocator\" feature.\n";
+
 /// Defines the Redis allocator. This allocator delegates the allocation
 /// and deallocation tasks to the Redis server when available, otherwise
 /// it fallbacks to the default Rust [std::alloc::System] allocator
 /// which is always available compared to the Redis allocator.
 #[derive(Copy, Clone)]
-pub struct RedisAlloc {
-    system: std::alloc::System,
-}
-
-impl RedisAlloc {
-    pub const fn new() -> Self {
-        Self {
-            system: std::alloc::System,
-        }
-    }
-}
-
-impl Default for RedisAlloc {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+pub struct RedisAlloc;
 
 unsafe impl GlobalAlloc for RedisAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
@@ -45,14 +47,14 @@ unsafe impl GlobalAlloc for RedisAlloc {
                 let size = (layout.size() + layout.align() - 1) & (!(layout.align() - 1));
                 alloc(size).cast()
             }
-            None => self.system.alloc(layout).cast(),
+            None => allocation_free_panic(REDIS_ALLOCATOR_NOT_AVAILABLE_MESSAGE),
         }
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
         match raw::RedisModule_Free {
             Some(dealloc) => dealloc(ptr.cast()),
-            None => self.system.dealloc(ptr, layout),
+            None => allocation_free_panic(REDIS_ALLOCATOR_NOT_AVAILABLE_MESSAGE),
         }
     }
 }

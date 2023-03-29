@@ -194,9 +194,8 @@ impl Context {
     #[must_use]
     pub fn is_keys_position_request(&self) -> bool {
         // We want this to be available in tests where we don't have an actual Redis to call
-        if cfg!(feature = "test") {
-            return false;
-        }
+        #[cfg(test)]
+        return false;
 
         let result = unsafe { raw::RedisModule_IsKeysPositionRequest.unwrap()(self.ctx) };
 
@@ -631,7 +630,6 @@ impl Context {
     }
 
     /// Returns the redis version by calling "info server" API and parsing the reply
-    #[cfg(feature = "test")]
     pub fn get_redis_version_rm_call(&self) -> Result<Version, RedisError> {
         self.get_redis_version_internal(true)
     }
