@@ -9,7 +9,7 @@ use crate::raw;
 /// allocator can't be used. This function makes sure we can panic with
 /// a reasonable message even without the allocator working.
 fn allocation_free_panic(message: &'static str) -> ! {
-    use std::os::fd::AsRawFd;
+    use std::os::unix::io::AsRawFd;
 
     let _ = nix::unistd::write(std::io::stderr().as_raw_fd(), message.as_bytes());
 
