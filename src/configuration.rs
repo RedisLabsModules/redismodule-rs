@@ -41,6 +41,7 @@ macro_rules! enum_configuration {
     ($(#[$meta:meta])* $vis:vis enum $name:ident {
         $($(#[$vmeta:meta])* $vname:ident = $val:expr,)*
     }) => {
+        use $crate::configuration::EnumConfigurationValue;
         $(#[$meta])*
         $vis enum $name {
             $($(#[$vmeta])* $vname = $val,)*
@@ -140,7 +141,7 @@ impl ConfigurationValue<i64> for AtomicI64 {
 impl ConfigurationValue<RedisString> for RedisGILGuard<String> {
     fn get(&self, ctx: &ConfigurationContext) -> RedisString {
         let value = self.lock(ctx);
-        RedisString::create(None, &value)
+        RedisString::create(None, value.as_str())
     }
     fn set(&self, ctx: &ConfigurationContext, val: RedisString) -> Result<(), RedisError> {
         let mut value = self.lock(ctx);
@@ -152,7 +153,7 @@ impl ConfigurationValue<RedisString> for RedisGILGuard<String> {
 impl ConfigurationValue<RedisString> for Mutex<String> {
     fn get(&self, _ctx: &ConfigurationContext) -> RedisString {
         let value = self.lock().unwrap();
-        RedisString::create(None, &value)
+        RedisString::create(None, value.as_str())
     }
     fn set(&self, _ctx: &ConfigurationContext, val: RedisString) -> Result<(), RedisError> {
         let mut value = self.lock().unwrap();
@@ -184,7 +185,7 @@ impl<G, T: ConfigurationValue<G> + 'static> ConfigrationPrivateData<G, T> {
         // we know the GIL is held so it is safe to use Context::dummy().
         let configuration_ctx = ConfigurationContext::new();
         if let Err(e) = self.variable.set(&configuration_ctx, val) {
-            let error_msg = RedisString::create(None, &e.to_string());
+            let error_msg = RedisString::create(None, e.to_string().as_str());
             unsafe { *err = error_msg.take() };
             return raw::REDISMODULE_ERR as i32;
         }
@@ -366,7 +367,7 @@ extern "C" fn enum_configuration_set<
     match val {
         Ok(val) => private_data.set_val(name, val, err),
         Err(e) => {
-            let error_msg = RedisString::create(None, &e.to_string());
+            let error_msg = RedisString::create(None, e.to_string().as_str());
             unsafe { *err = error_msg.take() };
             raw::REDISMODULE_ERR as i32
         }
@@ -427,7 +428,7 @@ pub fn register_enum_configuration<G: EnumConfigurationValue, T: ConfigurationVa
 
 pub fn apply_module_args_as_configuration(
     ctx: &Context,
-    mut args: Vec<RedisString>,
+    args: &[RedisString],
 ) -> Result<(), RedisError> {
     if args.len() == 0 {
         return Ok(());
@@ -437,6 +438,7 @@ pub fn apply_module_args_as_configuration(
             "Arguments lenght is not devided by 2 (require to be read as module configuration).",
         ));
     }
+    let mut args = args.to_vec();
     args.insert(0, ctx.create_string("set"));
     ctx.call(
         "config",

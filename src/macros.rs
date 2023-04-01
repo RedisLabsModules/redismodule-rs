@@ -57,7 +57,7 @@ macro_rules! redis_event_handler {
         ) -> c_int {
             let context = $crate::Context::new(ctx);
 
-            let redis_key = $crate::RedisString::from_ptr(key).unwrap();
+            let redis_key = $crate::RedisString::string_as_slice(key);
             let event_str = unsafe { CStr::from_ptr(event) };
             $event_handler(
                 &context,
@@ -108,7 +108,7 @@ macro_rules! redis_module {
                 $(@$event_type:ident) +:
                 $event_handler:expr
             ]),* $(,)*
-        ])?
+        ] $(,)* )?
         $(configurations: [
             $(i64:[$([
                 $i64_configuration_name:expr,
@@ -197,12 +197,6 @@ macro_rules! redis_module {
             let args = $crate::decode_args(ctx, argv, argc);
 
             $(
-                if $init_func(&context, &args) == $crate::Status::Err {
-                    return $crate::Status::Err as c_int;
-                }
-            )*
-
-            $(
                 if (&$data_type).create_data_type(ctx).is_err() {
                     return raw::Status::Err as c_int;
                 }
@@ -242,7 +236,7 @@ macro_rules! redis_module {
                 raw::RedisModule_LoadConfigs.unwrap()(ctx);
                 $(
                     if $use_module_args {
-                        if let Err(e) = apply_module_args_as_configuration(&context, args) {
+                        if let Err(e) = apply_module_args_as_configuration(&context, &args) {
                             context.log_warning(&e.to_string());
                             return raw::Status::Err as c_int;
                         }
@@ -256,6 +250,12 @@ macro_rules! redis_module {
                 context.log_warning(&format!("{e}"));
                 return raw::Status::Err as c_int;
             }
+
+            $(
+                if $init_func(&context, &args) == $crate::Status::Err {
+                    return $crate::Status::Err as c_int;
+                }
+            )*
 
             raw::Status::Ok as c_int
         }

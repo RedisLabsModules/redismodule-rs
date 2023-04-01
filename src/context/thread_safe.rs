@@ -164,7 +164,8 @@ impl<B: Send> ThreadSafeContext<B> {
     /// similar to `std::sync::Mutex`.
     pub fn lock(&self) -> ContextGuard {
         unsafe { raw::RedisModule_ThreadSafeContextLock.unwrap()(self.ctx) };
-        let ctx = Context::new(self.ctx);
+        let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(ptr::null_mut()) };
+        let ctx = Context::new(ctx);
         ContextGuard { ctx }
     }
 }

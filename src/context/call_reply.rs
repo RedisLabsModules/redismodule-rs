@@ -48,6 +48,12 @@ pub struct ErrorCallReply<'root> {
     _dummy: PhantomData<&'root ()>,
 }
 
+#[derive(Debug)]
+pub enum ErrorReply<'root> {
+    Msg(String),
+    RedisError(ErrorCallReply<'root>),
+}
+
 impl<'root> ErrorCallReply<'root> {
     /// Convert ErrorCallReply to String.
     /// Return None data is not a valid utf8.
@@ -62,6 +68,25 @@ impl<'root> ErrorCallReply<'root> {
             RedisModule_CallReplyStringPtr.unwrap()(self.reply.as_ptr(), &mut len) as *mut u8
         };
         unsafe { slice::from_raw_parts(reply_string, len) }
+    }
+}
+
+impl<'root> ErrorReply<'root> {
+    /// Convert ErrorCallReply to String.
+    /// Return None data is not a valid utf8.
+    pub fn to_string(&self) -> Option<String> {
+        match self {
+            ErrorReply::Msg(s) => Some(s.clone()),
+            ErrorReply::RedisError(r) => r.to_string(),
+        }
+    }
+
+    /// Return the ErrorCallReply data as &[u8]
+    pub fn as_bytes(&self) -> &[u8] {
+        match self {
+            ErrorReply::Msg(s) => s.as_bytes(),
+            ErrorReply::RedisError(r) => r.as_bytes(),
+        }
     }
 }
 
@@ -384,16 +409,13 @@ impl<'root> VerbatimStringCallReply<'root> {
     /// Return None if the format is not a valid utf8.
     pub fn as_parts(&self) -> Option<(&str, &[u8])> {
         let mut len: usize = 0;
-        let format: *const u8 = std::ptr::null();
+        let mut format: *const c_char = std::ptr::null();
         let reply_string: *mut u8 = unsafe {
-            RedisModule_CallReplyVerbatim.unwrap()(
-                self.reply.as_ptr(),
-                &mut len,
-                &mut (format as *const c_char),
-            ) as *mut u8
+            RedisModule_CallReplyVerbatim.unwrap()(self.reply.as_ptr(), &mut len, &mut format)
+                as *mut u8
         };
         Some((
-            std::str::from_utf8(unsafe { slice::from_raw_parts(format, 3) })
+            std::str::from_utf8(unsafe { slice::from_raw_parts(format as *const u8, 3) })
                 .ok()
                 .unwrap(),
             unsafe { slice::from_raw_parts(reply_string, len) },
@@ -440,10 +462,10 @@ fn create_call_reply<'root>(reply: NonNull<RedisModuleCallReply>) -> CallResult<
             reply: reply,
             _dummy: PhantomData,
         })),
-        ReplyType::Error => Err(ErrorCallReply {
+        ReplyType::Error => Err(ErrorReply::RedisError(ErrorCallReply {
             reply: reply,
             _dummy: PhantomData,
-        }),
+        })),
         ReplyType::Array => Ok(CallReply::Array(ArrayCallReply {
             reply: reply,
             _dummy: PhantomData,
@@ -485,4 +507,4 @@ pub(crate) fn create_root_call_reply<'root>(
     reply.map_or(Ok(CallReply::Unknown), |v| create_call_reply(v))
 }
 
-pub type CallResult<'root> = Result<CallReply<'root>, ErrorCallReply<'root>>;
+pub type CallResult<'root> = Result<CallReply<'root>, ErrorReply<'root>>;

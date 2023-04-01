@@ -81,7 +81,7 @@ fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
     // test resp3 on call_ext
     let call_options = CallOptionsBuilder::new()
         .script_mode()
-        .resp_3(CallOptionResp::Resp3)
+        .resp(CallOptionResp::Resp3)
         .errors_as_replies()
         .build();
     ctx.call_ext::<_, CallResult>("HSET", &call_options, &["x", "foo", "bar"])

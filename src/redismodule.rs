@@ -11,9 +11,12 @@ use std::str;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
 
+use serde::de::{Error, SeqAccess};
+
 pub use crate::raw;
 pub use crate::rediserror::RedisError;
 pub use crate::redisvalue::RedisValue;
+use crate::Context;
 
 pub type RedisResult = Result<RedisValue, RedisError>;
 
@@ -124,11 +127,26 @@ impl RedisString {
         Self { ctx, inner }
     }
 
+    /// Safely clone `RedisString`
+    /// In general `RedisModuleString` is none atomic ref counted object.
+    /// So it is not safe to clone it if Redis GIL is not hold.
+    /// `safe_clone` gets a context reference which indicating that Redis GIL is held.
+    pub fn safe_clone(&self, ctx: &Context) -> Self {
+        // RedisString are *not* atomic ref counted, so we must get a lock indicator to clone them.
+        raw::string_retain_string(ctx.ctx, self.inner);
+        Self {
+            ctx: ctx.ctx,
+            inner: self.inner,
+        }
+    }
+
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
-    pub fn create(ctx: Option<NonNull<raw::RedisModuleCtx>>, s: &str) -> Self {
+    pub fn create<T: Into<Vec<u8>>>(ctx: Option<NonNull<raw::RedisModuleCtx>>, s: T) -> Self {
         let ctx = ctx.map_or(std::ptr::null_mut(), |v| v.as_ptr());
         let str = CString::new(s).unwrap();
-        let inner = unsafe { raw::RedisModule_CreateString.unwrap()(ctx, str.as_ptr(), s.len()) };
+        let inner = unsafe {
+            raw::RedisModule_CreateString.unwrap()(ctx, str.as_ptr(), str.as_bytes().len())
+        };
 
         Self { ctx, inner }
     }
@@ -182,7 +200,7 @@ impl RedisString {
         Self::string_as_slice(self.inner)
     }
 
-    fn string_as_slice<'a>(ptr: *const raw::RedisModuleString) -> &'a [u8] {
+    pub fn string_as_slice<'a>(ptr: *const raw::RedisModuleString) -> &'a [u8] {
         let mut len: libc::size_t = 0;
         let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(ptr, &mut len) };
 
@@ -304,6 +322,53 @@ impl Deref for RedisString {
 impl From<RedisString> for Vec<u8> {
     fn from(rs: RedisString) -> Self {
         rs.as_slice().to_vec()
+    }
+}
+
+impl serde::Serialize for RedisString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes(self.as_slice())
+    }
+}
+
+struct RedisStringVisitor;
+
+impl<'de> serde::de::Visitor<'de> for RedisStringVisitor {
+    type Value = RedisString;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("A bytes buffer")
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(RedisString::create(None, v))
+    }
+
+    fn visit_seq<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
+    where
+        V: SeqAccess<'de>,
+    {
+        let mut v = Vec::new();
+        while let Some(elem) = visitor.next_element()? {
+            v.push(elem);
+        }
+
+        Ok(RedisString::create(None, v.as_slice()))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for RedisString {
+    fn deserialize<D>(deserializer: D) -> Result<RedisString, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_bytes(RedisStringVisitor)
     }
 }
 

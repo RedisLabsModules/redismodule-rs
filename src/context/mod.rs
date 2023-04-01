@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use std::borrow::Borrow;
+use std::cell::UnsafeCell;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr::{self, NonNull};
@@ -37,6 +37,7 @@ pub struct CallOptionsBuilder {
     options: String,
 }
 
+#[derive(Clone)]
 pub struct CallOptions {
     options: CString,
 }
@@ -100,7 +101,7 @@ impl CallOptionsBuilder {
     }
 
     /// Allow control the protocol version in which the replies will be returned.
-    pub fn resp_3(mut self, resp: CallOptionResp) -> CallOptionsBuilder {
+    pub fn resp(mut self, resp: CallOptionResp) -> CallOptionsBuilder {
         match resp {
             CallOptionResp::Auto => self.add_flag("0"),
             CallOptionResp::Resp2 => (),
@@ -117,10 +118,78 @@ impl CallOptionsBuilder {
     }
 }
 
+/// This struct allows logging when the Redis GIL is not acquired.
+/// It is implemented `Send` and `Sync` so it can safely be used
+/// from within different threads.
+pub struct DetachContext {
+    ctx: UnsafeCell<Option<NonNull<raw::RedisModuleCtx>>>,
+}
+
+impl Default for DetachContext {
+    fn default() -> Self {
+        DetachContext {
+            ctx: UnsafeCell::new(None),
+        }
+    }
+}
+
+impl DetachContext {
+    pub fn log(&self, level: LogLevel, message: &str) {
+        let c = unsafe { &*self.ctx.get() };
+        crate::logging::log_internal(c.map_or(ptr::null_mut(), |v| v.as_ptr()), level, message);
+    }
+
+    pub fn log_debug(&self, message: &str) {
+        self.log(LogLevel::Debug, message);
+    }
+
+    pub fn log_notice(&self, message: &str) {
+        self.log(LogLevel::Notice, message);
+    }
+
+    pub fn log_verbose(&self, message: &str) {
+        self.log(LogLevel::Verbose, message);
+    }
+
+    pub fn log_warning(&self, message: &str) {
+        self.log(LogLevel::Warning, message);
+    }
+
+    pub fn set_context(&self, ctx: &Context) {
+        let curr = unsafe { &mut *self.ctx.get() };
+        let ctx = unsafe { raw::RedisModule_GetDetachedThreadSafeContext.unwrap()(ctx.ctx) };
+        *curr = NonNull::new(ctx);
+    }
+}
+
+unsafe impl Send for DetachContext {}
+unsafe impl Sync for DetachContext {}
+
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
 pub struct Context {
     pub ctx: *mut raw::RedisModuleCtx,
+}
+
+/// A guerd that protected a user that has
+/// been set on a context using `autenticate_user`.
+/// This guerd make sure to unset the user when freed.
+/// It prevent privilege escalation security issues
+/// that can happened by forgeting to unset the user.
+pub struct ContextUserScope<'ctx> {
+    ctx: &'ctx Context,
+}
+
+impl<'ctx> Drop for ContextUserScope<'ctx> {
+    fn drop(&mut self) {
+        self.ctx.deautenticate_user();
+    }
+}
+
+impl<'ctx> ContextUserScope<'ctx> {
+    fn new(ctx: &'ctx Context) -> ContextUserScope<'ctx> {
+        ContextUserScope { ctx }
+    }
 }
 
 pub struct StrCallArgs<'a> {
@@ -173,7 +242,7 @@ where
 }
 
 impl<'a> StrCallArgs<'a> {
-    fn args_mut(&mut self) -> &mut [*mut raw::RedisModuleString] {
+    pub(crate) fn args_mut(&mut self) -> &mut [*mut raw::RedisModuleString] {
         &mut self.args
     }
 }
@@ -422,8 +491,13 @@ impl Context {
         raw::replicate_verbatim(self.ctx);
     }
 
+    /// Replicate command to the replica and AOF.
+    pub fn replicate<'a, T: Into<StrCallArgs<'a>>>(&self, command: &str, args: T) {
+        raw::replicate(self.ctx, command, args);
+    }
+
     #[must_use]
-    pub fn create_string(&self, s: &str) -> RedisString {
+    pub fn create_string<T: Into<Vec<u8>>>(&self, s: T) -> RedisString {
         RedisString::create(NonNull::new(self.ctx), s)
     }
 
@@ -534,19 +608,20 @@ impl Context {
     /// Attach the given user to the current context so each operation performed from
     /// now on using this context will be validated againts this new user.
     /// Return Status::Ok on success and Status::Err or failure.
-    pub fn autenticate_user<T: Borrow<[u8]>>(&self, user_name: T) -> raw::Status {
-        let user_name_blob: &[u8] = user_name.borrow();
-        unsafe {
-            raw::RedisModule_AuthenticateClientWithACLUser.unwrap()(
-                self.ctx,
-                user_name_blob.as_ptr() as *const c_char,
-                user_name_blob.len(),
-                None,
-                ptr::null_mut(),
-                ptr::null_mut(),
-            )
+    pub fn autenticate_user(
+        &self,
+        user_name: &RedisString,
+    ) -> Result<ContextUserScope<'_>, RedisError> {
+        let user = unsafe { raw::RedisModule_GetModuleUserFromUserName.unwrap()(user_name.inner) };
+        if user.is_null() {
+            return Err(RedisError::Str("User does not exists or disabled"));
         }
-        .into()
+        unsafe { raw::RedisModule_SetContextUser.unwrap()(self.ctx, user) };
+        Ok(ContextUserScope::new(self))
+    }
+
+    fn deautenticate_user(&self) {
+        unsafe { raw::RedisModule_SetContextUser.unwrap()(self.ctx, ptr::null_mut()) };
     }
 
     /// Verify the the given user has the give ACL permission on the given key.
