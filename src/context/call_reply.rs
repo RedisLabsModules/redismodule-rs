@@ -37,6 +37,12 @@ impl<'root> Drop for StringCallReply<'root> {
     }
 }
 
+impl<'root> Debug for StringCallReply<'root> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.as_bytes())
+    }
+}
+
 pub struct ErrorCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
     _dummy: PhantomData<&'root ()>,
@@ -59,20 +65,15 @@ impl<'root> ErrorCallReply<'root> {
     }
 }
 
-impl<'root> Debug for ErrorCallReply<'root> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "ErrorCallReply: {}.",
-            self.to_string()
-                .unwrap_or("can not transform data into String".to_string())
-        )
-    }
-}
-
 impl<'root> Drop for ErrorCallReply<'root> {
     fn drop(&mut self) {
         free_call_reply(self.reply.as_ptr());
+    }
+}
+
+impl<'root> Debug for ErrorCallReply<'root> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.to_string())
     }
 }
 
@@ -91,6 +92,12 @@ impl<'root> I64CallReply<'root> {
 impl<'root> Drop for I64CallReply<'root> {
     fn drop(&mut self) {
         free_call_reply(self.reply.as_ptr());
+    }
+}
+
+impl<'root> Debug for I64CallReply<'root> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.to_i64())
     }
 }
 
@@ -144,6 +151,13 @@ impl<'root, 'curr> Iterator for ArrayCallReplyIterator<'root, 'curr> {
     }
 }
 
+impl<'root> Debug for ArrayCallReply<'root> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let children: Vec<CallResult> = self.iter().collect();
+        write!(f, "{:?}", children)
+    }
+}
+
 pub struct NullCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
     _dummy: PhantomData<&'root ()>,
@@ -152,6 +166,12 @@ pub struct NullCallReply<'root> {
 impl<'root> Drop for NullCallReply<'root> {
     fn drop(&mut self) {
         free_call_reply(self.reply.as_ptr());
+    }
+}
+
+impl<'root> Debug for NullCallReply<'root> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "Null")
     }
 }
 
@@ -209,6 +229,13 @@ impl<'root> Drop for MapCallReply<'root> {
     }
 }
 
+impl<'root> Debug for MapCallReply<'root> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let elements: Vec<(CallResult, CallResult)> = self.iter().collect();
+        write!(f, "{:?}", elements)
+    }
+}
+
 pub struct SetCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
     _dummy: PhantomData<&'root ()>,
@@ -258,6 +285,13 @@ impl<'root> Drop for SetCallReply<'root> {
     }
 }
 
+impl<'root> Debug for SetCallReply<'root> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let elements: Vec<CallResult> = self.iter().collect();
+        write!(f, "{:?}", elements)
+    }
+}
+
 pub struct BoolCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
     _dummy: PhantomData<&'root ()>,
@@ -273,6 +307,12 @@ impl<'root> BoolCallReply<'root> {
 impl<'root> Drop for BoolCallReply<'root> {
     fn drop(&mut self) {
         free_call_reply(self.reply.as_ptr());
+    }
+}
+
+impl<'root> Debug for BoolCallReply<'root> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.to_bool())
     }
 }
 
@@ -294,6 +334,12 @@ impl<'root> Drop for DoubleCallReply<'root> {
     }
 }
 
+impl<'root> Debug for DoubleCallReply<'root> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.to_double())
+    }
+}
+
 pub struct BigNumberCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
     _dummy: PhantomData<&'root ()>,
@@ -310,6 +356,12 @@ impl<'root> BigNumberCallReply<'root> {
 impl<'root> Drop for BigNumberCallReply<'root> {
     fn drop(&mut self) {
         free_call_reply(self.reply.as_ptr());
+    }
+}
+
+impl<'root> Debug for BigNumberCallReply<'root> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.to_string())
     }
 }
 
@@ -355,6 +407,13 @@ impl<'root> Drop for VerbatimStringCallReply<'root> {
     }
 }
 
+impl<'root> Debug for VerbatimStringCallReply<'root> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.to_parts())
+    }
+}
+
+#[derive(Debug)]
 pub enum CallReply<'root> {
     Unknown,
     I64(I64CallReply<'root>),
