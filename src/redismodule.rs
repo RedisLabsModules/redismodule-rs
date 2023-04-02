@@ -1,7 +1,6 @@
 use std::borrow::Borrow;
 use std::convert::TryFrom;
 use std::ffi::CString;
-use std::{fmt, ptr};
 use std::fmt::Display;
 use std::ops::Deref;
 use std::os::raw::{c_char, c_int, c_void};
@@ -10,6 +9,7 @@ use std::slice;
 use std::str;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
+use std::{fmt, ptr};
 
 use serde::de::{Error, SeqAccess};
 

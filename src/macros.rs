@@ -141,6 +141,8 @@ macro_rules! redis_module {
                 $enum_on_changed:expr
             ]),* $(,)*],)?
             $(module_args_as_configuration:$use_module_args:expr,)?
+            $(module_config_get:$module_config_get_command:expr,)?
+            $(module_config_set:$module_config_set_command:expr,)?
         ])?
     ) => {
         extern "C" fn __info_func(
@@ -170,7 +172,12 @@ macro_rules! redis_module {
             use $crate::configuration::register_string_configuration;
             use $crate::configuration::register_bool_configuration;
             use $crate::configuration::register_enum_configuration;
-            use $crate::configuration::apply_module_args_as_configuration;
+            use $crate::configuration::module_config_get;
+            use $crate::configuration::module_config_set;
+            use $crate::configuration::get_i64_default_config_value;
+            use $crate::configuration::get_string_default_config_value;
+            use $crate::configuration::get_bool_default_config_value;
+            use $crate::configuration::get_enum_default_config_value;
 
             // We use a statically sized buffer to avoid allocating.
             // This is needed since we use a custom allocator that relies on the Redis allocator,
@@ -215,32 +222,80 @@ macro_rules! redis_module {
             $(
                 $(
                     $(
-                        register_i64_configuration(&context, $i64_configuration_name, $i64_configuration_val, $i64_default, $i64_min, $i64_max, $i64_flags_options, $i64_on_changed);
+                        let default = if $use_module_args {
+                            match get_i64_default_config_value(&args, $i64_configuration_name, $i64_default) {
+                                Ok(v) => v,
+                                Err(e) => {
+                                    context.log_warning(&format!("{e}"));
+                                    return raw::Status::Err as c_int;
+                                }
+                            }
+                        } else {
+                            $i64_default
+                        };
+                        register_i64_configuration(&context, $i64_configuration_name, $i64_configuration_val, default, $i64_min, $i64_max, $i64_flags_options, $i64_on_changed);
                     )*
                 )?
                 $(
                     $(
-                        register_string_configuration(&context, $string_configuration_name, $string_configuration_val, $string_default, $string_flags_options, $string_on_changed);
+                        let default = if $use_module_args {
+                            match get_string_default_config_value(&args, $string_configuration_name, $string_default) {
+                                Ok(v) => v,
+                                Err(e) => {
+                                    context.log_warning(&format!("{e}"));
+                                    return raw::Status::Err as c_int;
+                                }
+                            }
+                        } else {
+                            $string_default
+                        };
+                        register_string_configuration(&context, $string_configuration_name, $string_configuration_val, default, $string_flags_options, $string_on_changed);
                     )*
                 )?
                 $(
                     $(
-                        register_bool_configuration(&context, $bool_configuration_name, $bool_configuration_val, $bool_default, $bool_flags_options, $bool_on_changed);
+                        let default = if $use_module_args {
+                            match get_bool_default_config_value(&args, $bool_configuration_name, $bool_default) {
+                                Ok(v) => v,
+                                Err(e) => {
+                                    context.log_warning(&format!("{e}"));
+                                    return raw::Status::Err as c_int;
+                                }
+                            }
+                        } else {
+                            $bool_default
+                        };
+                        register_bool_configuration(&context, $bool_configuration_name, $bool_configuration_val, default, $bool_flags_options, $bool_on_changed);
                     )*
                 )?
                 $(
                     $(
-                        register_enum_configuration(&context, $enum_configuration_name, $enum_configuration_val, $enum_default, $enum_flags_options, $enum_on_changed);
+                        let default = if $use_module_args {
+                            match get_enum_default_config_value(&args, $enum_configuration_name, $enum_default) {
+                                Ok(v) => v,
+                                Err(e) => {
+                                    context.log_warning(&format!("{e}"));
+                                    return raw::Status::Err as c_int;
+                                }
+                            }
+                        } else {
+                            $enum_default
+                        };
+                        register_enum_configuration(&context, $enum_configuration_name, $enum_configuration_val, default, $enum_flags_options, $enum_on_changed);
                     )*
                 )?
                 raw::RedisModule_LoadConfigs.unwrap()(ctx);
+
                 $(
-                    if $use_module_args {
-                        if let Err(e) = apply_module_args_as_configuration(&context, &args) {
-                            context.log_warning(&e.to_string());
-                            return raw::Status::Err as c_int;
-                        }
-                    }
+                    redis_command!(ctx, $module_config_get_command, |ctx, args: Vec<RedisString>| {
+                        module_config_get(ctx, args, $module_name)
+                    }, "", 0, 0, 0);
+                )?
+
+                $(
+                    redis_command!(ctx, $module_config_set_command, |ctx, args: Vec<RedisString>| {
+                        module_config_set(ctx, args, $module_name)
+                    }, "", 0, 0, 0);
                 )?
             )?
 

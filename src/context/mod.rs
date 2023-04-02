@@ -184,7 +184,7 @@ pub struct ContextUserScope<'ctx> {
 impl<'ctx> Drop for ContextUserScope<'ctx> {
     fn drop(&mut self) {
         self.ctx.deautenticate_user();
-        unsafe{raw::RedisModule_FreeModuleUser.unwrap()(self.user)};
+        unsafe { raw::RedisModule_FreeModuleUser.unwrap()(self.user) };
     }
 }
 
