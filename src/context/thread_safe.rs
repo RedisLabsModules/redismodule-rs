@@ -91,7 +91,10 @@ unsafe impl RedisLockIndicator for ContextGuard {}
 
 impl Drop for ContextGuard {
     fn drop(&mut self) {
-        unsafe { raw::RedisModule_ThreadSafeContextUnlock.unwrap()(self.ctx.ctx) };
+        unsafe {
+            raw::RedisModule_ThreadSafeContextUnlock.unwrap()(self.ctx.ctx);
+            raw::RedisModule_FreeThreadSafeContext.unwrap()(self.ctx.ctx);
+        };
     }
 }
 
