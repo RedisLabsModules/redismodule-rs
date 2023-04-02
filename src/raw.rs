@@ -659,8 +659,7 @@ pub fn load_signed(rdb: *mut RedisModuleIO) -> Result<i64, Error> {
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn load_string(rdb: *mut RedisModuleIO) -> Result<RedisString, Error> {
     let p = unsafe { load(rdb, |rdb| RedisModule_LoadString.unwrap()(rdb))? };
-    let ctx = unsafe { RedisModule_GetContextFromIO.unwrap()(rdb) };
-    Ok(RedisString::from_redis_module_string(ctx, p))
+    Ok(RedisString::from_redis_module_string(ptr::null_mut(), p))
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
