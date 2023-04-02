@@ -178,17 +178,19 @@ pub struct Context {
 /// that can happened by forgeting to unset the user.
 pub struct ContextUserScope<'ctx> {
     ctx: &'ctx Context,
+    user: *mut raw::RedisModuleUser,
 }
 
 impl<'ctx> Drop for ContextUserScope<'ctx> {
     fn drop(&mut self) {
         self.ctx.deautenticate_user();
+        unsafe{raw::RedisModule_FreeModuleUser.unwrap()(self.user)};
     }
 }
 
 impl<'ctx> ContextUserScope<'ctx> {
-    fn new(ctx: &'ctx Context) -> ContextUserScope<'ctx> {
-        ContextUserScope { ctx }
+    fn new(ctx: &'ctx Context, user: *mut raw::RedisModuleUser) -> ContextUserScope<'ctx> {
+        ContextUserScope { ctx, user }
     }
 }
 
@@ -617,7 +619,7 @@ impl Context {
             return Err(RedisError::Str("User does not exists or disabled"));
         }
         unsafe { raw::RedisModule_SetContextUser.unwrap()(self.ctx, user) };
-        Ok(ContextUserScope::new(self))
+        Ok(ContextUserScope::new(self, user))
     }
 
     fn deautenticate_user(&self) {

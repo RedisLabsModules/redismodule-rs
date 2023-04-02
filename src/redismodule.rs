@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 use std::convert::TryFrom;
 use std::ffi::CString;
-use std::fmt;
+use std::{fmt, ptr};
 use std::fmt::Display;
 use std::ops::Deref;
 use std::os::raw::{c_char, c_int, c_void};
@@ -133,7 +133,8 @@ impl RedisString {
     /// `safe_clone` gets a context reference which indicating that Redis GIL is held.
     pub fn safe_clone(&self, ctx: &Context) -> Self {
         // RedisString are *not* atomic ref counted, so we must get a lock indicator to clone them.
-        raw::string_retain_string(ctx.ctx, self.inner);
+        // notice that it is unsafe to clone the string with the same Redis context as this context might get free.
+        raw::string_retain_string(ptr::null_mut(), self.inner);
         Self {
             ctx: ctx.ctx,
             inner: self.inner,
@@ -300,8 +301,9 @@ impl Borrow<str> for RedisString {
 impl Clone for RedisString {
     fn clone(&self) -> Self {
         let inner =
-            unsafe { raw::RedisModule_CreateStringFromString.unwrap()(self.ctx, self.inner) };
-        Self::new(NonNull::new(self.ctx), inner)
+            // notice that it is unsafe to clone the string with the same Redis context as this context might get free.
+            unsafe { raw::RedisModule_CreateStringFromString.unwrap()(ptr::null_mut(), self.inner) };
+        Self::from_redis_module_string(ptr::null_mut(), inner)
     }
 }
 

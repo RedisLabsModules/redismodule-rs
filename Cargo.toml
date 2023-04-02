@@ -114,6 +114,7 @@ anyhow = "1.0.38"
 redis = "0.22.1"
 lazy_static = "1.4.0"
 redis-module-derive = { path = "./redismodule-rs-derive"}
+redis-module = { path = "./", features = ["test", "experimental-api"]}
 
 [build-dependencies]
 bindgen = "0.64"
