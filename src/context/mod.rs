@@ -1,5 +1,7 @@
 use bitflags::bitflags;
+use redis_module_derive::redismodule_api;
 use std::ffi::CString;
+use std::os::raw::c_void;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr::{self, NonNull};
 use std::sync::atomic::{AtomicPtr, Ordering};
@@ -671,6 +673,32 @@ impl Context {
         let acl_permission_result: Result<(), &str> = acl_permission_result.into();
         acl_permission_result.map_err(|_e| RedisError::Str("User does not have permissions on key"))
     }
+
+    #[redismodule_api(RedisModule_AddPostNotificationJob)]
+    pub fn add_post_notification_job<F: Fn(&Context)>(self, callback: F) {
+        let callback = Box::into_raw(Box::new(callback));
+        unsafe {
+            raw::RedisModule_AddPostNotificationJob.unwrap()(
+                self.ctx,
+                Some(post_notification_job::<F>),
+                callback as *mut c_void,
+                Some(post_notification_job_free_callback::<F>),
+            );
+        }
+    }
+}
+
+extern "C" fn post_notification_job_free_callback<F: Fn(&Context)>(pd: *mut c_void) {
+    unsafe { Box::from_raw(pd as *mut F) };
+}
+
+extern "C" fn post_notification_job<F: Fn(&Context)>(
+    ctx: *mut raw::RedisModuleCtx,
+    pd: *mut c_void,
+) {
+    let callback = unsafe { &*(pd as *mut F) };
+    let ctx = Context::new(ctx);
+    callback(&ctx);
 }
 
 unsafe impl RedisLockIndicator for Context {}

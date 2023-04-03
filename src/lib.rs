@@ -5,6 +5,7 @@ use strum_macros::AsRefStr;
 extern crate num_traits;
 
 pub mod alloc;
+pub mod apierror;
 pub mod error;
 pub mod native_types;
 pub mod raw;
