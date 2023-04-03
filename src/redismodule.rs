@@ -133,7 +133,10 @@ impl RedisString {
     /// `safe_clone` gets a context reference which indicating that Redis GIL is held.
     pub fn safe_clone(&self, _ctx: &Context) -> Self {
         // RedisString are *not* atomic ref counted, so we must get a lock indicator to clone them.
-        // notice that it is unsafe to clone the string with the same Redis context as this context might get free.
+        // Alos notice that Redis allows us to create RedisModuleString with NULL context
+        // so we use ptr::null_mut() instead of the curren RedisString context.
+        // We do this because we can not promise the new RedisString will not outlive the current
+        // context and we want them to be independent.
         raw::string_retain_string(ptr::null_mut(), self.inner);
         Self {
             ctx: ptr::null_mut(),
@@ -301,7 +304,10 @@ impl Borrow<str> for RedisString {
 impl Clone for RedisString {
     fn clone(&self) -> Self {
         let inner =
-            // notice that it is unsafe to clone the string with the same Redis context as this context might get free.
+            // Redis allows us to create RedisModuleString with NULL context
+            // so we use ptr::null_mut() instead of the curren RedisString context.
+            // We do this because we can not promise the new RedisString will not outlive the current
+            // context and we want them to be independent.
             unsafe { raw::RedisModule_CreateStringFromString.unwrap()(ptr::null_mut(), self.inner) };
         Self::from_redis_module_string(ptr::null_mut(), inner)
     }
@@ -356,7 +362,11 @@ impl<'de> serde::de::Visitor<'de> for RedisStringVisitor {
     where
         V: SeqAccess<'de>,
     {
-        let mut v = Vec::new();
+        let mut v = if let Some(size_hint) = visitor.size_hint() {
+            Vec::with_capacity(size_hint)
+        } else {
+            Vec::new()
+        };
         while let Some(elem) = visitor.next_element()? {
             v.push(elem);
         }

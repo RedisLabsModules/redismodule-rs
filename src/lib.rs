@@ -42,7 +42,7 @@ pub use crate::context::CallOptions;
 pub use crate::context::CallOptionsBuilder;
 pub use crate::context::Context;
 pub use crate::context::ContextFlags;
-pub use crate::context::DetachContext;
+pub use crate::context::DetachedContext;
 pub use crate::raw::*;
 pub use crate::redismodule::*;
 use backtrace::Backtrace;

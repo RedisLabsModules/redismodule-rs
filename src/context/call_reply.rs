@@ -50,14 +50,14 @@ pub struct ErrorCallReply<'root> {
 
 #[derive(Debug)]
 pub enum ErrorReply<'root> {
-    Msg(String),
+    Message(String),
     RedisError(ErrorCallReply<'root>),
 }
 
 impl<'root> ErrorCallReply<'root> {
     /// Convert ErrorCallReply to String.
     /// Return None data is not a valid utf8.
-    pub fn to_string(&self) -> Option<String> {
+    pub fn to_utf8_string(&self) -> Option<String> {
         String::from_utf8(self.as_bytes().to_vec()).ok()
     }
 
@@ -72,19 +72,19 @@ impl<'root> ErrorCallReply<'root> {
 }
 
 impl<'root> ErrorReply<'root> {
-    /// Convert ErrorCallReply to String.
-    /// Return None data is not a valid utf8.
-    pub fn to_string(&self) -> Option<String> {
+    /// Convert [ErrorCallReply] to [String].
+    /// Return the [ErrorCallReply] data as `&[u8]`.
+    pub fn to_utf8_string(&self) -> Option<String> {
         match self {
-            ErrorReply::Msg(s) => Some(s.clone()),
-            ErrorReply::RedisError(r) => r.to_string(),
+            ErrorReply::Message(s) => Some(s.clone()),
+            ErrorReply::RedisError(r) => r.to_utf8_string(),
         }
     }
 
     /// Return the ErrorCallReply data as &[u8]
     pub fn as_bytes(&self) -> &[u8] {
         match self {
-            ErrorReply::Msg(s) => s.as_bytes(),
+            ErrorReply::Message(s) => s.as_bytes(),
             ErrorReply::RedisError(r) => r.as_bytes(),
         }
     }
@@ -98,7 +98,7 @@ impl<'root> Drop for ErrorCallReply<'root> {
 
 impl<'root> Debug for ErrorCallReply<'root> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.to_string())
+        write!(f, "{:?}", self.to_utf8_string())
     }
 }
 

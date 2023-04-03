@@ -68,7 +68,7 @@ fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
     let call_options = CallOptionsBuilder::new().script_mode().errors_as_replies();
     let res: CallResult = ctx.call_ext::<&[&str; 0], _>("SHUTDOWN", &call_options.build(), &[]);
     if let Err(err) = res {
-        let error_msg = err.to_string().unwrap();
+        let error_msg = err.to_utf8_string().unwrap();
         if !error_msg.contains("not allow") {
             return Err(RedisError::String(format!(
                 "Failed to verify error messages, expected error message to contain 'not allow', error message: '{error_msg}'",

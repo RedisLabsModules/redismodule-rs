@@ -14,7 +14,7 @@ pub enum RedisError {
 impl<'root> From<ErrorCallReply<'root>> for RedisError {
     fn from(err: ErrorCallReply<'root>) -> Self {
         RedisError::String(
-            err.to_string()
+            err.to_utf8_string()
                 .unwrap_or("can not convert error into String".into()),
         )
     }
@@ -23,7 +23,7 @@ impl<'root> From<ErrorCallReply<'root>> for RedisError {
 impl<'root> From<ErrorReply<'root>> for RedisError {
     fn from(err: ErrorReply<'root>) -> Self {
         RedisError::String(
-            err.to_string()
+            err.to_utf8_string()
                 .unwrap_or("can not convert error into String".into()),
         )
     }

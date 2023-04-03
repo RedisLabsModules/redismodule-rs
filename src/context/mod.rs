@@ -1,8 +1,8 @@
 use bitflags::bitflags;
-use std::cell::UnsafeCell;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr::{self, NonNull};
+use std::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::raw::{ModuleOptions, Version};
@@ -121,22 +121,22 @@ impl CallOptionsBuilder {
 /// This struct allows logging when the Redis GIL is not acquired.
 /// It is implemented `Send` and `Sync` so it can safely be used
 /// from within different threads.
-pub struct DetachContext {
-    ctx: UnsafeCell<Option<NonNull<raw::RedisModuleCtx>>>,
+pub struct DetachedContext {
+    ctx: AtomicPtr<raw::RedisModuleCtx>,
 }
 
-impl Default for DetachContext {
+impl Default for DetachedContext {
     fn default() -> Self {
-        DetachContext {
-            ctx: UnsafeCell::new(None),
+        DetachedContext {
+            ctx: AtomicPtr::new(ptr::null_mut()),
         }
     }
 }
 
-impl DetachContext {
+impl DetachedContext {
     pub fn log(&self, level: LogLevel, message: &str) {
-        let c = unsafe { &*self.ctx.get() };
-        crate::logging::log_internal(c.map_or(ptr::null_mut(), |v| v.as_ptr()), level, message);
+        let c = self.ctx.load(Ordering::Relaxed);
+        crate::logging::log_internal(c, level, message);
     }
 
     pub fn log_debug(&self, message: &str) {
@@ -156,14 +156,13 @@ impl DetachContext {
     }
 
     pub fn set_context(&self, ctx: &Context) {
-        let curr = unsafe { &mut *self.ctx.get() };
         let ctx = unsafe { raw::RedisModule_GetDetachedThreadSafeContext.unwrap()(ctx.ctx) };
-        *curr = NonNull::new(ctx);
+        self.ctx.store(ctx, Ordering::Relaxed)
     }
 }
 
-unsafe impl Send for DetachContext {}
-unsafe impl Sync for DetachContext {}
+unsafe impl Send for DetachedContext {}
+unsafe impl Sync for DetachedContext {}
 
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
@@ -609,7 +608,8 @@ impl Context {
 
     /// Attach the given user to the current context so each operation performed from
     /// now on using this context will be validated againts this new user.
-    /// Return Status::Ok on success and Status::Err or failure.
+    /// Return [ContextUserScope] which make sure to unset the user when freed and
+    /// can not outlive the current [Context].
     pub fn autenticate_user(
         &self,
         user_name: &RedisString,

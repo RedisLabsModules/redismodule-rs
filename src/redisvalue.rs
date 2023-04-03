@@ -182,7 +182,7 @@ impl<'root> From<&CallResult<'root>> for RedisValue {
                 // RedisValue does not support error, we can change that but to avoid.
                 // drastic changes and try to keep backword compatability, currently
                 // we will stansform the error into a simple String.
-                RedisValue::SimpleString(e.to_string().unwrap())
+                RedisValue::SimpleString(e.to_utf8_string().unwrap())
             },
             |v| (v).into(),
         )

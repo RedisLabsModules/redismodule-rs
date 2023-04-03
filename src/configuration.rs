@@ -267,14 +267,11 @@ pub fn get_i64_default_config_value(
     name: &str,
     default: i64,
 ) -> Result<i64, RedisError> {
-    let arg = find_config_value(args, name);
-    if let Some(arg) = arg {
+    find_config_value(args, name).map_or(Ok(default), |arg| {
         arg.try_as_str()?
             .parse::<i64>()
             .map_err(|e| RedisError::String(e.to_string()))
-    } else {
-        Ok(default)
-    }
+    })
 }
 
 extern "C" fn string_configuration_set<T: ConfigurationValue<RedisString> + 'static>(
@@ -334,12 +331,7 @@ pub fn get_string_default_config_value<'a>(
     name: &str,
     default: &'a str,
 ) -> Result<&'a str, RedisError> {
-    let arg = find_config_value(args, name);
-    if let Some(arg) = arg {
-        arg.try_as_str()
-    } else {
-        Ok(default)
-    }
+    find_config_value(args, name).map_or(Ok(default), |arg| arg.try_as_str())
 }
 
 extern "C" fn bool_configuration_set<T: ConfigurationValue<bool> + 'static>(
@@ -393,12 +385,7 @@ pub fn get_bool_default_config_value(
     name: &str,
     default: bool,
 ) -> Result<bool, RedisError> {
-    let arg = find_config_value(args, name);
-    if let Some(arg) = arg {
-        Ok(arg.try_as_str()? == "yes")
-    } else {
-        Ok(default)
-    }
+    find_config_value(args, name).map_or(Ok(default), |arg| Ok(arg.try_as_str()? == "yes"))
 }
 
 extern "C" fn enum_configuration_set<
@@ -479,8 +466,7 @@ pub fn get_enum_default_config_value<G: EnumConfigurationValue>(
     name: &str,
     default: G,
 ) -> Result<G, RedisError> {
-    let arg = find_config_value(args, name);
-    if let Some(arg) = arg {
+    find_config_value(args, name).map_or(Ok(default.clone()), |arg| {
         let (names, vals) = default.get_options();
         let (index, _name) = names
             .into_iter()
@@ -491,9 +477,7 @@ pub fn get_enum_default_config_value<G: EnumConfigurationValue>(
                 arg.to_string_lossy()
             )))?;
         G::try_from(vals[index])
-    } else {
-        Ok(default)
-    }
+    })
 }
 
 pub fn module_config_get(
@@ -520,7 +504,7 @@ pub fn module_config_get(
     );
     let res = res.map_err(|e| {
         RedisError::String(
-            e.to_string()
+            e.to_utf8_string()
                 .unwrap_or("Failed converting error to utf8".into()),
         )
     })?;
@@ -558,7 +542,7 @@ pub fn module_config_set(
     );
     let res = res.map_err(|e| {
         RedisError::String(
-            e.to_string()
+            e.to_utf8_string()
                 .unwrap_or("Failed converting error to utf8".into()),
         )
     })?;
