@@ -127,10 +127,9 @@ impl RedisString {
         Self { ctx, inner }
     }
 
-    /// Safely clone [RedisString]
-    /// In general `RedisModuleString` is none atomic ref counted object.
-    /// So it is not safe to clone it if Redis GIL is not hold.
-    /// `safe_clone` gets a context reference which indicating that Redis GIL is held.
+    /// In general, [RedisModuleString] is none atomic ref counted object.
+    /// So it is not safe to clone it if Redis GIL is not held.
+    /// [Self::safe_clone] gets a context reference which indicates that Redis GIL is held.
     pub fn safe_clone(&self, _ctx: &Context) -> Self {
         // RedisString are *not* atomic ref counted, so we must get a lock indicator to clone them.
         // Alos notice that Redis allows us to create RedisModuleString with NULL context

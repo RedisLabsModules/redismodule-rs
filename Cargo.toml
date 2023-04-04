@@ -107,7 +107,7 @@ strum_macros = "0.24"
 #failure = "0.1"
 backtrace = "0.3"
 linkme = "0.3"
-serde = { version = "1.0.159", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
 anyhow = "1.0.38"
