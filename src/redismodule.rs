@@ -127,7 +127,7 @@ impl RedisString {
         Self { ctx, inner }
     }
 
-    /// Safely clone `RedisString`
+    /// Safely clone [RedisString]
     /// In general `RedisModuleString` is none atomic ref counted object.
     /// So it is not safe to clone it if Redis GIL is not hold.
     /// `safe_clone` gets a context reference which indicating that Redis GIL is held.
