@@ -72,8 +72,7 @@ impl<'root> ErrorCallReply<'root> {
 }
 
 impl<'root> ErrorReply<'root> {
-    /// Convert [ErrorCallReply] to [String].
-    /// Return the [ErrorCallReply] data as `&[u8]`.
+    /// Convert [ErrorCallReply] to [String] or [None] if its not a valid utf8.
     pub fn to_utf8_string(&self) -> Option<String> {
         match self {
             ErrorReply::Message(s) => Some(s.clone()),

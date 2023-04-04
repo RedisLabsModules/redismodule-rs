@@ -155,9 +155,14 @@ impl DetachedContext {
         self.log(LogLevel::Warning, message);
     }
 
-    pub fn set_context(&self, ctx: &Context) {
+    pub fn set_context(&self, ctx: &Context) -> Result<(), RedisError> {
+        let c = self.ctx.load(Ordering::Relaxed);
+        if c.is_null() {
+            return Err(RedisError::Str("Detached context is already set"));
+        }
         let ctx = unsafe { raw::RedisModule_GetDetachedThreadSafeContext.unwrap()(ctx.ctx) };
-        self.ctx.store(ctx, Ordering::Relaxed)
+        self.ctx.store(ctx, Ordering::Relaxed);
+        Ok(())
     }
 }
 

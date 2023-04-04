@@ -134,7 +134,7 @@ impl RedisString {
     pub fn safe_clone(&self, _ctx: &Context) -> Self {
         // RedisString are *not* atomic ref counted, so we must get a lock indicator to clone them.
         // Alos notice that Redis allows us to create RedisModuleString with NULL context
-        // so we use ptr::null_mut() instead of the curren RedisString context.
+        // so we use [std::ptr::null_mut()] instead of the curren RedisString context.
         // We do this because we can not promise the new RedisString will not outlive the current
         // context and we want them to be independent.
         raw::string_retain_string(ptr::null_mut(), self.inner);
@@ -305,7 +305,7 @@ impl Clone for RedisString {
     fn clone(&self) -> Self {
         let inner =
             // Redis allows us to create RedisModuleString with NULL context
-            // so we use ptr::null_mut() instead of the curren RedisString context.
+            // so we use [std::ptr::null_mut()] instead of the curren RedisString context.
             // We do this because we can not promise the new RedisString will not outlive the current
             // context and we want them to be independent.
             unsafe { raw::RedisModule_CreateStringFromString.unwrap()(ptr::null_mut(), self.inner) };
