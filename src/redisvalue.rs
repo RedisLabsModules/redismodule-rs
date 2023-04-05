@@ -187,7 +187,7 @@ impl<'root> From<&CallResult<'root>> for RedisValue {
                 // [RedisValue] does not support error, we can change that but to avoid
                 // drastic changes and try to keep backword compatability, currently
                 // we will stansform the error into a String buffer.
-                RedisValue::BulkString(String::from_utf8_lossy(e.as_bytes()).to_string())
+                RedisValue::StringBuffer(e.as_bytes().to_vec())
             },
             |v| (v).into(),
         )
