@@ -52,11 +52,8 @@ impl<'root> Debug for StringCallReply<'root> {
 impl<'root> Display for StringCallReply<'root> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(
-            self.to_string()
-                .as_ref()
-                .map(|v| v.as_str())
-                .unwrap_or("None"),
-            f,
+            &String::from_utf8_lossy(self.as_bytes()),
+            f
         )
     }
 }
@@ -104,10 +101,7 @@ impl<'root> Debug for ErrorCallReply<'root> {
 impl<'root> Display for ErrorCallReply<'root> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(
-            self.to_string()
-                .as_ref()
-                .map(|v| v.as_str())
-                .unwrap_or("None"),
+            &String::from_utf8_lossy(self.as_bytes()),
             f,
         )
     }
