@@ -184,10 +184,10 @@ impl<'root> From<&CallResult<'root>> for RedisValue {
     fn from(reply: &CallResult<'root>) -> Self {
         reply.as_ref().map_or_else(
             |e| {
-                // RedisValue does not support error, we can change that but to avoid.
+                // [RedisValue] does not support error, we can change that but to avoid
                 // drastic changes and try to keep backword compatability, currently
-                // we will stansform the error into a simple String.
-                RedisValue::SimpleString(e.to_string().unwrap())
+                // we will stansform the error into a String buffer.
+                RedisValue::StringBuffer(e.as_bytes().to_vec())
             },
             |v| (v).into(),
         )

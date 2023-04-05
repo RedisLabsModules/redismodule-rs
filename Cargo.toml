@@ -107,12 +107,14 @@ strum_macros = "0.24"
 #failure = "0.1"
 backtrace = "0.3"
 linkme = "0.3"
+serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
 anyhow = "1.0.38"
 redis = "0.22.1"
 lazy_static = "1.4.0"
 redis-module-derive = { path = "./redismodule-rs-derive"}
+redis-module = { path = "./", features = ["test", "experimental-api"]}
 
 [build-dependencies]
 bindgen = "0.64"

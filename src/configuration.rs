@@ -1,5 +1,5 @@
 use crate::context::thread_safe::RedisLockIndicator;
-use crate::{raw, RedisGILGuard};
+use crate::{raw, CallOptionResp, CallOptionsBuilder, CallResult, RedisGILGuard, RedisValue};
 use crate::{Context, RedisError, RedisString};
 use bitflags::bitflags;
 use std::ffi::{c_char, c_int, c_longlong, c_void, CStr, CString};
@@ -41,6 +41,7 @@ macro_rules! enum_configuration {
     ($(#[$meta:meta])* $vis:vis enum $name:ident {
         $($(#[$vmeta:meta])* $vname:ident = $val:expr,)*
     }) => {
+        use $crate::configuration::EnumConfigurationValue;
         $(#[$meta])*
         $vis enum $name {
             $($(#[$vmeta])* $vname = $val,)*
@@ -140,7 +141,7 @@ impl ConfigurationValue<i64> for AtomicI64 {
 impl ConfigurationValue<RedisString> for RedisGILGuard<String> {
     fn get(&self, ctx: &ConfigurationContext) -> RedisString {
         let value = self.lock(ctx);
-        RedisString::create(None, &value)
+        RedisString::create(None, value.as_str())
     }
     fn set(&self, ctx: &ConfigurationContext, val: RedisString) -> Result<(), RedisError> {
         let mut value = self.lock(ctx);
@@ -152,7 +153,7 @@ impl ConfigurationValue<RedisString> for RedisGILGuard<String> {
 impl ConfigurationValue<RedisString> for Mutex<String> {
     fn get(&self, _ctx: &ConfigurationContext) -> RedisString {
         let value = self.lock().unwrap();
-        RedisString::create(None, &value)
+        RedisString::create(None, value.as_str())
     }
     fn set(&self, _ctx: &ConfigurationContext, val: RedisString) -> Result<(), RedisError> {
         let mut value = self.lock().unwrap();
@@ -184,7 +185,7 @@ impl<G, T: ConfigurationValue<G> + 'static> ConfigrationPrivateData<G, T> {
         // we know the GIL is held so it is safe to use Context::dummy().
         let configuration_ctx = ConfigurationContext::new();
         if let Err(e) = self.variable.set(&configuration_ctx, val) {
-            let error_msg = RedisString::create(None, &e.to_string());
+            let error_msg = RedisString::create(None, e.to_string().as_str());
             unsafe { *err = error_msg.take() };
             return raw::REDISMODULE_ERR as i32;
         }
@@ -254,6 +255,25 @@ pub fn register_i64_configuration<T: ConfigurationValue<i64>>(
     }
 }
 
+fn find_config_value<'a>(args: &'a [RedisString], name: &str) -> Option<&'a RedisString> {
+    args.into_iter()
+        .skip_while(|item| !item.as_slice().eq(name.as_bytes()))
+        .skip(1)
+        .next()
+}
+
+pub fn get_i64_default_config_value(
+    args: &[RedisString],
+    name: &str,
+    default: i64,
+) -> Result<i64, RedisError> {
+    find_config_value(args, name).map_or(Ok(default), |arg| {
+        arg.try_as_str()?
+            .parse::<i64>()
+            .map_err(|e| RedisError::String(e.to_string()))
+    })
+}
+
 extern "C" fn string_configuration_set<T: ConfigurationValue<RedisString> + 'static>(
     name: *const c_char,
     val: *mut raw::RedisModuleString,
@@ -306,6 +326,14 @@ pub fn register_string_configuration<T: ConfigurationValue<RedisString>>(
     }
 }
 
+pub fn get_string_default_config_value<'a>(
+    args: &'a [RedisString],
+    name: &str,
+    default: &'a str,
+) -> Result<&'a str, RedisError> {
+    find_config_value(args, name).map_or(Ok(default), |arg| arg.try_as_str())
+}
+
 extern "C" fn bool_configuration_set<T: ConfigurationValue<bool> + 'static>(
     name: *const c_char,
     val: i32,
@@ -352,6 +380,14 @@ pub fn register_bool_configuration<T: ConfigurationValue<bool>>(
     }
 }
 
+pub fn get_bool_default_config_value(
+    args: &[RedisString],
+    name: &str,
+    default: bool,
+) -> Result<bool, RedisError> {
+    find_config_value(args, name).map_or(Ok(default), |arg| Ok(arg.try_as_str()? == "yes"))
+}
+
 extern "C" fn enum_configuration_set<
     G: EnumConfigurationValue,
     T: ConfigurationValue<G> + 'static,
@@ -366,7 +402,7 @@ extern "C" fn enum_configuration_set<
     match val {
         Ok(val) => private_data.set_val(name, val, err),
         Err(e) => {
-            let error_msg = RedisString::create(None, &e.to_string());
+            let error_msg = RedisString::create(None, e.to_string().as_str());
             unsafe { *err = error_msg.take() };
             raw::REDISMODULE_ERR as i32
         }
@@ -425,22 +461,90 @@ pub fn register_enum_configuration<G: EnumConfigurationValue, T: ConfigurationVa
     }
 }
 
-pub fn apply_module_args_as_configuration(
+pub fn get_enum_default_config_value<G: EnumConfigurationValue>(
+    args: &[RedisString],
+    name: &str,
+    default: G,
+) -> Result<G, RedisError> {
+    find_config_value(args, name).map_or(Ok(default.clone()), |arg| {
+        let (names, vals) = default.get_options();
+        let (index, _name) = names
+            .into_iter()
+            .enumerate()
+            .find(|(_index, item)| item.as_bytes().eq(arg.as_slice()))
+            .ok_or(RedisError::String(format!(
+                "Enum '{}' not exists",
+                arg.to_string_lossy()
+            )))?;
+        G::try_from(vals[index])
+    })
+}
+
+pub fn module_config_get(
     ctx: &Context,
-    mut args: Vec<RedisString>,
-) -> Result<(), RedisError> {
-    if args.len() == 0 {
-        return Ok(());
-    }
-    if args.len() % 2 != 0 {
-        return Err(RedisError::Str(
-            "Arguments lenght is not devided by 2 (require to be read as module configuration).",
-        ));
-    }
-    args.insert(0, ctx.create_string("set"));
-    ctx.call(
+    args: Vec<RedisString>,
+    name: &str,
+) -> Result<RedisValue, RedisError> {
+    let mut args: Vec<String> = args
+        .into_iter()
+        .skip(1)
+        .map(|e| format!("{}.{}", name, e.to_string_lossy()))
+        .collect();
+    args.insert(0, "get".into());
+    let res: CallResult = ctx.call_ext(
         "config",
-        args.iter().collect::<Vec<&RedisString>>().as_slice(),
-    )?;
-    Ok(())
+        &CallOptionsBuilder::new()
+            .errors_as_replies()
+            .resp(CallOptionResp::Auto)
+            .build(),
+        args.iter()
+            .map(|v| v.as_str())
+            .collect::<Vec<&str>>()
+            .as_slice(),
+    );
+    let res = res.map_err(|e| {
+        RedisError::String(
+            e.to_utf8_string()
+                .unwrap_or("Failed converting error to utf8".into()),
+        )
+    })?;
+    Ok((&res).into())
+}
+
+pub fn module_config_set(
+    ctx: &Context,
+    args: Vec<RedisString>,
+    name: &str,
+) -> Result<RedisValue, RedisError> {
+    let mut args: Vec<String> = args
+        .into_iter()
+        .skip(1)
+        .enumerate()
+        .map(|(index, e)| {
+            if index % 2 == 0 {
+                format!("{}.{}", name, e.to_string_lossy())
+            } else {
+                e.to_string_lossy()
+            }
+        })
+        .collect();
+    args.insert(0, "set".into());
+    let res: CallResult = ctx.call_ext(
+        "config",
+        &CallOptionsBuilder::new()
+            .errors_as_replies()
+            .resp(CallOptionResp::Auto)
+            .build(),
+        args.iter()
+            .map(|v| v.as_str())
+            .collect::<Vec<&str>>()
+            .as_slice(),
+    );
+    let res = res.map_err(|e| {
+        RedisError::String(
+            e.to_utf8_string()
+                .unwrap_or("Failed converting error to utf8".into()),
+        )
+    })?;
+    Ok((&res).into())
 }

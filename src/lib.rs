@@ -30,16 +30,19 @@ pub use crate::raw::NotifyEvent;
 
 pub use crate::configuration::ConfigurationValue;
 pub use crate::configuration::EnumConfigurationValue;
-pub use crate::context::call_reply::{CallReply, CallResult};
+pub use crate::context::call_reply::{CallReply, CallResult, ErrorReply};
 pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::server_events;
+pub use crate::context::thread_safe::ContextGuard;
 pub use crate::context::thread_safe::RedisGILGuard;
+pub use crate::context::thread_safe::RedisLockIndicator;
 pub use crate::context::AclPermissions;
 pub use crate::context::CallOptionResp;
 pub use crate::context::CallOptions;
 pub use crate::context::CallOptionsBuilder;
 pub use crate::context::Context;
 pub use crate::context::ContextFlags;
+pub use crate::context::DetachedContext;
 pub use crate::raw::*;
 pub use crate::redismodule::*;
 use backtrace::Backtrace;
@@ -77,4 +80,9 @@ pub fn base_info_func(
         // Add module info
         func(ctx, for_crash_report);
     }
+}
+
+/// Initialize RedisModuleAPI without register as a module.
+pub fn init_api(ctx: &Context) {
+    unsafe { crate::raw::Export_RedisModule_InitAPI(ctx.ctx) };
 }

@@ -9,8 +9,7 @@ use std::sync::{
 use lazy_static::lazy_static;
 use redis_module::{
     configuration::{ConfigurationContext, ConfigurationFlags},
-    ConfigurationValue, Context, EnumConfigurationValue, RedisGILGuard, RedisResult, RedisString,
-    RedisValue,
+    ConfigurationValue, Context, RedisGILGuard, RedisResult, RedisString, RedisValue,
 };
 
 enum_configuration! {

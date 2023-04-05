@@ -8,9 +8,8 @@ extern crate num_traits;
 
 use std::cmp::Ordering;
 use std::ffi::{CStr, CString};
-use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
+use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong, c_void};
 use std::ptr;
-use std::ptr::NonNull;
 use std::slice;
 
 use bitflags::bitflags;
@@ -20,7 +19,7 @@ use num_traits::FromPrimitive;
 
 use crate::error::Error;
 pub use crate::redisraw::bindings::*;
-use crate::{Context, RedisString};
+use crate::{context::StrCallArgs, Context, RedisString};
 use crate::{RedisBuffer, RedisError};
 
 bitflags! {
@@ -178,6 +177,8 @@ extern "C" {
         module_version: c_int,
         api_version: c_int,
     ) -> c_int;
+
+    pub fn Export_RedisModule_InitAPI(ctx: *mut RedisModuleCtx) -> c_void;
 }
 
 ///////////////////////////////////////////////////////////////
@@ -658,8 +659,7 @@ pub fn load_signed(rdb: *mut RedisModuleIO) -> Result<i64, Error> {
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn load_string(rdb: *mut RedisModuleIO) -> Result<RedisString, Error> {
     let p = unsafe { load(rdb, |rdb| RedisModule_LoadString.unwrap()(rdb))? };
-    let ctx = unsafe { RedisModule_GetContextFromIO.unwrap()(rdb) };
-    Ok(RedisString::from_redis_module_string(ctx, p))
+    Ok(RedisString::from_redis_module_string(ptr::null_mut(), p))
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -674,13 +674,13 @@ pub fn load_string_buffer(rdb: *mut RedisModuleIO) -> Result<RedisBuffer, Error>
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Status {
-    let terminated_args: Vec<RedisString> = args
-        .iter()
-        .map(|s| RedisString::create(NonNull::new(ctx), s))
-        .collect();
-
-    let inner_args: Vec<*mut RedisModuleString> = terminated_args.iter().map(|s| s.inner).collect();
+pub fn replicate<'a, T: Into<StrCallArgs<'a>>>(
+    ctx: *mut RedisModuleCtx,
+    command: &str,
+    args: T,
+) -> Status {
+    let mut call_args: StrCallArgs = args.into();
+    let final_args = call_args.args_mut();
 
     let cmd = CString::new(command).unwrap();
 
@@ -689,8 +689,8 @@ pub fn replicate(ctx: *mut RedisModuleCtx, command: &str, args: &[&str]) -> Stat
             ctx,
             cmd.as_ptr(),
             FMT,
-            inner_args.as_ptr(),
-            terminated_args.len(),
+            final_args.as_ptr(),
+            final_args.len(),
         )
         .into()
     }
@@ -708,6 +708,18 @@ pub fn load_float(rdb: *mut RedisModuleIO) -> Result<f32, Error> {
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn save_string(rdb: *mut RedisModuleIO, buf: &str) {
+    unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr().cast::<c_char>(), buf.len()) };
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+/// Save the `RedisString` into the RDB
+pub fn save_redis_string(rdb: *mut RedisModuleIO, s: &RedisString) {
+    unsafe { RedisModule_SaveString.unwrap()(rdb, s.inner) };
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+/// Save the `&[u8]` into the RDB
+pub fn save_slice(rdb: *mut RedisModuleIO, buf: &[u8]) {
     unsafe { RedisModule_SaveStringBuffer.unwrap()(rdb, buf.as_ptr().cast::<c_char>(), buf.len()) };
 }
 
@@ -819,7 +831,7 @@ pub fn get_keyspace_events() -> NotifyEvent {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Version {
     pub major: i32,
     pub minor: i32,

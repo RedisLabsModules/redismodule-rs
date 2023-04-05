@@ -63,7 +63,7 @@ pub struct ErrorCallReply<'root> {
 impl<'root> ErrorCallReply<'root> {
     /// Convert ErrorCallReply to String.
     /// Return None data is not a valid utf8.
-    pub fn to_string(&self) -> Option<String> {
+    pub fn to_utf8_string(&self) -> Option<String> {
         String::from_utf8(self.as_bytes().to_vec()).ok()
     }
 
@@ -87,7 +87,7 @@ impl<'root> Debug for ErrorCallReply<'root> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut debug_struct = f.debug_struct("ErrorCallReply");
         let debug_struct = debug_struct.field("reply", &self.reply);
-        match self.to_string() {
+        match self.to_utf8_string() {
             Some(s) => debug_struct.field("value", &s),
             None => debug_struct.field("value", &self.as_bytes()),
         }
@@ -96,6 +96,36 @@ impl<'root> Debug for ErrorCallReply<'root> {
 }
 
 impl<'root> Display for ErrorCallReply<'root> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&String::from_utf8_lossy(self.as_bytes()), f)
+    }
+}
+
+#[derive(Debug)]
+pub enum ErrorReply<'root> {
+    Message(String),
+    RedisError(ErrorCallReply<'root>),
+}
+
+impl<'root> ErrorReply<'root> {
+    /// Convert [ErrorCallReply] to [String] or [None] if its not a valid utf8.
+    pub fn to_utf8_string(&self) -> Option<String> {
+        match self {
+            ErrorReply::Message(s) => Some(s.clone()),
+            ErrorReply::RedisError(r) => r.to_utf8_string(),
+        }
+    }
+
+    /// Return the ErrorCallReply data as &[u8]
+    pub fn as_bytes(&self) -> &[u8] {
+        match self {
+            ErrorReply::Message(s) => s.as_bytes(),
+            ErrorReply::RedisError(r) => r.as_bytes(),
+        }
+    }
+}
+
+impl<'root> Display for ErrorReply<'root> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&String::from_utf8_lossy(self.as_bytes()), f)
     }
@@ -520,17 +550,16 @@ impl<'root> VerbatimStringCallReply<'root> {
     /// The first entry represents the format as &str, the second entry represent the data as &[u8].
     /// Return None if the format is not a valid utf8.
     pub fn as_parts(&self) -> Option<(&str, &[u8])> {
+        // RESP3 state that veribatim string format must be of size 3.
+        const FORMAT_LEN: usize = 3;
         let mut len: usize = 0;
-        let format: *const u8 = std::ptr::null();
+        let mut format: *const c_char = std::ptr::null();
         let reply_string: *mut u8 = unsafe {
-            RedisModule_CallReplyVerbatim.unwrap()(
-                self.reply.as_ptr(),
-                &mut len,
-                &mut (format as *const c_char),
-            ) as *mut u8
+            RedisModule_CallReplyVerbatim.unwrap()(self.reply.as_ptr(), &mut len, &mut format)
+                as *mut u8
         };
         Some((
-            std::str::from_utf8(unsafe { slice::from_raw_parts(format, 3) })
+            std::str::from_utf8(unsafe { slice::from_raw_parts(format as *const u8, FORMAT_LEN) })
                 .ok()
                 .unwrap(),
             unsafe { slice::from_raw_parts(reply_string, len) },
@@ -607,10 +636,10 @@ fn create_call_reply<'root>(reply: NonNull<RedisModuleCallReply>) -> CallResult<
             reply: reply,
             _dummy: PhantomData,
         })),
-        ReplyType::Error => Err(ErrorCallReply {
+        ReplyType::Error => Err(ErrorReply::RedisError(ErrorCallReply {
             reply: reply,
             _dummy: PhantomData,
-        }),
+        })),
         ReplyType::Array => Ok(CallReply::Array(ArrayCallReply {
             reply: reply,
             _dummy: PhantomData,
@@ -659,4 +688,4 @@ fn fmt_call_result(res: CallResult<'_>, f: &mut Formatter<'_>) -> fmt::Result {
     }
 }
 
-pub type CallResult<'root> = Result<CallReply<'root>, ErrorCallReply<'root>>;
+pub type CallResult<'root> = Result<CallReply<'root>, ErrorReply<'root>>;

@@ -91,7 +91,10 @@ unsafe impl RedisLockIndicator for ContextGuard {}
 
 impl Drop for ContextGuard {
     fn drop(&mut self) {
-        unsafe { raw::RedisModule_ThreadSafeContextUnlock.unwrap()(self.ctx.ctx) };
+        unsafe {
+            raw::RedisModule_ThreadSafeContextUnlock.unwrap()(self.ctx.ctx);
+            raw::RedisModule_FreeThreadSafeContext.unwrap()(self.ctx.ctx);
+        };
     }
 }
 
@@ -164,7 +167,8 @@ impl<B: Send> ThreadSafeContext<B> {
     /// similar to `std::sync::Mutex`.
     pub fn lock(&self) -> ContextGuard {
         unsafe { raw::RedisModule_ThreadSafeContextLock.unwrap()(self.ctx) };
-        let ctx = Context::new(self.ctx);
+        let ctx = unsafe { raw::RedisModule_GetThreadSafeContext.unwrap()(ptr::null_mut()) };
+        let ctx = Context::new(ctx);
         ContextGuard { ctx }
     }
 }

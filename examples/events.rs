@@ -9,15 +9,17 @@ use std::sync::atomic::{AtomicI64, Ordering};
 
 static NUM_KEY_MISSES: AtomicI64 = AtomicI64::new(0);
 
-fn on_event(ctx: &Context, event_type: NotifyEvent, event: &str, key: &str) {
+fn on_event(ctx: &Context, event_type: NotifyEvent, event: &str, key: &[u8]) {
     let msg = format!(
         "Received event: {:?} on key: {} via event: {}",
-        event_type, key, event
+        event_type,
+        std::str::from_utf8(key).unwrap(),
+        event
     );
     ctx.log_debug(msg.as_str());
 }
 
-fn on_stream(ctx: &Context, _event_type: NotifyEvent, _event: &str, _key: &str) {
+fn on_stream(ctx: &Context, _event_type: NotifyEvent, _event: &str, _key: &[u8]) {
     ctx.log_debug("Stream event received!");
 }
 
@@ -34,7 +36,7 @@ fn event_send(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     }
 }
 
-fn on_key_miss(_ctx: &Context, _event_type: NotifyEvent, _event: &str, _key: &str) {
+fn on_key_miss(_ctx: &Context, _event_type: NotifyEvent, _event: &str, _key: &[u8]) {
     NUM_KEY_MISSES.fetch_add(1, Ordering::SeqCst);
 }
 
@@ -56,7 +58,7 @@ redis_module! {
         [@EXPIRED @EVICTED: on_event],
         [@STREAM: on_stream],
         [@MISSED: on_key_miss],
-    ]
+    ],
 }
 
 //////////////////////////////////////////////////////
