@@ -6,6 +6,7 @@ use std::ptr::{self, NonNull};
 
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::raw::{ModuleOptions, Version};
+use crate::redisvalue::RedisValueKey;
 use crate::{add_info_field_long_long, add_info_field_str, raw, utils, Status};
 use crate::{add_info_section, LogLevel};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
@@ -310,6 +311,20 @@ impl Context {
         unsafe { raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into() }
     }
 
+    pub fn reply_with_key(&self, result: RedisValueKey) -> raw::Status {
+        match result {
+            RedisValueKey::Integer(i) => raw::reply_with_long_long(self.ctx, i),
+            RedisValueKey::String(s) => {
+                raw::reply_with_string_buffer(self.ctx, s.as_ptr().cast::<c_char>(), s.len())
+            }
+            RedisValueKey::BulkString(b) => {
+                raw::reply_with_string_buffer(self.ctx, b.as_ptr().cast::<c_char>(), b.len())
+            }
+            RedisValueKey::BulkRedisString(s) => raw::reply_with_string(self.ctx, s.inner),
+            RedisValueKey::Bool(b) => raw::reply_with_bool(self.ctx, b.into()),
+        }
+    }
+
     /// # Panics
     ///
     /// Will panic if methods used are missing in redismodule.h
@@ -367,7 +382,7 @@ impl Context {
                 raw::reply_with_map(self.ctx, map.len() as c_long);
 
                 for (key, value) in map {
-                    self.reply(Ok(key));
+                    self.reply_with_key(key);
                     self.reply(Ok(value));
                 }
 
@@ -377,7 +392,7 @@ impl Context {
             Ok(RedisValue::Set(set)) => {
                 raw::reply_with_set(self.ctx, set.len() as c_long);
                 set.into_iter().for_each(|e| {
-                    self.reply(Ok(e));
+                    self.reply_with_key(e);
                 });
 
                 raw::Status::Ok

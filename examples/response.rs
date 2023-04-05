@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate redis_module;
 
-use redis_module::{Context, NextArg, RedisError, RedisResult, RedisString, RedisValue};
+use redis_module::{
+    redisvalue::RedisValueKey, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue,
+};
 use std::collections::{HashMap, HashSet};
 
 fn map_mget(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
@@ -19,10 +21,10 @@ fn map_mget(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let res = match values {
         None => RedisValue::Null,
         Some(values) => {
-            let mut map: HashMap<RedisValue, RedisValue> = HashMap::with_capacity(fields.len());
+            let mut map: HashMap<RedisValueKey, RedisValue> = HashMap::with_capacity(fields.len());
             for (field, value) in values.into_iter() {
                 map.insert(
-                    RedisValue::BulkRedisString(field),
+                    RedisValueKey::BulkRedisString(field),
                     RedisValue::BulkRedisString(value),
                 );
             }
@@ -48,9 +50,9 @@ fn map_unique(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let res = match values {
         None => RedisValue::Null,
         Some(values) => {
-            let mut set: HashSet<RedisValue> = HashSet::new();
+            let mut set: HashSet<RedisValueKey> = HashSet::new();
             for (_, value) in values.into_iter() {
-                set.insert(RedisValue::BulkRedisString(value));
+                set.insert(RedisValueKey::BulkRedisString(value));
             }
             RedisValue::Set(set)
         }
