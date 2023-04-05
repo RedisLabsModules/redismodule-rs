@@ -1,10 +1,19 @@
 use crate::{context::call_reply::CallResult, CallReply, RedisError, RedisString};
 use std::{
     collections::{HashMap, HashSet},
-    hash::{Hash, Hasher},
+    hash::Hash,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub enum RedisValueKey {
+    Integer(i64),
+    String(String),
+    BulkRedisString(RedisString),
+    BulkString(Vec<u8>),
+    Bool(bool),
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum RedisValue {
     SimpleStringStatic(&'static str),
     SimpleString(String),
@@ -18,48 +27,10 @@ pub enum RedisValue {
     VerbatimString((String, Vec<u8>)),
     Array(Vec<RedisValue>),
     StaticError(&'static str),
-    Map(HashMap<RedisValue, RedisValue>),
-    Set(HashSet<RedisValue>),
+    Map(HashMap<RedisValueKey, RedisValue>),
+    Set(HashSet<RedisValueKey>),
     Null,
     NoReply, // No reply at all (as opposed to a Null reply)
-}
-
-impl Eq for RedisValue {}
-
-#[allow(clippy::derive_hash_xor_eq)]
-impl Hash for RedisValue {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            RedisValue::SimpleStringStatic(s) => s.hash(state),
-            RedisValue::SimpleString(s) => s.hash(state),
-            RedisValue::BulkString(s) => s.hash(state),
-            RedisValue::BulkRedisString(s) => s.hash(state),
-            RedisValue::StringBuffer(s) => s.hash(state),
-            RedisValue::Integer(i) => i.hash(state),
-            RedisValue::Bool(b) => b.hash(state),
-            RedisValue::Float(f) => f.to_bits().hash(state),
-            RedisValue::Array(a) => a.hash(state),
-            RedisValue::StaticError(a) => a.hash(state),
-            RedisValue::Map(m) => {
-                for (k, v) in m {
-                    k.hash(state);
-                    v.hash(state);
-                }
-            }
-            RedisValue::Set(s) => {
-                for v in s {
-                    v.hash(state);
-                }
-            }
-            RedisValue::BigNumber(a) => a.hash(state),
-            RedisValue::VerbatimString((format, data)) => {
-                format.hash(state);
-                data.hash(state);
-            }
-            RedisValue::Null => 0.hash(state),
-            RedisValue::NoReply => 0.hash(state),
-        }
-    }
 }
 
 impl TryFrom<RedisValue> for String {
@@ -148,6 +119,25 @@ impl<T: Into<Self>> From<Vec<T>> for RedisValue {
     }
 }
 
+impl<'root> TryFrom<&CallReply<'root>> for RedisValueKey {
+    type Error = RedisError;
+    fn try_from(reply: &CallReply<'root>) -> Result<Self, Self::Error> {
+        match reply {
+            CallReply::I64(reply) => Ok(RedisValueKey::Integer(reply.to_i64())),
+            CallReply::String(reply) => Ok(reply
+                .to_string()
+                .map_or(RedisValueKey::BulkString(reply.as_bytes().to_vec()), |v| {
+                    RedisValueKey::String(v)
+                })),
+            CallReply::Bool(b) => Ok(RedisValueKey::Bool(b.to_bool())),
+            _ => Err(RedisError::String(format!(
+                "Given CallReply can not be used as a map key or a set element, {:?}",
+                reply
+            ))),
+        }
+    }
+}
+
 impl<'root> From<&CallReply<'root>> for RedisValue {
     fn from(reply: &CallReply<'root>) -> Self {
         match reply {
@@ -161,10 +151,25 @@ impl<'root> From<&CallReply<'root>> for RedisValue {
             CallReply::Map(reply) => RedisValue::Map(
                 reply
                     .iter()
-                    .map(|(key, val)| ((&key).into(), (&val).into()))
+                    .map(|(key, val)| {
+                        (
+                            (&key)
+                                .try_into()
+                                .expect(&format!("Got unhashable map key from Redis, {:?}", key)),
+                            (&val).into(),
+                        )
+                    })
                     .collect(),
             ),
-            CallReply::Set(reply) => RedisValue::Set(reply.iter().map(|v| (&v).into()).collect()),
+            CallReply::Set(reply) => RedisValue::Set(
+                reply
+                    .iter()
+                    .map(|v| {
+                        (&v).try_into()
+                            .expect(&format!("Got unhashable set element from Redis, {:?}", v))
+                    })
+                    .collect(),
+            ),
             CallReply::Bool(reply) => RedisValue::Bool(reply.to_bool()),
             CallReply::Double(reply) => RedisValue::Float(reply.to_double()),
             CallReply::BigNumber(reply) => RedisValue::BigNumber(reply.to_string().unwrap()),
@@ -185,6 +190,20 @@ impl<'root> From<&CallResult<'root>> for RedisValue {
                 RedisValue::SimpleString(e.to_utf8_string().unwrap())
             },
             |v| (v).into(),
+        )
+    }
+}
+
+impl<'root> TryFrom<&CallResult<'root>> for RedisValueKey {
+    type Error = RedisError;
+    fn try_from(reply: &CallResult<'root>) -> Result<Self, Self::Error> {
+        reply.as_ref().map_or_else(
+            |e| {
+                Err(RedisError::String(
+                    format!("Got an error reply which can not be translated into a map key or set element, {:?}", e),
+                ))
+            },
+            |v| v.try_into(),
         )
     }
 }
