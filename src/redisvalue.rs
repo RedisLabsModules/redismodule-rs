@@ -4,7 +4,7 @@ use std::{
     hash::Hash,
 };
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum RedisValueKey {
     Integer(i64),
     String(String),
@@ -13,7 +13,7 @@ pub enum RedisValueKey {
     Bool(bool),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum RedisValue {
     SimpleStringStatic(&'static str),
     SimpleString(String),
