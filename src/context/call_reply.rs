@@ -550,6 +550,8 @@ impl<'root> VerbatimStringCallReply<'root> {
     /// The first entry represents the format as &str, the second entry represent the data as &[u8].
     /// Return None if the format is not a valid utf8.
     pub fn as_parts(&self) -> Option<(&str, &[u8])> {
+        // RESP3 state that veribatim string format must be of size 3.
+        const FORMAT_LEN: usize = 3;
         let mut len: usize = 0;
         let mut format: *const c_char = std::ptr::null();
         let reply_string: *mut u8 = unsafe {
@@ -557,7 +559,7 @@ impl<'root> VerbatimStringCallReply<'root> {
                 as *mut u8
         };
         Some((
-            std::str::from_utf8(unsafe { slice::from_raw_parts(format as *const u8, 3) })
+            std::str::from_utf8(unsafe { slice::from_raw_parts(format as *const u8, FORMAT_LEN) })
                 .ok()
                 .unwrap(),
             unsafe { slice::from_raw_parts(reply_string, len) },
