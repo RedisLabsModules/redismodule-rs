@@ -12,6 +12,7 @@ pub(crate) fn log_internal(ctx: *mut raw::RedisModuleCtx, level: LogLevel, messa
 ///
 /// This function should be used when a callback is returning a critical error
 /// to the caller since cannot load or save the data for some critical reason.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn log_io_error(io: *mut raw::RedisModuleIO, level: LogLevel, message: &str) {
     if cfg!(feature = "test") {
         return;

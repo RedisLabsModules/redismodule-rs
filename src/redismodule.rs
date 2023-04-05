@@ -11,32 +11,21 @@ use std::str;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
 
-use crate::context::call_reply::{InnerCallReply, RootCallReply};
 pub use crate::raw;
 pub use crate::rediserror::RedisError;
 pub use crate::redisvalue::RedisValue;
 
 pub type RedisResult = Result<RedisValue, RedisError>;
 
-impl From<RootCallReply> for RedisResult {
-    fn from(reply: RootCallReply) -> Self {
-        let redis_value: RedisValue = (&reply).into();
-        match redis_value {
-            RedisValue::Error(s) => Err(RedisError::String(s)),
-            RedisValue::StaticError(s) => Err(RedisError::Str(s)),
-            _ => Ok(redis_value),
-        }
+impl From<RedisValue> for RedisResult {
+    fn from(v: RedisValue) -> Self {
+        Ok(v)
     }
 }
 
-impl<'root> From<InnerCallReply<'root>> for RedisResult {
-    fn from(reply: InnerCallReply) -> Self {
-        let redis_value: RedisValue = (&reply).into();
-        match redis_value {
-            RedisValue::Error(s) => Err(RedisError::String(s)),
-            RedisValue::StaticError(s) => Err(RedisError::Str(s)),
-            _ => Ok(redis_value),
-        }
+impl From<RedisError> for RedisResult {
+    fn from(v: RedisError) -> Self {
+        Err(v)
     }
 }
 
@@ -309,6 +298,12 @@ impl Deref for RedisString {
 
     fn deref(&self) -> &Self::Target {
         self.as_slice()
+    }
+}
+
+impl From<RedisString> for Vec<u8> {
+    fn from(rs: RedisString) -> Self {
+        rs.as_slice().to_vec()
     }
 }
 

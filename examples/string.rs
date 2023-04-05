@@ -40,7 +40,7 @@ redis_module! {
     version: 1,
     data_types: [],
     commands: [
-        ["string.set", string_set, "", 1, 1, 1],
-        ["string.get", string_get, "", 1, 1, 1],
+        ["string.set", string_set, "write fast deny-oom", 1, 1, 1],
+        ["string.get", string_get, "readonly", 1, 1, 1],
     ],
 }

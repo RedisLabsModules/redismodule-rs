@@ -2,11 +2,11 @@ use bitflags::bitflags;
 use std::borrow::Borrow;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
-use std::ptr;
-use std::ptr::NonNull;
+use std::ptr::{self, NonNull};
 
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::raw::{ModuleOptions, Version};
+use crate::redisvalue::RedisValueKey;
 use crate::{add_info_field_long_long, add_info_field_str, raw, utils, Status};
 use crate::{add_info_section, LogLevel};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
@@ -14,7 +14,7 @@ use crate::{RedisError, RedisResult, RedisString, RedisValue};
 #[cfg(feature = "experimental-api")]
 use std::ffi::CStr;
 
-use self::call_reply::RootCallReply;
+use self::call_reply::CallResult;
 use self::thread_safe::RedisLockIndicator;
 
 #[cfg(feature = "experimental-api")]
@@ -246,7 +246,7 @@ impl Context {
         }
     }
 
-    fn call_internal<'a, T: Into<StrCallArgs<'a>>, R: From<RootCallReply>>(
+    fn call_internal<'a, T: Into<StrCallArgs<'a>>, R: From<CallResult<'static>>>(
         &self,
         command: &str,
         fmt: *const c_char,
@@ -266,17 +266,18 @@ impl Context {
                 final_args.len(),
             )
         };
-        R::from(RootCallReply::new(reply))
+        R::from(call_reply::create_root_call_reply(NonNull::new(reply)))
     }
 
     pub fn call<'a, T: Into<StrCallArgs<'a>>>(&self, command: &str, args: T) -> RedisResult {
-        self.call_internal::<_, RedisResult>(command, raw::FMT, args)
+        self.call_internal::<_, CallResult>(command, raw::FMT, args)
+            .map_or_else(|e| Err(e.into()), |v| Ok((&v).into()))
     }
 
     /// Invoke a command on Redis and return the result
     /// Unlike 'call' this API also allow to pass a CallOption to control different aspects
     /// of the command invocation.
-    pub fn call_ext<'a, T: Into<StrCallArgs<'a>>, R: From<RootCallReply>>(
+    pub fn call_ext<'a, T: Into<StrCallArgs<'a>>, R: From<CallResult<'static>>>(
         &self,
         command: &str,
         options: &CallOptions,
@@ -301,7 +302,7 @@ impl Context {
     #[allow(clippy::must_use_candidate)]
     pub fn reply_simple_string(&self, s: &str) -> raw::Status {
         let msg = Self::str_as_legal_resp_string(s);
-        unsafe { raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into() }
+        raw::reply_with_simple_string(self.ctx, msg.as_ptr())
     }
 
     #[allow(clippy::must_use_candidate)]
@@ -310,58 +311,65 @@ impl Context {
         unsafe { raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into() }
     }
 
+    pub fn reply_with_key(&self, result: RedisValueKey) -> raw::Status {
+        match result {
+            RedisValueKey::Integer(i) => raw::reply_with_long_long(self.ctx, i),
+            RedisValueKey::String(s) => {
+                raw::reply_with_string_buffer(self.ctx, s.as_ptr().cast::<c_char>(), s.len())
+            }
+            RedisValueKey::BulkString(b) => {
+                raw::reply_with_string_buffer(self.ctx, b.as_ptr().cast::<c_char>(), b.len())
+            }
+            RedisValueKey::BulkRedisString(s) => raw::reply_with_string(self.ctx, s.inner),
+            RedisValueKey::Bool(b) => raw::reply_with_bool(self.ctx, b.into()),
+        }
+    }
+
     /// # Panics
     ///
     /// Will panic if methods used are missing in redismodule.h
     #[allow(clippy::must_use_candidate)]
-    pub fn reply(&self, r: RedisResult) -> raw::Status {
-        match r {
-            Ok(RedisValue::Integer(v)) => unsafe {
-                raw::RedisModule_ReplyWithLongLong.unwrap()(self.ctx, v).into()
-            },
-
-            Ok(RedisValue::Float(v)) => unsafe {
-                raw::RedisModule_ReplyWithDouble.unwrap()(self.ctx, v).into()
-            },
-
-            Ok(RedisValue::SimpleStringStatic(s)) => unsafe {
+    pub fn reply(&self, result: RedisResult) -> raw::Status {
+        match result {
+            Ok(RedisValue::Bool(v)) => raw::reply_with_bool(self.ctx, v.into()),
+            Ok(RedisValue::Integer(v)) => raw::reply_with_long_long(self.ctx, v),
+            Ok(RedisValue::Float(v)) => raw::reply_with_double(self.ctx, v),
+            Ok(RedisValue::SimpleStringStatic(s)) => {
                 let msg = CString::new(s).unwrap();
-                raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into()
-            },
+                raw::reply_with_simple_string(self.ctx, msg.as_ptr())
+            }
 
-            Ok(RedisValue::SimpleString(s)) => unsafe {
+            Ok(RedisValue::SimpleString(s)) => {
                 let msg = CString::new(s).unwrap();
-                raw::RedisModule_ReplyWithSimpleString.unwrap()(self.ctx, msg.as_ptr()).into()
-            },
+                raw::reply_with_simple_string(self.ctx, msg.as_ptr())
+            }
 
-            Ok(RedisValue::BulkString(s)) => unsafe {
-                raw::RedisModule_ReplyWithStringBuffer.unwrap()(
+            Ok(RedisValue::BulkString(s)) => {
+                raw::reply_with_string_buffer(self.ctx, s.as_ptr().cast::<c_char>(), s.len())
+            }
+
+            Ok(RedisValue::BigNumber(s)) => {
+                raw::reply_with_big_number(self.ctx, s.as_ptr().cast::<c_char>(), s.len())
+            }
+
+            Ok(RedisValue::VerbatimString((format, mut data))) => {
+                let mut final_data = format.as_bytes().to_vec();
+                final_data.append(&mut data);
+                raw::reply_with_verbatim_string(
                     self.ctx,
-                    s.as_ptr().cast::<c_char>(),
-                    s.len(),
+                    final_data.as_ptr().cast::<c_char>(),
+                    final_data.len(),
                 )
-                .into()
-            },
+            }
 
-            Ok(RedisValue::BulkRedisString(s)) => unsafe {
-                raw::RedisModule_ReplyWithString.unwrap()(self.ctx, s.inner).into()
-            },
+            Ok(RedisValue::BulkRedisString(s)) => raw::reply_with_string(self.ctx, s.inner),
 
-            Ok(RedisValue::StringBuffer(s)) => unsafe {
-                raw::RedisModule_ReplyWithStringBuffer.unwrap()(
-                    self.ctx,
-                    s.as_ptr().cast::<c_char>(),
-                    s.len(),
-                )
-                .into()
-            },
+            Ok(RedisValue::StringBuffer(s)) => {
+                raw::reply_with_string_buffer(self.ctx, s.as_ptr().cast::<c_char>(), s.len())
+            }
 
             Ok(RedisValue::Array(array)) => {
-                unsafe {
-                    // According to the Redis source code this always succeeds,
-                    // so there is no point in checking its return value.
-                    raw::RedisModule_ReplyWithArray.unwrap()(self.ctx, array.len() as c_long);
-                }
+                raw::reply_with_array(self.ctx, array.len() as c_long);
 
                 for elem in array {
                     self.reply(Ok(elem));
@@ -370,13 +378,30 @@ impl Context {
                 raw::Status::Ok
             }
 
-            Ok(RedisValue::Null) => unsafe {
-                raw::RedisModule_ReplyWithNull.unwrap()(self.ctx).into()
-            },
+            Ok(RedisValue::Map(map)) => {
+                raw::reply_with_map(self.ctx, map.len() as c_long);
+
+                for (key, value) in map {
+                    self.reply_with_key(key);
+                    self.reply(Ok(value));
+                }
+
+                raw::Status::Ok
+            }
+
+            Ok(RedisValue::Set(set)) => {
+                raw::reply_with_set(self.ctx, set.len() as c_long);
+                set.into_iter().for_each(|e| {
+                    self.reply_with_key(e);
+                });
+
+                raw::Status::Ok
+            }
+
+            Ok(RedisValue::Null) => raw::reply_with_null(self.ctx),
 
             Ok(RedisValue::NoReply) => raw::Status::Ok,
 
-            Ok(RedisValue::Error(s)) => self.reply_error_string(&s),
             Ok(RedisValue::StaticError(s)) => self.reply_error_string(s),
 
             Err(RedisError::WrongArity) => unsafe {
