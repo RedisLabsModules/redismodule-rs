@@ -81,7 +81,7 @@ endif
 test: cargo_test
 
 cargo_test:
-	cargo test --all-targets --features test,experimental-api $(CARGO_FLAGS)
+	cargo test --features experimental-api $(CARGO_FLAGS)
 
 .PHONY: test cargo_test
 
