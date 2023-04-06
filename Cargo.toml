@@ -108,6 +108,7 @@ strum_macros = "0.24"
 backtrace = "0.3"
 linkme = "0.3"
 serde = { version = "1", features = ["derive"] }
+nix = "0.26"
 
 [dev-dependencies]
 anyhow = "1.0.38"
@@ -124,7 +125,7 @@ cc = "1.0"
 default = ["experimental-api"]
 experimental-api = []
 
-# Workaround to allow cfg(feature = "test") in dependencies:
-# https://github.com/rust-lang/rust/issues/59168#issuecomment-472653680
-# This requires running the tests with `--features test`
+# TODO remove this "feature" as its name is misleading and using of
+# which should be avoided in favour of well-named and self-explanatory
+# features doing just one job following the SRP and KISS principles.
 test = []

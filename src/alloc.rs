@@ -1,8 +1,28 @@
 use std::alloc::{GlobalAlloc, Layout};
-use std::os::raw::c_void;
 
 use crate::raw;
 
+/// Panics with a message without using an allocator.
+/// Useful when using the allocator should be avoided or it is
+/// inaccessible. The default [std::panic] performs allocations and so
+/// will cause a double panic without a meaningful message if the
+/// allocator can't be used. This function makes sure we can panic with
+/// a reasonable message even without the allocator working.
+fn allocation_free_panic(message: &'static str) -> ! {
+    use std::os::unix::io::AsRawFd;
+
+    let _ = nix::unistd::write(std::io::stderr().as_raw_fd(), message.as_bytes());
+
+    std::process::abort();
+}
+
+const REDIS_ALLOCATOR_NOT_AVAILABLE_MESSAGE: &str =
+    "Critical error: the Redis Allocator isn't available.\n";
+
+/// Defines the Redis allocator. This allocator delegates the allocation
+/// and deallocation tasks to the Redis server when available, otherwise
+/// it panics.
+#[derive(Copy, Clone)]
 pub struct RedisAlloc;
 
 unsafe impl GlobalAlloc for RedisAlloc {
@@ -20,10 +40,16 @@ unsafe impl GlobalAlloc for RedisAlloc {
          */
         let size = (layout.size() + layout.align() - 1) & (!(layout.align() - 1));
 
-        raw::RedisModule_Alloc.unwrap()(size).cast::<u8>()
+        match raw::RedisModule_Alloc {
+            Some(alloc) => alloc(size).cast(),
+            None => allocation_free_panic(REDIS_ALLOCATOR_NOT_AVAILABLE_MESSAGE),
+        }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
-        raw::RedisModule_Free.unwrap()(ptr.cast::<c_void>());
+        match raw::RedisModule_Free {
+            Some(f) => f(ptr.cast()),
+            None => allocation_free_panic(REDIS_ALLOCATOR_NOT_AVAILABLE_MESSAGE),
+        };
     }
 }

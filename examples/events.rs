@@ -49,6 +49,7 @@ fn num_key_miss(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "events",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["events.send", event_send, "", 0, 0, 0],
@@ -60,8 +61,3 @@ redis_module! {
         [@MISSED: on_key_miss],
     ],
 }
-
-//////////////////////////////////////////////////////
-
-#[cfg(test)]
-mod tests {}

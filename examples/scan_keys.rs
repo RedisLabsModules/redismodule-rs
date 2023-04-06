@@ -22,6 +22,7 @@ fn scan_keys(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "scan",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["scan_keys", scan_keys, "readonly", 0, 0, 0],

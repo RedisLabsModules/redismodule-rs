@@ -24,6 +24,7 @@ fn num_flushed(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "server_events",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["num_flushed", num_flushed, "readonly", 0, 0, 0],

@@ -39,6 +39,7 @@ fn deinit(ctx: &Context) -> Status {
 redis_module! {
     name: "load_unload",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     init: init,
     deinit: deinit,
