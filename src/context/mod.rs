@@ -194,12 +194,11 @@ impl Context {
     #[must_use]
     pub fn is_keys_position_request(&self) -> bool {
         // We want this to be available in tests where we don't have an actual Redis to call
-        #[cfg(test)]
-        return false;
+        if cfg!(test) {
+            return false;
+        }
 
-        let result = unsafe { raw::RedisModule_IsKeysPositionRequest.unwrap()(self.ctx) };
-
-        result != 0
+        (unsafe { raw::RedisModule_IsKeysPositionRequest.unwrap()(self.ctx) }) != 0
     }
 
     /// # Panics

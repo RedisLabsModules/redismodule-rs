@@ -35,6 +35,7 @@ fn event_send(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "events",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["events.send", event_send, "", 0, 0, 0],
@@ -44,8 +45,3 @@ redis_module! {
         [@STREAM: on_stream],
     ]
 }
-
-//////////////////////////////////////////////////////
-
-#[cfg(test)]
-mod tests {}

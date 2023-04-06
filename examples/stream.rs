@@ -41,6 +41,7 @@ fn stream_read_from(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "stream",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["STREAM_POP", stream_read_from, "fast deny-oom", 1, 1, 1],

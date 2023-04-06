@@ -51,6 +51,7 @@ fn test_keys_pos() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "experimental-api")]
 #[cfg_attr(feature = "experimental-api", test)]
 fn test_helper_version() -> Result<()> {
     let port: u16 = 6481;
@@ -73,6 +74,7 @@ fn test_helper_version() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "experimental-api")]
 #[cfg_attr(feature = "experimental-api", test)]
 fn test_command_name() -> Result<()> {
     use redis_module::RedisValue;
@@ -110,6 +112,7 @@ fn test_command_name() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "experimental-api")]
 #[cfg_attr(feature = "experimental-api", test)]
 fn test_helper_info() -> Result<()> {
     let port: u16 = 6483;
@@ -148,6 +151,7 @@ fn test_helper_err() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "experimental-api")]
 #[cfg_attr(feature = "experimental-api", test)]
 fn test_stream_reader() -> Result<()> {
     let port: u16 = 6485;
@@ -188,6 +192,7 @@ fn test_stream_reader() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "experimental-api")]
 #[cfg_attr(feature = "experimental-api", test)]
 fn test_flush_events() -> Result<()> {
     let port: u16 = 6486;
@@ -217,6 +222,7 @@ fn test_flush_events() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "experimental-api")]
 #[cfg_attr(feature = "experimental-api", test)]
 fn test_role_changed_events() -> Result<()> {
     let port: u16 = 6487;
@@ -248,6 +254,7 @@ fn test_role_changed_events() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "experimental-api")]
 #[cfg_attr(feature = "experimental-api", test)]
 fn test_loading_events() -> Result<()> {
     let port: u16 = 6488;
@@ -284,6 +291,7 @@ fn test_loading_events() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "experimental-api")]
 #[cfg_attr(feature = "experimental-api", test)]
 fn test_key_scan() -> Result<()> {
     let port: u16 = 6489;

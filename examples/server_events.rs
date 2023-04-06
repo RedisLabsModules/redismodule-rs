@@ -41,6 +41,7 @@ fn on_flush_event(_ctx: &Context, _event_data: ServerEventData) {
 redis_module! {
     name: "server_events",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["NUM_FLUSHED", num_flushed, "fast deny-oom readonly", 0, 0, 0],

@@ -4,8 +4,9 @@ use std::ffi::CString;
 use std::ptr;
 
 pub(crate) fn log_internal(ctx: *mut raw::RedisModuleCtx, level: LogLevel, message: &str) {
-    #[cfg(test)]
-    return;
+    if cfg!(test) {
+        return;
+    }
 
     let level = CString::new(level.as_ref()).unwrap();
     let fmt = CString::new(message).unwrap();

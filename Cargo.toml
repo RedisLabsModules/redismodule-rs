@@ -98,11 +98,7 @@ cc = "1.0"
 [features]
 default = []
 experimental-api = []
-# Allows to fallback to the default Rust allocator when the Redis
-# allocator is not available. Particularly useful for tests without
-# having a running Redis instance and running as a Redis module.
-fallback_to_system_allocator = []
 # TODO remove this "feature" as its name is misleading and using of
 # which should be avoided in favour of well-named and self-explanatory
 # features doing just one job following the SRP and KISS principles.
-test = ["fallback_to_system_allocator"]
+test = []

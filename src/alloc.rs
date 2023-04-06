@@ -17,13 +17,11 @@ fn allocation_free_panic(message: &'static str) -> ! {
 }
 
 const REDIS_ALLOCATOR_NOT_AVAILABLE_MESSAGE: &str =
-    "Critical error: the Redis Allocator isn't available.
-Consider enabling the \"fallback_to_system_allocator\" feature.\n";
+    "Critical error: the Redis Allocator isn't available.\n";
 
 /// Defines the Redis allocator. This allocator delegates the allocation
 /// and deallocation tasks to the Redis server when available, otherwise
-/// it fallbacks to the default Rust [std::alloc::System] allocator
-/// which is always available compared to the Redis allocator.
+/// it panics.
 #[derive(Copy, Clone)]
 pub struct RedisAlloc;
 
