@@ -113,7 +113,7 @@ pub fn redismodule_api(attr: TokenStream, item: TokenStream) -> TokenStream {
                 #[allow(non_snake_case)]
                 let #requested_apis = unsafe{crate::raw::#requested_apis.ok_or(concat!(#requested_apis_str, " does not exists"))?};
             )*
-            let __callback__ = || {
+            let __callback__ = move || {
                 #original_func_code
             };
             Ok(__callback__())
@@ -126,7 +126,7 @@ pub fn redismodule_api(attr: TokenStream, item: TokenStream) -> TokenStream {
                 #[allow(non_snake_case)]
                 let #requested_apis = unsafe{crate::raw::#requested_apis.unwrap()};
             )*
-            let __callback__ = || {
+            let __callback__ = move || {
                 #original_func_code
             };
             __callback__()

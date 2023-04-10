@@ -675,7 +675,7 @@ impl Context {
     }
 
     #[redismodule_api(RedisModule_AddPostNotificationJob)]
-    pub fn add_post_notification_job<F: Fn(&Context)>(self, callback: F) {
+    pub fn add_post_notification_job<F: Fn(&Context)>(&self, callback: F) {
         let callback = Box::into_raw(Box::new(callback));
         unsafe {
             RedisModule_AddPostNotificationJob(
