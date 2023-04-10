@@ -678,7 +678,7 @@ impl Context {
     pub fn add_post_notification_job<F: Fn(&Context)>(self, callback: F) {
         let callback = Box::into_raw(Box::new(callback));
         unsafe {
-            raw::RedisModule_AddPostNotificationJob.unwrap()(
+            RedisModule_AddPostNotificationJob(
                 self.ctx,
                 Some(post_notification_job::<F>),
                 callback as *mut c_void,
