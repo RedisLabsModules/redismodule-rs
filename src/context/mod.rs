@@ -38,11 +38,20 @@ pub struct CallOptionsBuilder {
     options: String,
 }
 
+impl Default for CallOptionsBuilder {
+    fn default() -> Self {
+        CallOptionsBuilder {
+            options: "v".to_string(),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct CallOptions {
     options: CString,
 }
 
+#[derive(Copy, Clone)]
 pub enum CallOptionResp {
     Resp2,
     Resp3,
@@ -51,9 +60,7 @@ pub enum CallOptionResp {
 
 impl CallOptionsBuilder {
     pub fn new() -> CallOptionsBuilder {
-        CallOptionsBuilder {
-            options: "v".to_string(),
-        }
+        Self::default()
     }
 
     fn add_flag(&mut self, flag: &str) {

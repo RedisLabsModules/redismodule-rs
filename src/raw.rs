@@ -274,6 +274,7 @@ pub fn call_reply_array_element(
 /// # Panics
 ///
 /// Panics if the Redis server doesn't support replying with bool (since RESP3).
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_set_element(
     reply: *mut RedisModuleCallReply,
     idx: usize,
@@ -284,6 +285,7 @@ pub fn call_reply_set_element(
 /// # Panics
 ///
 /// Panics if the Redis server doesn't support replying with bool (since RESP3).
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_map_element(
     reply: *mut RedisModuleCallReply,
     idx: usize,

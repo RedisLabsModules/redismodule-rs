@@ -36,6 +36,8 @@ impl<'ctx, 'mutex, T, G: RedisLockIndicator> DerefMut for RedisGILGuardScope<'ct
 /// access and make sure the protected data is only accesses
 /// when the GIL is locked.
 ///
+/// # Safety
+///
 /// In general this trait should not be implemented by the
 /// user, the crate knows when the Redis GIL is held and will
 /// make sure to implement this trait correctly on different
