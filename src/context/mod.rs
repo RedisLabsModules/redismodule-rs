@@ -674,31 +674,33 @@ impl Context {
         acl_permission_result.map_err(|_e| RedisError::Str("User does not have permissions on key"))
     }
 
-    /// When running inside a key space notification callback, it is dangerous and highly discouraged to perform any write
-    /// operation. In order to still perform write actions in this scenario, Redis provides this API ([add_post_notification_job])
-    /// that allows to register a job callback which Redis will call when the following condition holds:
-    ///
-    /// 1. It is safe to perform any write operation.
-    /// 2. The job will be called atomically along side the key space notification.
-    ///
-    /// Notice, one job might trigger key space notifications that will trigger more jobs.
-    /// This raises a concerns of entering an infinite loops, we consider infinite loops
-    /// as a logical bug that need to be fixed in the module, an attempt to protect against
-    /// infinite loops by halting the execution could result in violation of the feature correctness
-    /// and so Redis will make no attempt to protect the module from infinite loops.
-    #[redismodule_api(RedisModule_AddPostNotificationJob)]
-    pub fn add_post_notification_job<F: Fn(&Context)>(&self, callback: F) -> Status {
-        let callback = Box::into_raw(Box::new(callback));
-        unsafe {
-            RedisModule_AddPostNotificationJob(
-                self.ctx,
-                Some(post_notification_job::<F>),
-                callback as *mut c_void,
-                Some(post_notification_job_free_callback::<F>),
-            )
+    redismodule_api!(
+        [RedisModule_AddPostNotificationJob],
+        /// When running inside a key space notification callback, it is dangerous and highly discouraged to perform any write
+        /// operation. In order to still perform write actions in this scenario, Redis provides this API ([add_post_notification_job])
+        /// that allows to register a job callback which Redis will call when the following condition holds:
+        ///
+        /// 1. It is safe to perform any write operation.
+        /// 2. The job will be called atomically along side the key space notification.
+        ///
+        /// Notice, one job might trigger key space notifications that will trigger more jobs.
+        /// This raises a concerns of entering an infinite loops, we consider infinite loops
+        /// as a logical bug that need to be fixed in the module, an attempt to protect against
+        /// infinite loops by halting the execution could result in violation of the feature correctness
+        /// and so Redis will make no attempt to protect the module from infinite loops.
+        pub fn add_post_notification_job<F: Fn(&Context)>(&self, callback: F) -> Status {
+            let callback = Box::into_raw(Box::new(callback));
+            unsafe {
+                RedisModule_AddPostNotificationJob(
+                    self.ctx,
+                    Some(post_notification_job::<F>),
+                    callback as *mut c_void,
+                    Some(post_notification_job_free_callback::<F>),
+                )
+            }
+            .into()
         }
-        .into()
-    }
+    );
 }
 
 extern "C" fn post_notification_job_free_callback<F: Fn(&Context)>(pd: *mut c_void) {

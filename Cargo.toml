@@ -73,7 +73,7 @@ crate-type = ["cdylib"]
 [[example]]
 name = "events"
 crate-type = ["cdylib"]
-required-features = ["experimental-api", "min-redis-compatibility-version-6-0"]
+required-features = ["experimental-api"]
 
 [[example]]
 name = "test_helper"

@@ -6,23 +6,28 @@ use proc_macro::{TokenStream};
 use quote::quote;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
-use syn::token::{RArrow, Paren};
-use syn::{self, parse_macro_input, Token, Type, ReturnType, TypeTuple};
+use syn::token::{RArrow, Paren, self};
+use syn::{self, parse_macro_input, Token, Type, ReturnType, TypeTuple, bracketed};
 use syn::ItemFn;
 use syn::Ident;
 use api_versions::{API_VERSION_MAPPING, API_OLDEST_VERSION, get_feature_flags};
 
 #[derive(Debug)]
 struct Args{
-    requested_apis: Vec<Ident>
+    requested_apis: Vec<Ident>,
+    function: ItemFn,
 }
 
 impl Parse for Args{
     fn parse(input: ParseStream) -> Result<Self> {
-        // parses a,b,c, or a,b,c where a,b and c are Indent
-        let vars = Punctuated::<Ident, Token![,]>::parse_terminated(input)?;
+        let content;
+        let _paren_token: token::Bracket = bracketed!(content in input);
+        let vars: Punctuated<Ident, Token![,]> = content.parse_terminated(Ident::parse)?;
+        input.parse::<Token![,]>()?;
+        let func: ItemFn = input.parse()?;
         Ok(Args {
             requested_apis: vars.into_iter().collect(),
+            function: func,
         })
     }
 }
@@ -33,9 +38,9 @@ impl Parse for Args{
 /// that contains all those API and decided whether or not the function might raise an [APIError].
 /// In addition, for each RedisModuleAPI, the proc macro inject a code that extract the actual API
 /// function pointer, and raise an error/panic if the API is not valid.
-#[proc_macro_attribute]
-pub fn redismodule_api(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(attr as Args);
+#[proc_macro]
+pub fn redismodule_api(item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(item as Args);
     let minimum_require_version = args.requested_apis.iter().fold(*API_OLDEST_VERSION, |min_api_version, item|{
         // if we do not have a version mapping, we assume the API exists and return the minimum version.
         let api_version = API_VERSION_MAPPING.get(&item.to_string()).map(|v| *v).unwrap_or(*API_OLDEST_VERSION);
@@ -45,7 +50,7 @@ pub fn redismodule_api(attr: TokenStream, item: TokenStream) -> TokenStream {
     let requested_apis = args.requested_apis;
     let requested_apis_str: Vec<String> = requested_apis.iter().map(|e| e.to_string()).collect();
 
-    let original_func = parse_macro_input!(item as ItemFn);
+    let original_func = args.function;
     let original_func_code = original_func.block;
     let original_func_sig = original_func.sig;
     let original_func_vis = original_func.vis;
