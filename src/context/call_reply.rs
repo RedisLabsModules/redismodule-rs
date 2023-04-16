@@ -1,5 +1,5 @@
 use core::slice;
-use std::os::raw::{c_char};
+use std::os::raw::c_char;
 use std::{
     fmt,
     fmt::{Debug, Display, Formatter},
