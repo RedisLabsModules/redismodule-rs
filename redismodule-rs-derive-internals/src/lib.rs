@@ -24,10 +24,10 @@ impl Parse for Args{
         let _paren_token: token::Bracket = bracketed!(content in input);
         let vars: Punctuated<Ident, Token![,]> = content.parse_terminated(Ident::parse)?;
         input.parse::<Token![,]>()?;
-        let func: ItemFn = input.parse()?;
+        let function: ItemFn = input.parse()?;
         Ok(Args {
             requested_apis: vars.into_iter().collect(),
-            function: func,
+            function,
         })
     }
 }
@@ -51,6 +51,7 @@ pub fn redismodule_api(item: TokenStream) -> TokenStream {
     let requested_apis_str: Vec<String> = requested_apis.iter().map(|e| e.to_string()).collect();
 
     let original_func = args.function;
+    let original_func_attr = original_func.attrs;
     let original_func_code = original_func.block;
     let original_func_sig = original_func.sig;
     let original_func_vis = original_func.vis;
@@ -67,6 +68,7 @@ pub fn redismodule_api(item: TokenStream) -> TokenStream {
     new_func_sig.output = ReturnType::Type(RArrow::default(), Box::new(new_return_return_type));
 
     let old_ver_func = quote!(
+        #(#original_func_attr)*
         #original_func_vis #new_func_sig {
             #(  
                 #[allow(non_snake_case)]
@@ -80,6 +82,7 @@ pub fn redismodule_api(item: TokenStream) -> TokenStream {
     );
 
     let new_ver_func = quote!(
+        #(#original_func_attr)*
         #original_func_vis #original_func_sig {
             #(
                 #[allow(non_snake_case)]
