@@ -1,5 +1,5 @@
 [package]
-name = "redis-module-derive"
+name = "redis-module-derive-internals"
 version = "99.99.99"
 authors = ["Meir Shpilraien <meir@redis.com>"]
 edition = "2021"
@@ -14,8 +14,10 @@ categories = ["database", "api-bindings"]
 [dependencies]
 syn = { version="1.0", features = ["full"]}
 quote = "1.0"
+lazy_static = "1.4.0"
+proc-macro2 = "1.0.56"
 
 [lib]
-name = "redis_module_derive"
+name = "redis_module_derive_internals"
 path = "src/lib.rs"
 proc-macro = true

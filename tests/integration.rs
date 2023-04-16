@@ -339,6 +339,11 @@ fn test_key_miss_event() -> Result<()> {
     let res: usize = redis::cmd("events.num_key_miss").query(&mut con)?;
     assert_eq!(res, 1);
 
+    let _: RedisResult<String> = redis::cmd("SET").arg(&["x", "1"]).query(&mut con);
+
+    let res: String = redis::cmd("GET").arg(&["num_sets"]).query(&mut con)?;
+    assert_eq!(res, "1");
+
     Ok(())
 }
 

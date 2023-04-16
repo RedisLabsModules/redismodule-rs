@@ -73,7 +73,7 @@ crate-type = ["cdylib"]
 [[example]]
 name = "events"
 crate-type = ["cdylib"]
-required-features = ["experimental-api"]
+required-features = ["experimental-api", "min-redis-compatibility-version-6-0"]
 
 [[example]]
 name = "test_helper"
@@ -109,13 +109,14 @@ backtrace = "0.3"
 linkme = "0.3"
 serde = { version = "1", features = ["derive"] }
 cfg-if = "1"
-redis-module-derive = { path = "./redismodule-rs-derive"}
+redis-module-derive-internals = { path = "./redismodule-rs-derive-internals"}
 
 [dev-dependencies]
 anyhow = "1.0.38"
 redis = "0.22.1"
 lazy_static = "1.4.0"
 redis-module = { path = "./", features = ["test", "experimental-api"]}
+redis-module-derive = { path = "./redismodule-rs-derive"}
 
 [build-dependencies]
 bindgen = "0.64"
