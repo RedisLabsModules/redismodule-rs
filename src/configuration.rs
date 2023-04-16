@@ -2,8 +2,9 @@ use crate::context::thread_safe::RedisLockIndicator;
 use crate::{raw, CallOptionResp, CallOptionsBuilder, CallResult, RedisGILGuard, RedisValue};
 use crate::{Context, RedisError, RedisString};
 use bitflags::bitflags;
-use std::ffi::{c_char, c_int, c_longlong, c_void, CStr, CString};
+use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
+use std::os::raw::{c_char, c_int, c_longlong, c_void};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::Mutex;
 
