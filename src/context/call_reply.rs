@@ -1,6 +1,6 @@
 use core::slice;
+use std::os::raw::{c_char};
 use std::{
-    ffi::c_char,
     fmt,
     fmt::{Debug, Display, Formatter},
     marker::PhantomData,
