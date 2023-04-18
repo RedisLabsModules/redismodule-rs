@@ -66,6 +66,7 @@ fn map_unique(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "response",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["map.mget", map_mget, "readonly", 1, 1, 1],

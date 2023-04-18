@@ -54,6 +54,7 @@ fn num_changes(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "configuration",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["configuration.num_changes", num_changes, "", 0, 0, 0],

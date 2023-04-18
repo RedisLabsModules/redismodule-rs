@@ -41,6 +41,7 @@ fn lpoprpush(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "lists",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["LPOPRPUSH", lpoprpush, "write fast deny-oom", 1, 2, 1],

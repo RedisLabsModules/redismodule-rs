@@ -82,11 +82,19 @@ macro_rules! redis_event_handler {
     }};
 }
 
+/// Defines a Redis module.
+///
+/// It registers the defined module, sets it up and initialises properly,
+/// registers all the commands and types.
 #[macro_export]
 macro_rules! redis_module {
     (
         name: $module_name:expr,
         version: $module_version:expr,
+        /// Global allocator for the redis module defined.
+        /// In most of the cases, the Redis allocator ([crate::alloc::RedisAlloc])
+        /// should be used.
+        allocator: ($allocator_type:ty, $allocator_init:expr),
         data_types: [
             $($data_type:ident),* $(,)*
         ],
@@ -145,6 +153,10 @@ macro_rules! redis_module {
             $(module_config_set:$module_config_set_command:expr,)?
         ])?
     ) => {
+        /// Redis module allocator.
+        #[global_allocator]
+        static REDIS_MODULE_ALLOCATOR: $allocator_type = $allocator_init;
+
         extern "C" fn __info_func(
             ctx: *mut $crate::raw::RedisModuleInfoCtx,
             for_crash_report: i32,
