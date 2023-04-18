@@ -42,17 +42,14 @@ crate-type = ["cdylib"]
 [[example]]
 name = "timer"
 crate-type = ["cdylib"]
-required-features = ["experimental-api"]
 
 [[example]]
 name = "threads"
 crate-type = ["cdylib"]
-required-features = ["experimental-api"]
 
 [[example]]
 name = "block"
 crate-type = ["cdylib"]
-required-features = ["experimental-api"]
 
 [[example]]
 name = "data_type"
@@ -73,17 +70,14 @@ crate-type = ["cdylib"]
 [[example]]
 name = "events"
 crate-type = ["cdylib"]
-required-features = ["experimental-api"]
 
 [[example]]
 name = "test_helper"
 crate-type = ["cdylib"]
-required-features = ["test","experimental-api"]
 
 [[example]]
 name = "info"
 crate-type = ["cdylib"]
-required-features = []
 
 [[example]]
 name = "scan_keys"
@@ -98,34 +92,24 @@ name = "response"
 crate-type = ["cdylib"]
 
 [dependencies]
-bitflags = "1.2"
+bitflags = "1"
 libc = "0.2"
 enum-primitive-derive = "^0.1"
 num-traits = "^0.2"
 regex = "1"
 strum_macros = "0.24"
-#failure = "0.1"
 backtrace = "0.3"
 linkme = "0.3"
 serde = { version = "1", features = ["derive"] }
 nix = "0.26"
 
 [dev-dependencies]
-anyhow = "1.0.38"
-redis = "0.22.1"
-lazy_static = "1.4.0"
+anyhow = "1"
+redis = "0.22"
+lazy_static = "1"
 redis-module-derive = { path = "./redismodule-rs-derive"}
-redis-module = { path = "./", features = ["test", "experimental-api"]}
+redis-module = { path = "./" }
 
 [build-dependencies]
 bindgen = "0.64"
-cc = "1.0"
-
-[features]
-default = ["experimental-api"]
-experimental-api = []
-
-# TODO remove this "feature" as its name is misleading and using of
-# which should be avoided in favour of well-named and self-explanatory
-# features doing just one job following the SRP and KISS principles.
-test = []
+cc = "1"

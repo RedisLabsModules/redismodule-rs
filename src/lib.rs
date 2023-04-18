@@ -21,11 +21,10 @@ pub mod logging;
 mod macros;
 mod utils;
 
-#[cfg(feature = "experimental-api")]
 pub use crate::context::blocked::BlockedClient;
-#[cfg(feature = "experimental-api")]
-pub use crate::context::thread_safe::{DetachedFromClient, ThreadSafeContext};
-#[cfg(feature = "experimental-api")]
+pub use crate::context::thread_safe::{
+    ContextGuard, DetachedFromClient, RedisGILGuard, RedisLockIndicator, ThreadSafeContext,
+};
 pub use crate::raw::NotifyEvent;
 
 pub use crate::configuration::ConfigurationValue;
@@ -33,9 +32,6 @@ pub use crate::configuration::EnumConfigurationValue;
 pub use crate::context::call_reply::{CallReply, CallResult, ErrorReply};
 pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::server_events;
-pub use crate::context::thread_safe::ContextGuard;
-pub use crate::context::thread_safe::RedisGILGuard;
-pub use crate::context::thread_safe::RedisLockIndicator;
 pub use crate::context::AclPermissions;
 pub use crate::context::CallOptionResp;
 pub use crate::context::CallOptions;

@@ -51,8 +51,7 @@ fn test_keys_pos() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "experimental-api")]
-#[cfg_attr(feature = "experimental-api", test)]
+#[test]
 fn test_helper_version() -> Result<()> {
     let port: u16 = 6481;
     let _guards = vec![start_redis_server_with_module("test_helper", port)
@@ -74,8 +73,7 @@ fn test_helper_version() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "experimental-api")]
-#[cfg_attr(feature = "experimental-api", test)]
+#[test]
 fn test_command_name() -> Result<()> {
     use redis_module::RedisValue;
 
@@ -112,8 +110,7 @@ fn test_command_name() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "experimental-api")]
-#[cfg_attr(feature = "experimental-api", test)]
+#[test]
 fn test_helper_info() -> Result<()> {
     let port: u16 = 6483;
     let _guards = vec![start_redis_server_with_module("test_helper", port)

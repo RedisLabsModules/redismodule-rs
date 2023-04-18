@@ -11,28 +11,19 @@ use crate::{add_info_field_long_long, add_info_field_str, raw, utils, Status};
 use crate::{add_info_section, LogLevel};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
-#[cfg(feature = "experimental-api")]
 use std::ffi::CStr;
 
 use self::call_reply::CallResult;
 use self::thread_safe::RedisLockIndicator;
 
-#[cfg(feature = "experimental-api")]
 mod timer;
 
-#[cfg(feature = "experimental-api")]
-pub mod thread_safe;
-
-#[cfg(feature = "experimental-api")]
 pub mod blocked;
-
-pub mod info;
-
-pub mod server_events;
-
-pub mod keys_cursor;
-
 pub mod call_reply;
+pub mod info;
+pub mod keys_cursor;
+pub mod server_events;
+pub mod thread_safe;
 
 pub struct CallOptionsBuilder {
     options: String,
@@ -533,7 +524,8 @@ impl Context {
     }
 
     /// # Safety
-    #[cfg(feature = "experimental-api")]
+    ///
+    /// See [raw::export_shared_api].
     pub unsafe fn export_shared_api(
         &self,
         func: *const ::std::os::raw::c_void,
@@ -542,7 +534,9 @@ impl Context {
         raw::export_shared_api(self.ctx, func, name);
     }
 
-    #[cfg(feature = "experimental-api")]
+    /// # Safety
+    ///
+    /// See [raw::notify_keyspace_event].
     #[allow(clippy::must_use_candidate)]
     pub fn notify_keyspace_event(
         &self,
@@ -553,7 +547,6 @@ impl Context {
         unsafe { raw::notify_keyspace_event(self.ctx, event_type, event, keyname) }
     }
 
-    #[cfg(feature = "experimental-api")]
     pub fn current_command_name(&self) -> Result<String, RedisError> {
         unsafe {
             match raw::RedisModule_GetCurrentCommandName {
@@ -572,7 +565,6 @@ impl Context {
     }
 
     /// Returns the redis version by calling "info server" API and parsing the reply
-    #[cfg(feature = "test")]
     pub fn get_redis_version_rm_call(&self) -> Result<Version, RedisError> {
         self.get_redis_version_internal(true)
     }
