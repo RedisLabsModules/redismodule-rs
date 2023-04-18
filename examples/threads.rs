@@ -64,6 +64,7 @@ fn get_static_data_on_thread(ctx: &Context, _args: Vec<RedisString>) -> RedisRes
 redis_module! {
     name: "threads",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["threads", threads, "", 0, 0, 0],

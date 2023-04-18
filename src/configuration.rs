@@ -2,8 +2,9 @@ use crate::context::thread_safe::RedisLockIndicator;
 use crate::{raw, CallOptionResp, CallOptionsBuilder, CallResult, RedisGILGuard, RedisValue};
 use crate::{Context, RedisError, RedisString};
 use bitflags::bitflags;
-use std::ffi::{c_char, c_int, c_longlong, c_void, CStr, CString};
+use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
+use std::os::raw::{c_char, c_int, c_longlong, c_void};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::Mutex;
 
@@ -190,13 +191,13 @@ impl<G, T: ConfigurationValue<G> + 'static> ConfigrationPrivateData<G, T> {
             return raw::REDISMODULE_ERR as i32;
         }
         let c_str_name = unsafe { CStr::from_ptr(name) };
-        self.on_changed.as_ref().map(|v| {
+        if let Some(v) = self.on_changed.as_ref() {
             v(
                 &configuration_ctx,
                 c_str_name.to_str().unwrap(),
                 self.variable,
             )
-        });
+        }
         raw::REDISMODULE_OK as i32
     }
 
@@ -235,8 +236,8 @@ pub fn register_i64_configuration<T: ConfigurationValue<i64>>(
 ) {
     let name = CString::new(name).unwrap();
     let config_private_data = ConfigrationPrivateData {
-        variable: variable,
-        on_changed: on_changed,
+        variable,
+        on_changed,
         phantom: PhantomData::<i64>,
     };
     unsafe {
@@ -244,7 +245,7 @@ pub fn register_i64_configuration<T: ConfigurationValue<i64>>(
             ctx.ctx,
             name.as_ptr(),
             default,
-            flags.bits() as u32,
+            flags.bits(),
             min,
             max,
             Some(i64_configuration_get::<T>),
@@ -256,10 +257,9 @@ pub fn register_i64_configuration<T: ConfigurationValue<i64>>(
 }
 
 fn find_config_value<'a>(args: &'a [RedisString], name: &str) -> Option<&'a RedisString> {
-    args.into_iter()
+    args.iter()
         .skip_while(|item| !item.as_slice().eq(name.as_bytes()))
-        .skip(1)
-        .next()
+        .nth(1)
 }
 
 pub fn get_i64_default_config_value(
@@ -308,8 +308,8 @@ pub fn register_string_configuration<T: ConfigurationValue<RedisString>>(
     let name = CString::new(name).unwrap();
     let default = CString::new(default).unwrap();
     let config_private_data = ConfigrationPrivateData {
-        variable: variable,
-        on_changed: on_changed,
+        variable,
+        on_changed,
         phantom: PhantomData::<RedisString>,
     };
     unsafe {
@@ -317,7 +317,7 @@ pub fn register_string_configuration<T: ConfigurationValue<RedisString>>(
             ctx.ctx,
             name.as_ptr(),
             default.as_ptr(),
-            flags.bits() as u32,
+            flags.bits(),
             Some(string_configuration_get::<T>),
             Some(string_configuration_set::<T>),
             None,
@@ -362,8 +362,8 @@ pub fn register_bool_configuration<T: ConfigurationValue<bool>>(
 ) {
     let name = CString::new(name).unwrap();
     let config_private_data = ConfigrationPrivateData {
-        variable: variable,
-        on_changed: on_changed,
+        variable,
+        on_changed,
         phantom: PhantomData::<bool>,
     };
     unsafe {
@@ -371,7 +371,7 @@ pub fn register_bool_configuration<T: ConfigurationValue<bool>>(
             ctx.ctx,
             name.as_ptr(),
             default as i32,
-            flags.bits() as u32,
+            flags.bits(),
             Some(bool_configuration_get::<T>),
             Some(bool_configuration_set::<T>),
             None,
@@ -436,8 +436,8 @@ pub fn register_enum_configuration<G: EnumConfigurationValue, T: ConfigurationVa
         .map(|v| CString::new(v).unwrap())
         .collect();
     let config_private_data = ConfigrationPrivateData {
-        variable: variable,
-        on_changed: on_changed,
+        variable,
+        on_changed,
         phantom: PhantomData::<G>,
     };
     unsafe {
@@ -445,7 +445,7 @@ pub fn register_enum_configuration<G: EnumConfigurationValue, T: ConfigurationVa
             ctx.ctx,
             name.as_ptr(),
             default.into(),
-            flags.bits() as u32,
+            flags.bits(),
             names
                 .iter()
                 .map(|v| v.as_ptr())

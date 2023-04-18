@@ -47,6 +47,7 @@ fn add_info(ctx: &InfoContext, _for_crash_report: bool) {
 redis_module! {
     name: "test_helper",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     info: add_info,
     commands: [

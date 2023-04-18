@@ -23,6 +23,7 @@ fn block(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "block",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["block", block, "", 0, 0, 0],

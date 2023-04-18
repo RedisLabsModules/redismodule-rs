@@ -25,6 +25,7 @@ fn get_current_user(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "acl",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["verify_key_access_for_user", verify_key_access_for_user, "", 0, 0, 0],

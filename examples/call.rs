@@ -118,6 +118,7 @@ fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "call",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["call.test", call_test, "", 0, 0, 0],

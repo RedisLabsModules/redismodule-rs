@@ -38,6 +38,7 @@ fn string_get(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "string",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["string.set", string_set, "write fast deny-oom", 1, 1, 1],

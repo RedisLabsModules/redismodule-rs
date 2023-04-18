@@ -153,9 +153,9 @@ impl<'root> From<&CallReply<'root>> for RedisValue {
                     .iter()
                     .map(|(key, val)| {
                         (
-                            (&key)
-                                .try_into()
-                                .expect(&format!("Got unhashable map key from Redis, {:?}", key)),
+                            (&key).try_into().unwrap_or_else(|e| {
+                                panic!("Got unhashable map key from Redis, {key:?}, {e}")
+                            }),
                             (&val).into(),
                         )
                     })
@@ -165,8 +165,9 @@ impl<'root> From<&CallReply<'root>> for RedisValue {
                 reply
                     .iter()
                     .map(|v| {
-                        (&v).try_into()
-                            .expect(&format!("Got unhashable set element from Redis, {:?}", v))
+                        (&v).try_into().unwrap_or_else(|e| {
+                            panic!("Got unhashable set element from Redis, {v:?}, {e}")
+                        })
                     })
                     .collect(),
             ),

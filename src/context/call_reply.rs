@@ -1,6 +1,6 @@
 use core::slice;
+use std::os::raw::c_char;
 use std::{
-    ffi::c_char,
     fmt,
     fmt::{Debug, Display, Formatter},
     marker::PhantomData,
@@ -522,13 +522,7 @@ impl<'root> Debug for BigNumberCallReply<'root> {
 
 impl<'root> Display for BigNumberCallReply<'root> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(
-            self.to_string()
-                .as_ref()
-                .map(|v| v.as_str())
-                .unwrap_or("None"),
-            f,
-        )
+        fmt::Display::fmt(self.to_string().as_deref().unwrap_or("None"), f)
     }
 }
 
@@ -629,47 +623,47 @@ fn create_call_reply<'root>(reply: NonNull<RedisModuleCallReply>) -> CallResult<
     match ty {
         ReplyType::Unknown => Ok(CallReply::Unknown), // unknown means NULL so no need to free free anything
         ReplyType::Integer => Ok(CallReply::I64(I64CallReply {
-            reply: reply,
+            reply,
             _dummy: PhantomData,
         })),
         ReplyType::String => Ok(CallReply::String(StringCallReply {
-            reply: reply,
+            reply,
             _dummy: PhantomData,
         })),
         ReplyType::Error => Err(ErrorReply::RedisError(ErrorCallReply {
-            reply: reply,
+            reply,
             _dummy: PhantomData,
         })),
         ReplyType::Array => Ok(CallReply::Array(ArrayCallReply {
-            reply: reply,
+            reply,
             _dummy: PhantomData,
         })),
         ReplyType::Null => Ok(CallReply::Null(NullCallReply {
-            reply: reply,
+            reply,
             _dummy: PhantomData,
         })),
         ReplyType::Map => Ok(CallReply::Map(MapCallReply {
-            reply: reply,
+            reply,
             _dummy: PhantomData,
         })),
         ReplyType::Set => Ok(CallReply::Set(SetCallReply {
-            reply: reply,
+            reply,
             _dummy: PhantomData,
         })),
         ReplyType::Bool => Ok(CallReply::Bool(BoolCallReply {
-            reply: reply,
+            reply,
             _dummy: PhantomData,
         })),
         ReplyType::Double => Ok(CallReply::Double(DoubleCallReply {
-            reply: reply,
+            reply,
             _dummy: PhantomData,
         })),
         ReplyType::BigNumber => Ok(CallReply::BigNumber(BigNumberCallReply {
-            reply: reply,
+            reply,
             _dummy: PhantomData,
         })),
         ReplyType::VerbatimString => Ok(CallReply::VerbatimString(VerbatimStringCallReply {
-            reply: reply,
+            reply,
             _dummy: PhantomData,
         })),
     }
@@ -678,7 +672,7 @@ fn create_call_reply<'root>(reply: NonNull<RedisModuleCallReply>) -> CallResult<
 pub(crate) fn create_root_call_reply<'root>(
     reply: Option<NonNull<RedisModuleCallReply>>,
 ) -> CallResult<'root> {
-    reply.map_or(Ok(CallReply::Unknown), |v| create_call_reply(v))
+    reply.map_or(Ok(CallReply::Unknown), create_call_reply)
 }
 
 fn fmt_call_result(res: CallResult<'_>, f: &mut Formatter<'_>) -> fmt::Result {
