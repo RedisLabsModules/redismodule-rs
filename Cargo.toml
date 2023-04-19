@@ -112,7 +112,7 @@ nix = "0.26"
 
 [dev-dependencies]
 anyhow = "1.0.38"
-redis = "0.22.1"
+redis = "0.23.0"
 lazy_static = "1.4.0"
 redis-module-derive = { path = "./redismodule-rs-derive"}
 redis-module = { path = "./", features = ["test", "experimental-api"]}
