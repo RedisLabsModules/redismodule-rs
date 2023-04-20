@@ -41,7 +41,6 @@ macro_rules! redis_command {
     }};
 }
 
-#[cfg(feature = "experimental-api")]
 #[macro_export]
 macro_rules! redis_event_handler {
     (

@@ -1,5 +1,5 @@
-use crate::context::thread_safe::RedisLockIndicator;
-use crate::{raw, CallOptionResp, CallOptionsBuilder, CallResult, RedisGILGuard, RedisValue};
+use crate::context::thread_safe::{RedisGILGuard, RedisLockIndicator};
+use crate::{raw, CallOptionResp, CallOptionsBuilder, CallResult, RedisValue};
 use crate::{Context, RedisError, RedisString};
 use bitflags::bitflags;
 use std::ffi::{CStr, CString};

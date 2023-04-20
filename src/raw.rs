@@ -109,7 +109,6 @@ impl From<Status> for Result<(), &str> {
     }
 }
 
-#[cfg(feature = "experimental-api")]
 bitflags! {
     #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
     pub struct NotifyEvent : c_int {
@@ -803,7 +802,13 @@ pub fn add_info_field_long_long(
 }
 
 /// # Safety
-#[cfg(feature = "experimental-api")]
+///
+/// This function is safe to use as it doesn't perform any work with
+/// the [RedisModuleCtx] pointer except for passing it to the redis server.
+///
+/// # Panics
+///
+/// Panics when the [RedisModule_ExportSharedAPI] is unavailable.
 pub unsafe fn export_shared_api(
     ctx: *mut RedisModuleCtx,
     func: *const ::std::os::raw::c_void,
@@ -813,7 +818,13 @@ pub unsafe fn export_shared_api(
 }
 
 /// # Safety
-#[cfg(feature = "experimental-api")]
+///
+/// This function is safe to use as it doesn't perform any work with
+/// the [RedisModuleCtx] pointer except for passing it to the redis server.
+///
+/// # Panics
+///
+/// Panics when the [RedisModule_NotifyKeyspaceEvent] is unavailable.
 pub unsafe fn notify_keyspace_event(
     ctx: *mut RedisModuleCtx,
     event_type: NotifyEvent,
@@ -825,7 +836,9 @@ pub unsafe fn notify_keyspace_event(
         .into()
 }
 
-#[cfg(feature = "experimental-api")]
+/// # Panics
+///
+/// Panics when the [RedisModule_GetNotifyKeyspaceEvents] is unavailable.
 #[must_use]
 pub fn get_keyspace_events() -> NotifyEvent {
     unsafe {

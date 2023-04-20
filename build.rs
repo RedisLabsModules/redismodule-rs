@@ -43,29 +43,18 @@ fn main() {
 
     const EXPERIMENTAL_API: &str = "REDISMODULE_EXPERIMENTAL_API";
 
-    // Determine if the `experimental-api` feature is enabled
-    fn experimental_api() -> bool {
-        std::env::var_os("CARGO_FEATURE_EXPERIMENTAL_API").is_some()
-    }
-
     let mut build = cc::Build::new();
 
-    if experimental_api() {
-        build.define(EXPERIMENTAL_API, None);
-    }
-
     build
+        .define(EXPERIMENTAL_API, None)
         .file("src/redismodule.c")
         .include("src/include/")
         .compile("redismodule");
 
-    let mut build = bindgen::Builder::default();
+    let bindings_generator = bindgen::Builder::default();
 
-    if experimental_api() {
-        build = build.clang_arg(format!("-D{EXPERIMENTAL_API}").as_str());
-    }
-
-    let bindings = build
+    let bindings = bindings_generator
+        .clang_arg(&format!("-D{EXPERIMENTAL_API}"))
         .header("src/include/redismodule.h")
         .allowlist_var("(REDIS|Redis).*")
         .blocklist_type("__darwin_.*")
