@@ -28,6 +28,7 @@ fn keys_pos(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "keys_pos",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["keys_pos", keys_pos, "getkeys-api", 1, 1, 1],

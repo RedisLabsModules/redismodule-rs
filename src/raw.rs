@@ -109,8 +109,8 @@ impl From<Status> for Result<(), &str> {
     }
 }
 
-#[cfg(feature = "experimental-api")]
 bitflags! {
+    #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
     pub struct NotifyEvent : c_int {
         const GENERIC = REDISMODULE_NOTIFY_GENERIC;
         const STRING = REDISMODULE_NOTIFY_STRING;
@@ -274,6 +274,7 @@ pub fn call_reply_array_element(
 /// # Panics
 ///
 /// Panics if the Redis server doesn't support replying with bool (since RESP3).
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_set_element(
     reply: *mut RedisModuleCallReply,
     idx: usize,
@@ -284,6 +285,7 @@ pub fn call_reply_set_element(
 /// # Panics
 ///
 /// Panics if the Redis server doesn't support replying with bool (since RESP3).
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_map_element(
     reply: *mut RedisModuleCallReply,
     idx: usize,
@@ -330,7 +332,7 @@ pub fn open_key(
     keyname: *mut RedisModuleString,
     mode: KeyMode,
 ) -> *mut RedisModuleKey {
-    unsafe { RedisModule_OpenKey.unwrap()(ctx, keyname, mode.bits).cast::<RedisModuleKey>() }
+    unsafe { RedisModule_OpenKey.unwrap()(ctx, keyname, mode.bits()).cast::<RedisModuleKey>() }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -449,7 +451,7 @@ pub fn set_expire(key: *mut RedisModuleKey, expire: c_longlong) -> Status {
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> *mut c_char {
-    unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits) }
+    unsafe { RedisModule_StringDMA.unwrap()(key, len, mode.bits()) }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -800,7 +802,13 @@ pub fn add_info_field_long_long(
 }
 
 /// # Safety
-#[cfg(feature = "experimental-api")]
+///
+/// This function is safe to use as it doesn't perform any work with
+/// the [RedisModuleCtx] pointer except for passing it to the redis server.
+///
+/// # Panics
+///
+/// Panics when the [RedisModule_ExportSharedAPI] is unavailable.
 pub unsafe fn export_shared_api(
     ctx: *mut RedisModuleCtx,
     func: *const ::std::os::raw::c_void,
@@ -810,7 +818,13 @@ pub unsafe fn export_shared_api(
 }
 
 /// # Safety
-#[cfg(feature = "experimental-api")]
+///
+/// This function is safe to use as it doesn't perform any work with
+/// the [RedisModuleCtx] pointer except for passing it to the redis server.
+///
+/// # Panics
+///
+/// Panics when the [RedisModule_NotifyKeyspaceEvent] is unavailable.
 pub unsafe fn notify_keyspace_event(
     ctx: *mut RedisModuleCtx,
     event_type: NotifyEvent,
@@ -818,11 +832,13 @@ pub unsafe fn notify_keyspace_event(
     keyname: &RedisString,
 ) -> Status {
     let event = CString::new(event).unwrap();
-    RedisModule_NotifyKeyspaceEvent.unwrap()(ctx, event_type.bits, event.as_ptr(), keyname.inner)
+    RedisModule_NotifyKeyspaceEvent.unwrap()(ctx, event_type.bits(), event.as_ptr(), keyname.inner)
         .into()
 }
 
-#[cfg(feature = "experimental-api")]
+/// # Panics
+///
+/// Panics when the [RedisModule_GetNotifyKeyspaceEvents] is unavailable.
 #[must_use]
 pub fn get_keyspace_events() -> NotifyEvent {
     unsafe {

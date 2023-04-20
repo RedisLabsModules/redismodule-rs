@@ -85,6 +85,7 @@ fn alloc_get(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "alloc",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [
         MY_REDIS_TYPE,
     ],

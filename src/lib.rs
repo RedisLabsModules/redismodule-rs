@@ -22,11 +22,10 @@ pub mod logging;
 mod macros;
 mod utils;
 
-#[cfg(feature = "experimental-api")]
 pub use crate::context::blocked::BlockedClient;
-#[cfg(feature = "experimental-api")]
-pub use crate::context::thread_safe::{DetachedFromClient, ThreadSafeContext};
-#[cfg(feature = "experimental-api")]
+pub use crate::context::thread_safe::{
+    ContextGuard, DetachedFromClient, RedisGILGuard, RedisLockIndicator, ThreadSafeContext,
+};
 pub use crate::raw::NotifyEvent;
 
 pub use crate::configuration::ConfigurationValue;
@@ -34,9 +33,6 @@ pub use crate::configuration::EnumConfigurationValue;
 pub use crate::context::call_reply::{CallReply, CallResult, ErrorReply};
 pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::server_events;
-pub use crate::context::thread_safe::ContextGuard;
-pub use crate::context::thread_safe::RedisGILGuard;
-pub use crate::context::thread_safe::RedisLockIndicator;
 pub use crate::context::AclPermissions;
 pub use crate::context::CallOptionResp;
 pub use crate::context::CallOptions;
@@ -47,13 +43,6 @@ pub use crate::context::DetachedContext;
 pub use crate::raw::*;
 pub use crate::redismodule::*;
 use backtrace::Backtrace;
-
-/// Ideally this would be `#[cfg(not(test))]`, but that doesn't work:
-/// [59168#issuecomment-472653680](https://github.com/rust-lang/rust/issues/59168#issuecomment-472653680)
-/// The workaround is to use the `test` feature instead.
-#[cfg(not(feature = "test"))]
-#[global_allocator]
-static ALLOC: crate::alloc::RedisAlloc = crate::alloc::RedisAlloc;
 
 /// `LogLevel` is a level of logging to be specified with a Redis log directive.
 #[derive(Clone, Copy, Debug, AsRefStr)]

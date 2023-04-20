@@ -45,6 +45,7 @@ fn timer_stop(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "timer",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["timer.create", timer_create, "", 0, 0, 0],
