@@ -1,8 +1,7 @@
-#[macro_use]
-extern crate redis_module;
-
 use redis_module::raw::KeyType;
-use redis_module::{Context, NextArg, RedisError, RedisResult, RedisString, RedisValue};
+use redis_module::{
+    redis_module, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue,
+};
 
 // LPOPRPUSH source destination
 // Pops and returns the first element (head) of the list stored at 'source'

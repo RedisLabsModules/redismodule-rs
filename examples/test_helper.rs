@@ -1,9 +1,6 @@
-#[macro_use]
-extern crate redis_module;
-
 use redis_module::InfoContext;
 use redis_module::Status;
-use redis_module::{Context, RedisError, RedisResult, RedisString};
+use redis_module::{redis_module, Context, RedisError, RedisResult, RedisString};
 
 fn test_helper_version(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     let ver = ctx.get_redis_version()?;

@@ -1,9 +1,6 @@
-#[macro_use]
-extern crate redis_module;
-
 use redis_module::apierror::APIResult;
 use redis_module::{
-    Context, NotifyEvent, RedisError, RedisResult, RedisString, RedisValue, Status,
+    redis_module, Context, NotifyEvent, RedisError, RedisResult, RedisString, RedisValue, Status,
 };
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicI64, Ordering};

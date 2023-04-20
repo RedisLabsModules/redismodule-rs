@@ -221,12 +221,12 @@ macro_rules! redis_module {
             )*
 
             $(
-                redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep);
+                $crate::redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep);
             )*
 
             $(
                 $(
-                    redis_event_handler!(ctx, $(raw::NotifyEvent::$event_type |)+ raw::NotifyEvent::empty(), $event_handler);
+                    $crate::redis_event_handler!(ctx, $(raw::NotifyEvent::$event_type |)+ raw::NotifyEvent::empty(), $event_handler);
                 )*
             )?
 

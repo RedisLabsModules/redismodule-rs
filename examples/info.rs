@@ -1,7 +1,6 @@
-#[macro_use]
-extern crate redis_module;
-
-use redis_module::{Context, NextArg, RedisError, RedisResult, RedisString, RedisValue};
+use redis_module::{
+    redis_module, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue,
+};
 
 fn info_cmd(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     if args.len() < 3 {

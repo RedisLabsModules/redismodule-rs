@@ -1,7 +1,4 @@
-#[macro_use]
-extern crate redis_module;
-
-use redis_module::{Context, RedisError, RedisResult, RedisString, RedisValue};
+use redis_module::{redis_module, Context, RedisError, RedisResult, RedisString, RedisValue};
 
 fn keys_pos(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     // Number of args (excluding command name) must be even

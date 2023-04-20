@@ -1,9 +1,6 @@
-#[macro_use]
-extern crate redis_module;
-
 use redis_module::{
-    CallOptionResp, CallOptionsBuilder, CallReply, CallResult, Context, RedisError, RedisResult,
-    RedisString,
+    redis_module, CallOptionResp, CallOptionsBuilder, CallReply, CallResult, Context, RedisError,
+    RedisResult, RedisString,
 };
 
 fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {

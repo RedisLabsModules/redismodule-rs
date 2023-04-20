@@ -30,11 +30,37 @@ lazy_static::lazy_static! {
     ];
 }
 
-pub(crate) fn get_feature_flags(min_required_version: usize) -> (Vec<TokenStream>, Vec<TokenStream>) {
-    let all_lower_versions: Vec<&str> = ALL_VERSIONS.iter().filter_map(|(v, s)| if *v < min_required_version {Some(s.as_str())} else {None}).collect();
-    let all_upper_versions: Vec<&str> = ALL_VERSIONS.iter().filter_map(|(v, s)| if *v >= min_required_version {Some(s.as_str())} else {None}).collect();
+pub(crate) fn get_feature_flags(
+    min_required_version: usize,
+) -> (Vec<TokenStream>, Vec<TokenStream>) {
+    let all_lower_versions: Vec<&str> = ALL_VERSIONS
+        .iter()
+        .filter_map(|(v, s)| {
+            if *v < min_required_version {
+                Some(s.as_str())
+            } else {
+                None
+            }
+        })
+        .collect();
+    let all_upper_versions: Vec<&str> = ALL_VERSIONS
+        .iter()
+        .filter_map(|(v, s)| {
+            if *v >= min_required_version {
+                Some(s.as_str())
+            } else {
+                None
+            }
+        })
+        .collect();
     (
-        all_lower_versions.into_iter().map(|s| quote!(feature = #s).into()).collect(),
-        all_upper_versions.into_iter().map(|s| quote!(feature = #s).into()).collect(),
+        all_lower_versions
+            .into_iter()
+            .map(|s| quote!(feature = #s).into())
+            .collect(),
+        all_upper_versions
+            .into_iter()
+            .map(|s| quote!(feature = #s).into())
+            .collect(),
     )
 }

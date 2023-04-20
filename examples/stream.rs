@@ -1,8 +1,7 @@
-#[macro_use]
-extern crate redis_module;
-
 use redis_module::raw::{KeyType, RedisModuleStreamID};
-use redis_module::{Context, NextArg, RedisError, RedisResult, RedisString, RedisValue};
+use redis_module::{
+    redis_module, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue,
+};
 
 fn stream_read_from(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let mut args = args.into_iter().skip(1);

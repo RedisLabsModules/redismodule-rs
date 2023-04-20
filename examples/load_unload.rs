@@ -1,7 +1,4 @@
-#[macro_use]
-extern crate redis_module;
-
-use redis_module::{Context, LogLevel, RedisString, Status};
+use redis_module::{redis_module, Context, LogLevel, RedisString, Status};
 
 static mut GLOBAL_STATE: Option<String> = None;
 
