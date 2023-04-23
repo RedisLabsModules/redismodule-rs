@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use redis_module_derive_internals::redismodule_api;
+use redis_module_macros_internals::redismodule_api;
 use std::ffi::CString;
 use std::os::raw::c_void;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};

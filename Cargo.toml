@@ -103,13 +103,13 @@ linkme = "0.3"
 serde = { version = "1", features = ["derive"] }
 nix = "0.26"
 cfg-if = "1"
-redis-module-derive-internals = { path = "./redismodule-rs-derive-internals"}
+redis-module-macros-internals = { path = "./redismodule-rs-macros-internals"}
 
 [dev-dependencies]
 anyhow = "1"
 redis = "0.23"
 lazy_static = "1"
-redis-module-derive = { path = "./redismodule-rs-derive"}
+redis-module-macros = { path = "./redismodule-rs-macros"}
 redis-module = { path = "./" }
 
 [build-dependencies]

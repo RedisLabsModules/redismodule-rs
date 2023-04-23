@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use redis_module::{
     redis_module, server_events::FlushSubevent, Context, RedisResult, RedisString, RedisValue,
 };
-use redis_module_derive::flush_event_handler;
+use redis_module_macros::flush_event_handler;
 
 static NUM_FLUSHES: AtomicI64 = AtomicI64::new(0);
 

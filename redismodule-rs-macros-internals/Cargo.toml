@@ -1,9 +1,9 @@
 [package]
-name = "redis-module-derive-internals"
+name = "redis-module-macros-internals"
 version = "99.99.99"
 authors = ["Meir Shpilraien <meir@redis.com>"]
 edition = "2021"
-description = "A derive crate for redismodule-rs"
+description = "A macros crate for redismodule-rs"
 license = "BSD-3-Clause"
 repository = "https://github.com/RedisLabsModules/redismodule-rs"
 keywords = ["redis", "plugin"]
@@ -18,6 +18,6 @@ lazy_static = "1"
 proc-macro2 = "1"
 
 [lib]
-name = "redis_module_derive_internals"
+name = "redis_module_macros_internals"
 path = "src/lib.rs"
 proc-macro = true

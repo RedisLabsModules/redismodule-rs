@@ -1,9 +1,9 @@
 [package]
-name = "redis-module-derive"
+name = "redis-module-macros"
 version = "99.99.99"
 authors = ["Meir Shpilraien <meir@redis.com>"]
 edition = "2021"
-description = "A derive crate for redismodule-rs"
+description = "A macros crate for redismodule-rs"
 license = "BSD-3-Clause"
 repository = "https://github.com/RedisLabsModules/redismodule-rs"
 keywords = ["redis", "plugin"]
@@ -16,6 +16,6 @@ syn = { version="1.0", features = ["full"]}
 quote = "1.0"
 
 [lib]
-name = "redis_module_derive"
+name = "redis_module_macros"
 path = "src/lib.rs"
 proc-macro = true
