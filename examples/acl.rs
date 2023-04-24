@@ -1,8 +1,6 @@
-#[macro_use]
-extern crate redis_module;
-
 use redis_module::{
-    AclPermissions, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue,
+    redis_module, AclPermissions, Context, NextArg, RedisError, RedisResult, RedisString,
+    RedisValue,
 };
 
 fn verify_key_access_for_user(ctx: &Context, args: Vec<RedisString>) -> RedisResult {

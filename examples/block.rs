@@ -1,7 +1,6 @@
-#[macro_use]
-extern crate redis_module;
-
-use redis_module::{Context, RedisResult, RedisString, RedisValue, ThreadSafeContext};
+use redis_module::{
+    redis_module, Context, RedisResult, RedisString, RedisValue, ThreadSafeContext,
+};
 use std::thread;
 use std::time::Duration;
 

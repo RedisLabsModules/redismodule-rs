@@ -323,7 +323,7 @@ fn test_verify_acl_on_user() -> Result<()> {
 }
 
 #[test]
-fn test_key_miss_event() -> Result<()> {
+fn test_key_space_notifications() -> Result<()> {
     let port: u16 = 6492;
     let _guards = vec![start_redis_server_with_module("events", port)
         .with_context(|| "failed to start redis server")?];
@@ -333,10 +333,15 @@ fn test_key_miss_event() -> Result<()> {
     let res: usize = redis::cmd("events.num_key_miss").query(&mut con)?;
     assert_eq!(res, 0);
 
-    let _: RedisResult<String> = redis::cmd("GET").arg(&["x"]).query(&mut con);
+    let _ = redis::cmd("GET").arg(&["x"]).query(&mut con)?;
 
     let res: usize = redis::cmd("events.num_key_miss").query(&mut con)?;
     assert_eq!(res, 1);
+
+    let _: String = redis::cmd("SET").arg(&["x", "1"]).query(&mut con)?;
+
+    let res: String = redis::cmd("GET").arg(&["num_sets"]).query(&mut con)?;
+    assert_eq!(res, "1");
 
     Ok(())
 }

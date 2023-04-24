@@ -102,14 +102,24 @@ backtrace = "0.3"
 linkme = "0.3"
 serde = { version = "1", features = ["derive"] }
 nix = "0.26"
+cfg-if = "1"
+redis-module-macros-internals = { path = "./redismodule-rs-macros-internals"}
 
 [dev-dependencies]
 anyhow = "1"
 redis = "0.23"
 lazy_static = "1"
-redis-module-derive = { path = "./redismodule-rs-derive"}
+redis-module-macros = { path = "./redismodule-rs-macros"}
 redis-module = { path = "./" }
 
 [build-dependencies]
 bindgen = "0.64"
 cc = "1"
+
+[features]
+default = ["min-redis-compatibility-version-6-0"]
+min-redis-compatibility-version-7-2 = []
+min-redis-compatibility-version-7-0 = []
+min-redis-compatibility-version-6-2 = []
+min-redis-compatibility-version-6-0 = []
+

@@ -1,8 +1,6 @@
-#[macro_use]
-extern crate redis_module;
-
 use redis_module::{
-    redisvalue::RedisValueKey, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue,
+    redis_module, redisvalue::RedisValueKey, Context, NextArg, RedisError, RedisResult,
+    RedisString, RedisValue,
 };
 use std::collections::{HashMap, HashSet};
 

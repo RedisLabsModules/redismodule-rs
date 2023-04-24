@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate redis_module;
-
 use std::sync::{
     atomic::{AtomicBool, AtomicI64},
     Mutex,
@@ -9,7 +6,8 @@ use std::sync::{
 use lazy_static::lazy_static;
 use redis_module::{
     configuration::{ConfigurationContext, ConfigurationFlags},
-    ConfigurationValue, Context, RedisGILGuard, RedisResult, RedisString, RedisValue,
+    enum_configuration, redis_module, ConfigurationValue, Context, RedisGILGuard, RedisResult,
+    RedisString, RedisValue,
 };
 
 enum_configuration! {

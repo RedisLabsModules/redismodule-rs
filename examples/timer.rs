@@ -1,7 +1,4 @@
-#[macro_use]
-extern crate redis_module;
-
-use redis_module::{Context, NextArg, RedisResult, RedisString};
+use redis_module::{redis_module, Context, NextArg, RedisResult, RedisString};
 use std::time::Duration;
 
 fn callback(ctx: &Context, data: String) {
