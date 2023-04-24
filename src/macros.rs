@@ -153,6 +153,7 @@ macro_rules! redis_module {
         ])?
     ) => {
         /// Redis module allocator.
+        #[cfg(not(test))]
         #[global_allocator]
         static REDIS_MODULE_ALLOCATOR: $allocator_type = $allocator_init;
 
