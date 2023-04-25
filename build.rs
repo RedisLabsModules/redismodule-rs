@@ -54,7 +54,7 @@ fn main() {
     let bindings_generator = bindgen::Builder::default();
 
     let bindings = bindings_generator
-        .clang_arg(&format!("-D{EXPERIMENTAL_API}"))
+        .clang_arg(format!("-D{EXPERIMENTAL_API}"))
         .header("src/include/redismodule.h")
         .allowlist_var("(REDIS|Redis).*")
         .blocklist_type("__darwin_.*")
