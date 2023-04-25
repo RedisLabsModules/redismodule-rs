@@ -298,13 +298,13 @@ macro_rules! redis_module {
                 raw::RedisModule_LoadConfigs.unwrap()(ctx);
 
                 $(
-                    redis_command!(ctx, $module_config_get_command, |ctx, args: Vec<RedisString>| {
+                    $crate::redis_command!(ctx, $module_config_get_command, |ctx, args: Vec<RedisString>| {
                         module_config_get(ctx, args, $module_name)
                     }, "", 0, 0, 0);
                 )?
 
                 $(
-                    redis_command!(ctx, $module_config_set_command, |ctx, args: Vec<RedisString>| {
+                    $crate::redis_command!(ctx, $module_config_set_command, |ctx, args: Vec<RedisString>| {
                         module_config_set(ctx, args, $module_name)
                     }, "", 0, 0, 0);
                 )?
