@@ -425,18 +425,12 @@ impl Context {
                 raw::reply_with_big_number(self.ctx, s.as_ptr().cast::<c_char>(), s.len())
             }
 
-            Ok(RedisValue::VerbatimString((mut format, data))) => {
-                while format.len() < 3 {
-                    // pad the format till it will have 3 chars. Redis will look at those first 3 chars only.
-                    format.push(' ')
-                }
-                raw::reply_with_verbatim_string(
-                    self.ctx,
-                    data.as_ptr().cast(),
-                    data.len(),
-                    format.as_ptr().cast(),
-                )
-            }
+            Ok(RedisValue::VerbatimString((format, data))) => raw::reply_with_verbatim_string(
+                self.ctx,
+                data.as_ptr().cast(),
+                data.len(),
+                format.as_ptr().cast(),
+            ),
 
             Ok(RedisValue::BulkRedisString(s)) => raw::reply_with_string(self.ctx, s.inner),
 

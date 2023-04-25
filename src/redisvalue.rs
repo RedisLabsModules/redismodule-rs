@@ -24,7 +24,7 @@ pub enum RedisValue {
     Bool(bool),
     Float(f64),
     BigNumber(String),
-    VerbatimString((String, Vec<u8>)),
+    VerbatimString(([char; 3], Vec<u8>)),
     Array(Vec<RedisValue>),
     StaticError(&'static str),
     Map(HashMap<RedisValueKey, RedisValue>),
@@ -175,7 +175,16 @@ impl<'root> From<&CallReply<'root>> for RedisValue {
             CallReply::Double(reply) => RedisValue::Float(reply.to_double()),
             CallReply::BigNumber(reply) => RedisValue::BigNumber(reply.to_string().unwrap()),
             CallReply::VerbatimString(reply) => {
-                RedisValue::VerbatimString(reply.to_parts().unwrap())
+                let (f, data) = reply.to_parts().unwrap();
+                let mut format: [char; 3] = ['\0', '\0', '\0'];
+                f.chars()
+                    .into_iter()
+                    .take(3)
+                    .enumerate()
+                    .for_each(|(index, char)| {
+                        format[index] = char;
+                    });
+                RedisValue::VerbatimString((format, data))
             }
         }
     }
