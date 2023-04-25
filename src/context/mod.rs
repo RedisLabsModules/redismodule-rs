@@ -432,9 +432,9 @@ impl Context {
                 }
                 raw::reply_with_verbatim_string(
                     self.ctx,
-                    data.as_ptr().cast::<c_char>(),
+                    data.as_ptr().cast(),
                     data.len(),
-                    format.as_ptr().cast::<c_char>(),
+                    format.as_ptr().cast(),
                 )
             }
 
