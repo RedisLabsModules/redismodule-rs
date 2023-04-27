@@ -543,9 +543,9 @@ impl TryFrom<&str> for VerbatimStringFormat {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         if value.len() != 3 {
-            return Err(RedisError::String(
-                "Verbatim format len must be 3".to_owned(),
-            ));
+            return Err(RedisError::String(format!(
+                "Verbatim format length must be {VERBATIM_FORMAT_LENGTH}."
+            )));
         }
         let mut res = VerbatimStringFormat::default();
         value
