@@ -531,13 +531,33 @@ pub struct VerbatimStringCallReply<'root> {
     _dummy: PhantomData<&'root ()>,
 }
 
+/// RESP3 state that the verbatim string format must be of length 3.
+const VERBATIM_FORMAT_LENGTH: usize = 3;
+/// The string format of a verbatim string ([VerbatimStringCallReply]).
+#[repr(transparent)]
+#[derive(Debug, Default, Copy, Clone)]
+pub struct VerbatimStringFormat(pub [char; VERBATIM_FORMAT_LENGTH]);
+
+impl From<&str> for VerbatimStringFormat {
+    fn from(value: &str) -> Self {
+        let mut res = VerbatimStringFormat::default();
+        value
+            .chars()
+            .into_iter()
+            .take(3)
+            .enumerate()
+            .for_each(|(i, c)| res.0[i] = c);
+        res
+    }
+}
+
 impl<'root> VerbatimStringCallReply<'root> {
     /// Return the verbatim string value of the [VerbatimStringCallReply] as a tuple.
     /// The first entry represents the format, the second entry represent the data.
     /// Return None if the format is not a valid utf8
-    pub fn to_parts(&self) -> Option<(String, Vec<u8>)> {
+    pub fn to_parts(&self) -> Option<(VerbatimStringFormat, Vec<u8>)> {
         self.as_parts()
-            .map(|(format, data)| (format.to_string(), data.to_vec()))
+            .map(|(format, data)| (format.into(), data.to_vec()))
     }
 
     /// Borrow the verbatim string value of the [VerbatimStringCallReply] as a tuple.

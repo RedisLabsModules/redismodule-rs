@@ -175,16 +175,7 @@ impl<'root> From<&CallReply<'root>> for RedisValue {
             CallReply::Double(reply) => RedisValue::Float(reply.to_double()),
             CallReply::BigNumber(reply) => RedisValue::BigNumber(reply.to_string().unwrap()),
             CallReply::VerbatimString(reply) => {
-                let (f, data) = reply.to_parts().unwrap();
-                let mut format: [char; 3] = ['\0', '\0', '\0'];
-                f.chars()
-                    .into_iter()
-                    .take(3)
-                    .enumerate()
-                    .for_each(|(index, char)| {
-                        format[index] = char;
-                    });
-                RedisValue::VerbatimString((format, data))
+                RedisValue::VerbatimString(reply.to_parts().map(|(f, data)| (f.0, data)).unwrap())
             }
         }
     }
