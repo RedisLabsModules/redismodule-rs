@@ -7,7 +7,7 @@ use std::{
     ptr::NonNull,
 };
 
-use crate::raw::*;
+use crate::{raw::*, RedisError};
 
 pub struct StringCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
@@ -538,16 +538,31 @@ const VERBATIM_FORMAT_LENGTH: usize = 3;
 #[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub struct VerbatimStringFormat(pub [c_char; VERBATIM_FORMAT_LENGTH]);
 
-impl From<&str> for VerbatimStringFormat {
-    fn from(value: &str) -> Self {
+impl TryFrom<&str> for VerbatimStringFormat {
+    type Error = RedisError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value.len() != 3 {
+            return Err(RedisError::String(
+                "Verbatim format len must be 3".to_owned(),
+            ));
+        }
         let mut res = VerbatimStringFormat::default();
         value
             .chars()
             .into_iter()
             .take(3)
             .enumerate()
-            .for_each(|(i, c)| res.0[i] = c as c_char);
-        res
+            .try_for_each(|(i, c)| {
+                if c as u32 >= 127 {
+                    return Err(RedisError::String(
+                        "Verbatim format must contains only ASCI values.".to_owned(),
+                    ));
+                }
+                res.0[i] = c as c_char;
+                Ok(())
+            })?;
+        Ok(res)
     }
 }
 
@@ -556,8 +571,8 @@ impl<'root> VerbatimStringCallReply<'root> {
     /// The first entry represents the format, the second entry represent the data.
     /// Return None if the format is not a valid utf8
     pub fn to_parts(&self) -> Option<(VerbatimStringFormat, Vec<u8>)> {
-        self.as_parts()
-            .map(|(format, data)| (format.into(), data.to_vec()))
+        let (format, data) = self.as_parts()?;
+        Some((format.try_into().ok()?, data.to_vec()))
     }
 
     /// Borrow the verbatim string value of the [VerbatimStringCallReply] as a tuple.
