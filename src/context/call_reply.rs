@@ -7,7 +7,7 @@ use std::{
     ptr::NonNull,
 };
 
-use crate::raw::*;
+use crate::{raw::*, RedisError};
 
 pub struct StringCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
@@ -531,13 +531,48 @@ pub struct VerbatimStringCallReply<'root> {
     _dummy: PhantomData<&'root ()>,
 }
 
+/// RESP3 state that the verbatim string format must be of length 3.
+const VERBATIM_FORMAT_LENGTH: usize = 3;
+/// The string format of a verbatim string ([VerbatimStringCallReply]).
+#[repr(transparent)]
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
+pub struct VerbatimStringFormat(pub [c_char; VERBATIM_FORMAT_LENGTH]);
+
+impl TryFrom<&str> for VerbatimStringFormat {
+    type Error = RedisError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value.len() != 3 {
+            return Err(RedisError::String(format!(
+                "Verbatim format length must be {VERBATIM_FORMAT_LENGTH}."
+            )));
+        }
+        let mut res = VerbatimStringFormat::default();
+        value
+            .chars()
+            .into_iter()
+            .take(3)
+            .enumerate()
+            .try_for_each(|(i, c)| {
+                if c as u32 >= 127 {
+                    return Err(RedisError::String(
+                        "Verbatim format must contains only ASCI values.".to_owned(),
+                    ));
+                }
+                res.0[i] = c as c_char;
+                Ok(())
+            })?;
+        Ok(res)
+    }
+}
+
 impl<'root> VerbatimStringCallReply<'root> {
     /// Return the verbatim string value of the [VerbatimStringCallReply] as a tuple.
     /// The first entry represents the format, the second entry represent the data.
     /// Return None if the format is not a valid utf8
-    pub fn to_parts(&self) -> Option<(String, Vec<u8>)> {
-        self.as_parts()
-            .map(|(format, data)| (format.to_string(), data.to_vec()))
+    pub fn to_parts(&self) -> Option<(VerbatimStringFormat, Vec<u8>)> {
+        let (format, data) = self.as_parts()?;
+        Some((format.try_into().ok()?, data.to_vec()))
     }
 
     /// Borrow the verbatim string value of the [VerbatimStringCallReply] as a tuple.

@@ -425,15 +425,12 @@ impl Context {
                 raw::reply_with_big_number(self.ctx, s.as_ptr().cast::<c_char>(), s.len())
             }
 
-            Ok(RedisValue::VerbatimString((format, mut data))) => {
-                let mut final_data = format.as_bytes().to_vec();
-                final_data.append(&mut data);
-                raw::reply_with_verbatim_string(
-                    self.ctx,
-                    final_data.as_ptr().cast::<c_char>(),
-                    final_data.len(),
-                )
-            }
+            Ok(RedisValue::VerbatimString((format, data))) => raw::reply_with_verbatim_string(
+                self.ctx,
+                data.as_ptr().cast(),
+                data.len(),
+                format.0.as_ptr().cast(),
+            ),
 
             Ok(RedisValue::BulkRedisString(s)) => raw::reply_with_string(self.ctx, s.inner),
 

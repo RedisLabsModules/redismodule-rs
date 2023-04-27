@@ -1,4 +1,7 @@
-use crate::{context::call_reply::CallResult, CallReply, RedisError, RedisString};
+use crate::{
+    context::call_reply::{CallResult, VerbatimStringFormat},
+    CallReply, RedisError, RedisString,
+};
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
@@ -24,7 +27,7 @@ pub enum RedisValue {
     Bool(bool),
     Float(f64),
     BigNumber(String),
-    VerbatimString((String, Vec<u8>)),
+    VerbatimString((VerbatimStringFormat, Vec<u8>)),
     Array(Vec<RedisValue>),
     StaticError(&'static str),
     Map(HashMap<RedisValueKey, RedisValue>),
