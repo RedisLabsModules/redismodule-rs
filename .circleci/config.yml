@@ -71,7 +71,7 @@ commands:
     parameters:
       redis_version:
         type: string
-        default: "7"
+        default: "7.2-rc1"
       getredis_params:
         type: string
         default: ""
@@ -101,7 +101,7 @@ commands:
         default: ""
       redis_version:
         type: string
-        default: "7"
+        default: "7.2-rc1"
       getredis_params:
         type: string
         default: ""
