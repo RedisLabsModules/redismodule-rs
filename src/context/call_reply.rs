@@ -536,7 +536,7 @@ const VERBATIM_FORMAT_LENGTH: usize = 3;
 /// The string format of a verbatim string ([VerbatimStringCallReply]).
 #[repr(transparent)]
 #[derive(Debug, Default, Copy, Clone, PartialEq)]
-pub struct VerbatimStringFormat(pub [char; VERBATIM_FORMAT_LENGTH]);
+pub struct VerbatimStringFormat(pub [c_char; VERBATIM_FORMAT_LENGTH]);
 
 impl From<&str> for VerbatimStringFormat {
     fn from(value: &str) -> Self {
@@ -546,7 +546,7 @@ impl From<&str> for VerbatimStringFormat {
             .into_iter()
             .take(3)
             .enumerate()
-            .for_each(|(i, c)| res.0[i] = c);
+            .for_each(|(i, c)| res.0[i] = c as c_char);
         res
     }
 }
