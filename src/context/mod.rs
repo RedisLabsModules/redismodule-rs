@@ -429,7 +429,7 @@ impl Context {
                 self.ctx,
                 data.as_ptr().cast(),
                 data.len(),
-                format.as_ptr().cast(),
+                format.0.as_ptr().cast(),
             ),
 
             Ok(RedisValue::BulkRedisString(s)) => raw::reply_with_string(self.ctx, s.inner),

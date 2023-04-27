@@ -535,7 +535,7 @@ pub struct VerbatimStringCallReply<'root> {
 const VERBATIM_FORMAT_LENGTH: usize = 3;
 /// The string format of a verbatim string ([VerbatimStringCallReply]).
 #[repr(transparent)]
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
 pub struct VerbatimStringFormat(pub [char; VERBATIM_FORMAT_LENGTH]);
 
 impl From<&str> for VerbatimStringFormat {
