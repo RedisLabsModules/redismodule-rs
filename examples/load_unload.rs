@@ -1,4 +1,4 @@
-use redis_module::{redis_module, Context, LogLevel, RedisString, Status};
+use redis_module::{logging::RedisLogLevel, redis_module, Context, RedisString, Status};
 
 static mut GLOBAL_STATE: Option<String> = None;
 
@@ -10,7 +10,7 @@ fn init(ctx: &Context, args: &[RedisString]) -> Status {
         (before, after)
     };
     ctx.log(
-        LogLevel::Warning,
+        RedisLogLevel::Warning,
         &format!("Update global state on LOAD. BEFORE: {before:?}, AFTER: {after:?}",),
     );
 
@@ -24,7 +24,7 @@ fn deinit(ctx: &Context) -> Status {
         (before, after)
     };
     ctx.log(
-        LogLevel::Warning,
+        RedisLogLevel::Warning,
         &format!("Update global state on UNLOAD. BEFORE: {before:?}, AFTER: {after:?}"),
     );
 
