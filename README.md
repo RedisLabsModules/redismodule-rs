@@ -1,9 +1,9 @@
 [![license](https://img.shields.io/github/license/RedisLabsModules/redismodule-rs.svg)](https://github.com/RedisLabsModules/redismodule-rs/blob/master/LICENSE)
 [![Releases](https://img.shields.io/github/release/RedisLabsModules/redismodule-rs.svg)](https://github.com/RedisLabsModules/redismodule-rs/releases/latest)
-[![CircleCI](https://circleci.com/gh/RedisLabsModules/redismodule-rs/tree/master.svg?style=svg)](https://circleci.com/gh/RedisLabsModules/redismodule-rs/tree/master)
 [![crates.io](https://img.shields.io/crates/v/redis-module.svg)](https://crates.io/crates/redis-module)
+[![docs-crates.io](https://shields.io/static/v1?label=docs&message=crates.io&color=9cf)](https://docs.rs/redis-module)
 [![docs-master](https://shields.io/static/v1?label=docs&message=master&color=9cf)](https://docs.rs/redis-module/latest)
-[![docs-crates.io](https://shields.io/static/v1?label=docs&message=crates.io&color=9cf)](https://docs.rs/redis-module) 
+[![CircleCI](https://circleci.com/gh/RedisLabsModules/redismodule-rs/tree/master.svg?style=svg)](https://circleci.com/gh/RedisLabsModules/redismodule-rs/tree/master)
 
 # redismodule-rs
 
