@@ -435,8 +435,9 @@ pub fn reply_with_verbatim_string(
     ctx: *mut RedisModuleCtx,
     s: *const c_char,
     len: size_t,
+    format: *const c_char,
 ) -> Status {
-    unsafe { RedisModule_ReplyWithVerbatimString.unwrap()(ctx, s, len).into() }
+    unsafe { RedisModule_ReplyWithVerbatimStringType.unwrap()(ctx, s, len, format).into() }
 }
 
 // Sets the expiry on a key.
