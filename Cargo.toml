@@ -20,6 +20,14 @@ name = "string"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "configuration"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "acl"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "call"
 crate-type = ["cdylib"]
 
@@ -34,17 +42,14 @@ crate-type = ["cdylib"]
 [[example]]
 name = "timer"
 crate-type = ["cdylib"]
-required-features = ["experimental-api"]
 
 [[example]]
 name = "threads"
 crate-type = ["cdylib"]
-required-features = ["experimental-api"]
 
 [[example]]
 name = "block"
 crate-type = ["cdylib"]
-required-features = ["experimental-api"]
 
 [[example]]
 name = "data_type"
@@ -59,19 +64,20 @@ name = "ctx_flags"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "server_events"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "events"
 crate-type = ["cdylib"]
-required-features = ["experimental-api"]
 
 [[example]]
 name = "test_helper"
 crate-type = ["cdylib"]
-required-features = ["test","experimental-api"]
 
 [[example]]
 name = "info"
 crate-type = ["cdylib"]
-required-features = []
 
 [[example]]
 name = "scan_keys"
@@ -81,29 +87,39 @@ crate-type = ["cdylib"]
 name = "stream"
 crate-type = ["cdylib"]
 
+[[example]]
+name = "response"
+crate-type = ["cdylib"]
+
 [dependencies]
-bitflags = "1.2"
+bitflags = "2.1"
 libc = "0.2"
 enum-primitive-derive = "^0.1"
 num-traits = "^0.2"
 regex = "1"
 strum_macros = "0.24"
-#failure = "0.1"
 backtrace = "0.3"
+linkme = "0.3"
+serde = { version = "1", features = ["derive"] }
+nix = "0.26"
+cfg-if = "1"
+redis-module-macros-internals = { path = "./redismodule-rs-macros-internals"}
 
 [dev-dependencies]
-anyhow = "1.0.38"
-redis = "0.22.1"
+anyhow = "1"
+redis = "0.23"
+lazy_static = "1"
+redis-module-macros = { path = "./redismodule-rs-macros"}
+redis-module = { path = "./" }
 
 [build-dependencies]
 bindgen = "0.64"
-cc = "1.0"
+cc = "1"
 
 [features]
-default = []
-experimental-api = []
+default = ["min-redis-compatibility-version-6-0"]
+min-redis-compatibility-version-7-2 = []
+min-redis-compatibility-version-7-0 = []
+min-redis-compatibility-version-6-2 = []
+min-redis-compatibility-version-6-0 = []
 
-# Workaround to allow cfg(feature = "test") in dependencies:
-# https://github.com/rust-lang/rust/issues/59168#issuecomment-472653680
-# This requires running the tests with `--features test`
-test = []

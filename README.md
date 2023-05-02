@@ -31,5 +31,6 @@ The following are some modules that are built on this crate:
 
 - [RedisJSON](https://github.com/RedisJSON/RedisJSON)
 - [Rust API for RediSearch](https://github.com/RediSearch/redisearch-api-rs)
+- [RedisStateMachine](https://github.com/RedisLabsModules/redis-state-machine)
 
 Several member of the community have written their own modules based on this.

@@ -1,8 +1,5 @@
-#[macro_use]
-extern crate redis_module;
-
 use redis_module::native_types::RedisType;
-use redis_module::{raw, Context, NextArg, RedisResult, RedisString};
+use redis_module::{raw, redis_module, Context, NextArg, RedisResult, RedisString};
 use std::os::raw::c_void;
 
 #[derive(Debug)]
@@ -85,6 +82,7 @@ fn alloc_get(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "alloc",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [
         MY_REDIS_TYPE,
     ],

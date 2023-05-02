@@ -1,7 +1,6 @@
-#[macro_use]
-extern crate redis_module;
-
-use redis_module::{key::RedisKey, Context, KeysCursor, RedisResult, RedisString, RedisValue};
+use redis_module::{
+    key::RedisKey, redis_module, Context, KeysCursor, RedisResult, RedisString, RedisValue,
+};
 
 fn scan_keys(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     let cursor = KeysCursor::new();
@@ -22,6 +21,7 @@ fn scan_keys(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "scan",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["scan_keys", scan_keys, "readonly", 0, 0, 0],

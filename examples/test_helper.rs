@@ -1,9 +1,6 @@
-#[macro_use]
-extern crate redis_module;
-
 use redis_module::InfoContext;
 use redis_module::Status;
-use redis_module::{Context, RedisError, RedisResult, RedisString};
+use redis_module::{redis_module, Context, RedisError, RedisResult, RedisString};
 
 fn test_helper_version(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     let ver = ctx.get_redis_version()?;
@@ -12,7 +9,6 @@ fn test_helper_version(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     Ok(response.into())
 }
 
-#[cfg(feature = "test")]
 fn test_helper_version_rm_call(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     let ver = ctx.get_redis_version_rm_call()?;
     let response: Vec<i64> = vec![ver.major.into(), ver.minor.into(), ver.patch.into()];
@@ -43,10 +39,10 @@ fn add_info(ctx: &InfoContext, _for_crash_report: bool) {
 
 //////////////////////////////////////////////////////
 
-#[cfg(feature = "test")]
 redis_module! {
     name: "test_helper",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     info: add_info,
     commands: [

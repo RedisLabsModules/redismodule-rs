@@ -1,3 +1,4 @@
+use crate::context::call_reply::{ErrorCallReply, ErrorReply};
 pub use crate::raw;
 use std::ffi::CStr;
 use std::fmt;
@@ -8,6 +9,24 @@ pub enum RedisError {
     Str(&'static str),
     String(String),
     WrongType,
+}
+
+impl<'root> From<ErrorCallReply<'root>> for RedisError {
+    fn from(err: ErrorCallReply<'root>) -> Self {
+        RedisError::String(
+            err.to_utf8_string()
+                .unwrap_or("can not convert error into String".into()),
+        )
+    }
+}
+
+impl<'root> From<ErrorReply<'root>> for RedisError {
+    fn from(err: ErrorReply<'root>) -> Self {
+        RedisError::String(
+            err.to_utf8_string()
+                .unwrap_or("can not convert error into String".into()),
+        )
+    }
 }
 
 impl RedisError {

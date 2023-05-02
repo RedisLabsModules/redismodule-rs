@@ -1,0 +1,23 @@
+[package]
+name = "redis-module-macros-internals"
+version = "99.99.99"
+authors = ["Meir Shpilraien <meir@redis.com>"]
+edition = "2021"
+description = "A macros crate for redismodule-rs"
+license = "BSD-3-Clause"
+repository = "https://github.com/RedisLabsModules/redismodule-rs"
+keywords = ["redis", "plugin"]
+categories = ["database", "api-bindings"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+syn = { version="1", features = ["full"]}
+quote = "1"
+lazy_static = "1"
+proc-macro2 = "1"
+
+[lib]
+name = "redis_module_macros_internals"
+path = "src/lib.rs"
+proc-macro = true

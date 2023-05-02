@@ -1,7 +1,4 @@
-#[macro_use]
-extern crate redis_module;
-
-use redis_module::{Context, RedisError, RedisResult, RedisString};
+use redis_module::{redis_module, Context, RedisError, RedisResult, RedisString};
 
 fn hello_mul(_: &Context, args: Vec<RedisString>) -> RedisResult {
     if args.len() < 2 {
@@ -27,6 +24,7 @@ fn hello_mul(_: &Context, args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "hello",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["hello.mul", hello_mul, "", 0, 0, 0],

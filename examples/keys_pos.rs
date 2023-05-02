@@ -1,7 +1,4 @@
-#[macro_use]
-extern crate redis_module;
-
-use redis_module::{Context, RedisError, RedisResult, RedisString, RedisValue};
+use redis_module::{redis_module, Context, RedisError, RedisResult, RedisString, RedisValue};
 
 fn keys_pos(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     // Number of args (excluding command name) must be even
@@ -28,6 +25,7 @@ fn keys_pos(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "keys_pos",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["keys_pos", keys_pos, "getkeys-api", 1, 1, 1],

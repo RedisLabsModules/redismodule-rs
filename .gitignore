@@ -15,3 +15,9 @@ src/redisraw/bindings.rs
 
 # VS Code
 .vscode
+
+# Redis database
+dump.rdb
+
+# Debugger-related files:
+.gdb_history

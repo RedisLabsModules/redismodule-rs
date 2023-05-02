@@ -3,6 +3,7 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 use std::os::raw::c_void;
 use std::ptr;
+use std::ptr::NonNull;
 use std::time::Duration;
 
 use libc::size_t;
@@ -252,7 +253,7 @@ impl RedisKeyWritable {
             return None;
         }
 
-        Some(RedisString::new(self.ctx, ptr))
+        Some(RedisString::new(NonNull::new(self.ctx), ptr))
     }
 
     //  `list_pop_head` pops and returns the last element of the list.
@@ -267,7 +268,7 @@ impl RedisKeyWritable {
             return None;
         }
 
-        Some(RedisString::new(self.ctx, ptr))
+        Some(RedisString::new(NonNull::new(self.ctx), ptr))
     }
 
     pub fn set_expire(&self, expire: Duration) -> RedisResult {
@@ -287,7 +288,7 @@ impl RedisKeyWritable {
     }
 
     pub fn write(&self, val: &str) -> RedisResult {
-        let val_str = RedisString::create(self.ctx, val);
+        let val_str = RedisString::create(NonNull::new(self.ctx), val);
         match raw::string_set(self.key_inner, val_str.inner) {
             raw::Status::Ok => REDIS_OK,
             raw::Status::Err => Err(RedisError::Str("Error while setting key")),
@@ -333,7 +334,10 @@ impl RedisKeyWritable {
 
     /// # Panics
     ///
-    /// Will panic if `RedisModule_ModuleTypeGetValue` is missing in redismodule.h    
+    /// Will panic if `RedisModule_ModuleTypeGetValue` is missing in redismodule.h
+    ///
+    /// TODO Avoid clippy warning about needless lifetime as a temporary workaround
+    #[allow(clippy::needless_lifetimes)]
     pub fn get_value<'a, 'b, T>(
         &'a self,
         redis_type: &RedisType,
@@ -459,7 +463,7 @@ where
     /// use redis_module::{Context, RedisError, RedisResult, RedisString, RedisValue};
     ///
     /// fn call_hash(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
-    ///     let key_name = RedisString::create(ctx.ctx, "config");
+    ///     let key_name = RedisString::create(None, "config");
     ///     let fields = &["username", "password", "email"];
     ///     let hm: HMGetResult<'_, &str, RedisString> = ctx
     ///         .open_key(&key_name)
@@ -477,7 +481,7 @@ where
     /// use redis_module::key::HMGetResult;
     ///
     /// fn call_hash(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
-    ///     let key_name = RedisString::create(ctx.ctx, "config");
+    ///     let key_name = RedisString::create(None, "config");
     ///     let fields = &["username", "password", "email"];
     ///     let hm: HMGetResult<'_, &str, RedisString> = ctx
     ///          .open_key(&key_name)

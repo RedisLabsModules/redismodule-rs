@@ -1,7 +1,6 @@
-#[macro_use]
-extern crate redis_module;
-
-use redis_module::{Context, RedisResult, RedisString, RedisValue, ThreadSafeContext};
+use redis_module::{
+    redis_module, Context, RedisResult, RedisString, RedisValue, ThreadSafeContext,
+};
 use std::thread;
 use std::time::Duration;
 
@@ -23,6 +22,7 @@ fn block(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "block",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
         ["block", block, "", 0, 0, 0],

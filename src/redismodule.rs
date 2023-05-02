@@ -1,19 +1,36 @@
 use std::borrow::Borrow;
 use std::convert::TryFrom;
 use std::ffi::CString;
-use std::fmt;
 use std::fmt::Display;
+use std::ops::Deref;
 use std::os::raw::{c_char, c_int, c_void};
+use std::ptr::NonNull;
 use std::slice;
 use std::str;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
+use std::{fmt, ptr};
+
+use serde::de::{Error, SeqAccess};
 
 pub use crate::raw;
 pub use crate::rediserror::RedisError;
 pub use crate::redisvalue::RedisValue;
+use crate::Context;
 
 pub type RedisResult = Result<RedisValue, RedisError>;
+
+impl From<RedisValue> for RedisResult {
+    fn from(v: RedisValue) -> Self {
+        Ok(v)
+    }
+}
+
+impl From<RedisError> for RedisResult {
+    fn from(v: RedisError) -> Self {
+        Err(v)
+    }
+}
 
 pub const REDIS_OK: RedisResult = Ok(RedisValue::SimpleStringStatic("OK"));
 pub const TYPE_METHOD_VERSION: u64 = raw::REDISMODULE_TYPE_METHOD_VERSION as u64;
@@ -82,7 +99,7 @@ pub fn decode_args(
 ) -> Vec<RedisString> {
     unsafe { slice::from_raw_parts(argv, argc as usize) }
         .iter()
-        .map(|&arg| RedisString::new(ctx, arg))
+        .map(|&arg| RedisString::new(NonNull::new(ctx), arg))
         .collect()
 }
 
@@ -101,15 +118,38 @@ impl RedisString {
         inner
     }
 
-    pub fn new(ctx: *mut raw::RedisModuleCtx, inner: *mut raw::RedisModuleString) -> Self {
+    pub fn new(
+        ctx: Option<NonNull<raw::RedisModuleCtx>>,
+        inner: *mut raw::RedisModuleString,
+    ) -> Self {
+        let ctx = ctx.map_or(std::ptr::null_mut(), |v| v.as_ptr());
         raw::string_retain_string(ctx, inner);
         Self { ctx, inner }
     }
 
+    /// In general, [RedisModuleString] is none atomic ref counted object.
+    /// So it is not safe to clone it if Redis GIL is not held.
+    /// [Self::safe_clone] gets a context reference which indicates that Redis GIL is held.
+    pub fn safe_clone(&self, _ctx: &Context) -> Self {
+        // RedisString are *not* atomic ref counted, so we must get a lock indicator to clone them.
+        // Alos notice that Redis allows us to create RedisModuleString with NULL context
+        // so we use [std::ptr::null_mut()] instead of the curren RedisString context.
+        // We do this because we can not promise the new RedisString will not outlive the current
+        // context and we want them to be independent.
+        raw::string_retain_string(ptr::null_mut(), self.inner);
+        Self {
+            ctx: ptr::null_mut(),
+            inner: self.inner,
+        }
+    }
+
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
-    pub fn create(ctx: *mut raw::RedisModuleCtx, s: &str) -> Self {
+    pub fn create<T: Into<Vec<u8>>>(ctx: Option<NonNull<raw::RedisModuleCtx>>, s: T) -> Self {
+        let ctx = ctx.map_or(std::ptr::null_mut(), |v| v.as_ptr());
         let str = CString::new(s).unwrap();
-        let inner = unsafe { raw::RedisModule_CreateString.unwrap()(ctx, str.as_ptr(), s.len()) };
+        let inner = unsafe {
+            raw::RedisModule_CreateString.unwrap()(ctx, str.as_ptr(), str.as_bytes().len())
+        };
 
         Self { ctx, inner }
     }
@@ -163,7 +203,8 @@ impl RedisString {
         Self::string_as_slice(self.inner)
     }
 
-    fn string_as_slice<'a>(ptr: *const raw::RedisModuleString) -> &'a [u8] {
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    pub fn string_as_slice<'a>(ptr: *const raw::RedisModuleString) -> &'a [u8] {
         let mut len: libc::size_t = 0;
         let bytes = unsafe { raw::RedisModule_StringPtrLen.unwrap()(ptr, &mut len) };
 
@@ -263,14 +304,83 @@ impl Borrow<str> for RedisString {
 impl Clone for RedisString {
     fn clone(&self) -> Self {
         let inner =
-            unsafe { raw::RedisModule_CreateStringFromString.unwrap()(self.ctx, self.inner) };
-        Self::new(self.ctx, inner)
+            // Redis allows us to create RedisModuleString with NULL context
+            // so we use [std::ptr::null_mut()] instead of the curren RedisString context.
+            // We do this because we can not promise the new RedisString will not outlive the current
+            // context and we want them to be independent.
+            unsafe { raw::RedisModule_CreateStringFromString.unwrap()(ptr::null_mut(), self.inner) };
+        Self::from_redis_module_string(ptr::null_mut(), inner)
     }
 }
 
 impl From<RedisString> for String {
     fn from(rs: RedisString) -> Self {
         rs.to_string_lossy()
+    }
+}
+
+impl Deref for RedisString {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
+    }
+}
+
+impl From<RedisString> for Vec<u8> {
+    fn from(rs: RedisString) -> Self {
+        rs.as_slice().to_vec()
+    }
+}
+
+impl serde::Serialize for RedisString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes(self.as_slice())
+    }
+}
+
+struct RedisStringVisitor;
+
+impl<'de> serde::de::Visitor<'de> for RedisStringVisitor {
+    type Value = RedisString;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("A bytes buffer")
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(RedisString::create(None, v))
+    }
+
+    fn visit_seq<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
+    where
+        V: SeqAccess<'de>,
+    {
+        let mut v = if let Some(size_hint) = visitor.size_hint() {
+            Vec::with_capacity(size_hint)
+        } else {
+            Vec::new()
+        };
+        while let Some(elem) = visitor.next_element()? {
+            v.push(elem);
+        }
+
+        Ok(RedisString::create(None, v.as_slice()))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for RedisString {
+    fn deserialize<D>(deserializer: D) -> Result<RedisString, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_bytes(RedisStringVisitor)
     }
 }
 

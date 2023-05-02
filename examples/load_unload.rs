@@ -1,7 +1,4 @@
-#[macro_use]
-extern crate redis_module;
-
-use redis_module::{Context, LogLevel, RedisString, Status};
+use redis_module::{redis_module, Context, LogLevel, RedisString, Status};
 
 static mut GLOBAL_STATE: Option<String> = None;
 
@@ -39,6 +36,7 @@ fn deinit(ctx: &Context) -> Status {
 redis_module! {
     name: "load_unload",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     init: init,
     deinit: deinit,

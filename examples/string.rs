@@ -1,7 +1,6 @@
-#[macro_use]
-extern crate redis_module;
-
-use redis_module::{Context, NextArg, RedisError, RedisResult, RedisString, RedisValue};
+use redis_module::{
+    redis_module, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue,
+};
 
 fn string_set(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     if args.len() < 3 {
@@ -38,9 +37,10 @@ fn string_get(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 redis_module! {
     name: "string",
     version: 1,
+    allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
-        ["string.set", string_set, "", 1, 1, 1],
-        ["string.get", string_get, "", 1, 1, 1],
+        ["string.set", string_set, "write fast deny-oom", 1, 1, 1],
+        ["string.get", string_get, "readonly", 1, 1, 1],
     ],
 }

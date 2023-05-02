@@ -56,11 +56,14 @@ commands:
           name: Setup automation
           command: |
             git submodule update --init deps/readies
+            if [[ $(uname -s) == Darwin ]]; then rm -f /usr/local/bin/python3; fi
             ./deps/readies/bin/getpy3
       - run:
           name: Setup automation (part 2)
           shell: /bin/bash -l -eo pipefail
           command: |
+            ls -l /usr/local/bin/python* || true
+            echo "python3: $(command -v python3)"
             python3 --version
             python3 -m pip list
 
@@ -68,7 +71,7 @@ commands:
     parameters:
       redis_version:
         type: string
-        default: "6"
+        default: "7.2-rc1"
       getredis_params:
         type: string
         default: ""
@@ -84,6 +87,7 @@ commands:
           name: Install Redis
           shell: /bin/bash -l -eo pipefail
           command: |
+            export HOMEBREW_NO_AUTO_UPDATE=1
             ./deps/readies/bin/getredis -v '<<parameters.redis_version>>' --force <<parameters.getredis_params>>
             redis-server --version
 
@@ -97,7 +101,7 @@ commands:
         default: ""
       redis_version:
         type: string
-        default: "6"
+        default: "7.2-rc1"
       getredis_params:
         type: string
         default: ""
@@ -197,10 +201,17 @@ jobs:
       - vm-build-platforms-steps:
           platform: <<parameters.platform>>
 
-  build-macos:
+  build-macos-x64:
     macos:
-      xcode: 12.5.1
+      xcode: 13.2.1
     resource_class: macos.x86.medium.gen2
+    steps:
+      - build-steps
+
+  build-macos-m1:
+    macos:
+      xcode: 14.2.0
+    resource_class: macos.m1.large.gen1
     steps:
       - build-steps
 
@@ -293,12 +304,14 @@ workflows:
           context: common
           matrix:
             parameters:
-              platform: [jammy, focal, bionic, xenial, rocky8, centos7, bullseye]
+              platform: [jammy, focal, bionic, xenial, rocky8, centos7, bullseye, amzn2]
       - build-arm-platforms:
           <<: *on-integ-and-version-tags
           context: common
           matrix:
             parameters:
               platform: [jammy, bionic, focal]
-      - build-macos:
-          <<: *on-any-branch
+      - build-macos-x64:
+          <<: *always
+      - build-macos-m1:
+          <<: *on-integ-and-version-tags
