@@ -1,7 +1,5 @@
 name: Cratesio Publish
 on:
-  push:
-    branches: [ master ]
   release:
     types: [published]
 
