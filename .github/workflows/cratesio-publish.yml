@@ -35,7 +35,7 @@ jobs:
         with:
           file: "Cargo.toml"
           key: "dependencies.redis-module-macros-internals"
-          value: '{ path = "./redismodule-rs-macros-internals", version = "${{ steps.get_version.outputs.VERSION }}" }'
+          value: "{ path = \"./redismodule-rs-macros-internals\", version = \"${{ steps.get_version.outputs.VERSION }}\" }"
 
       - name: Set the version for publishing on macros crate
         uses: ciiiii/toml-editor@1.0.0
