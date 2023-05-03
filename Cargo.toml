@@ -103,7 +103,7 @@ linkme = "0.3"
 serde = { version = "1", features = ["derive"] }
 nix = "0.26"
 cfg-if = "1"
-redis-module-macros-internals = { path = "./redismodule-rs-macros-internals"}
+redis-module-macros-internals = { path = "./redismodule-rs-macros-internals", version="99.99.99"}
 
 [dev-dependencies]
 anyhow = "1"
