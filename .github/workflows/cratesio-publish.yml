@@ -1,5 +1,7 @@
 name: Cratesio Publish
 on:
+  push:
+    branches: [ master ]
   release:
     types: [published]
 
@@ -49,22 +51,8 @@ jobs:
           key: "package.version"
           value: "${{ steps.get_version.outputs.VERSION }}"
 
-      - name: Publishing redismodule-rs-macros-internals
-        uses: katyo/publish-crates@v1
-        with:
-          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-          path: './redismodule-rs-macros-internals'
-          args: --allow-dirty
-
-      - name: Publishing redismodule-rs
-        uses: katyo/publish-crates@v1
-        with:
-          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-          args: --allow-dirty
-
-      - name: Publishing redismodule-rs-macros
-        uses: katyo/publish-crates@v1
-        with:
-          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-          path: './redismodule-rs-macros'
-          args: --allow-dirty
+      - name: Echo Cargo.toml
+        run: |
+          cat Cargo.toml
+          cat redismodule-rs-macros/Cargo.toml
+          cat redismodule-rs-macros-internals/Cargo.toml
