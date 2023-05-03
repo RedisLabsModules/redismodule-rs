@@ -1,9 +1,9 @@
 name: Cratesio Publish
 on:
-  push:
+  pull_request:
     branches: [ master ]
   release:
-    types: [published]
+    types: [ published ]
 
 jobs:
   publish:
