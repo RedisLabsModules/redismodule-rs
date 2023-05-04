@@ -17,12 +17,27 @@ pub enum RedisLogLevel {
     Warning,
 }
 
-pub(crate) fn log_internal(ctx: *mut raw::RedisModuleCtx, level: RedisLogLevel, message: &str) {
+impl From<log::Level> for RedisLogLevel {
+    fn from(value: log::Level) -> Self {
+        match value {
+            log::Level::Error | log::Level::Warn => Self::Warning,
+            log::Level::Info => Self::Notice,
+            log::Level::Debug => Self::Debug,
+            log::Level::Trace => Self::Verbose,
+        }
+    }
+}
+
+pub(crate) fn log_internal<L: Into<RedisLogLevel>>(
+    ctx: *mut raw::RedisModuleCtx,
+    level: L,
+    message: &str,
+) {
     if cfg!(test) {
         return;
     }
 
-    let level = CString::new(level.as_ref()).unwrap();
+    let level = CString::new(level.into().as_ref()).unwrap();
     let fmt = CString::new(message).unwrap();
     unsafe {
         raw::RedisModule_Log.expect(NOT_INITIALISED_MESSAGE)(ctx, level.as_ptr(), fmt.as_ptr())
@@ -76,10 +91,14 @@ pub fn log_warning<T: AsRef<str>>(message: T) {
 
 /// The [log] crate implementation of logging.
 pub mod standard_log_implementation {
-    use super::*;
-    use log::{Level, Metadata, Record, SetLoggerError};
+    use std::sync::atomic::Ordering;
 
-    static LOGGER: RedisGlobalLogger = RedisGlobalLogger;
+    use crate::RedisError;
+
+    use super::*;
+    use log::{Metadata, Record, SetLoggerError};
+
+    static mut LOGGER: RedisGlobalLogger = RedisGlobalLogger(ptr::null_mut());
 
     /// The struct which has an implementation of the [log] crate's
     /// logging interface.
@@ -89,12 +108,31 @@ pub mod standard_log_implementation {
     /// Redis does not support logging at the [log::Level::Error] level,
     /// so logging at this level will be converted to logging at the
     /// [log::Level::Warn] level under the hood.
-    struct RedisGlobalLogger;
+    struct RedisGlobalLogger(*mut raw::RedisModuleCtx);
+
+    // The pointer of the Global logger can only be changed once during
+    // the startup. Once one of the [std::sync::OnceLock] or
+    // [std::sync::OnceCell] is stabilised, we can remove these unsafe
+    // trait implementations in favour of using the aforementioned safe
+    // types.
+    unsafe impl Send for RedisGlobalLogger {}
+    unsafe impl Sync for RedisGlobalLogger {}
 
     /// Sets this logger as a global logger. Use this method to set
     /// up the logger. If this method is never called, the default
     /// logger is used which redirects the logging to the standard
     /// input/output streams.
+    ///
+    /// # Note
+    ///
+    /// The logging context (the module context [raw::RedisModuleCtx])
+    /// is set by the [crate::redis_module] macro. If another context
+    /// should be used, please consider using the [setup_for_context]
+    /// method instead.
+    ///
+    /// In case this function is invoked before the initialisation, and
+    /// so without the redis module context, no context will be used for
+    /// the logging, however, the logger will be set.
     ///
     /// # Example
     ///
@@ -105,8 +143,22 @@ pub mod standard_log_implementation {
     /// [raw::Export_RedisModule_Init] function when loading the
     /// module).
     #[allow(dead_code)]
-    pub fn setup() -> Result<(), SetLoggerError> {
-        log::set_logger(&LOGGER).map(|()| log::set_max_level(log::LevelFilter::Trace))
+    pub fn setup() -> Result<(), RedisError> {
+        let pointer = crate::MODULE_CONTEXT.ctx.load(Ordering::Relaxed);
+        if pointer.is_null() {
+            return Err(RedisError::Str(NOT_INITIALISED_MESSAGE));
+        }
+        setup_for_context(pointer)
+            .map_err(|e| RedisError::String(format!("Couldn't set up the logger: {e}")))
+    }
+
+    /// The same as [setup] but sets the custom module context.
+    #[allow(dead_code)]
+    pub fn setup_for_context(context: *mut raw::RedisModuleCtx) -> Result<(), SetLoggerError> {
+        unsafe {
+            LOGGER.0 = context;
+            log::set_logger(&LOGGER).map(|()| log::set_max_level(log::LevelFilter::Trace))
+        }
     }
 
     impl log::Log for RedisGlobalLogger {
@@ -119,20 +171,26 @@ pub mod standard_log_implementation {
                 return;
             }
 
-            let message = format!(
-                "'{}' {}:{}: {}",
-                record.module_path().unwrap_or_default(),
-                record.file().unwrap_or("Unknown"),
-                record.line().unwrap_or(0),
-                record.args()
-            );
+            let message = match record.level() {
+                log::Level::Debug | log::Level::Trace => {
+                    format!(
+                        "'{}' {}:{}: {}",
+                        record.module_path().unwrap_or_default(),
+                        record.file().unwrap_or("Unknown"),
+                        record.line().unwrap_or(0),
+                        record.args()
+                    )
+                }
+                _ => {
+                    format!(
+                        "'{}' {}",
+                        record.module_path().unwrap_or_default(),
+                        record.args()
+                    )
+                }
+            };
 
-            match record.level() {
-                Level::Debug => log_debug(message),
-                Level::Error | Level::Warn => log_warning(message),
-                Level::Info => log_notice(message),
-                Level::Trace => log_verbose(message),
-            }
+            log_internal(self.0, record.level(), &message);
         }
 
         fn flush(&self) {

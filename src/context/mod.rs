@@ -124,14 +124,20 @@ impl CallOptionsBuilder {
 /// It is implemented `Send` and `Sync` so it can safely be used
 /// from within different threads.
 pub struct DetachedContext {
-    ctx: AtomicPtr<raw::RedisModuleCtx>,
+    pub(crate) ctx: AtomicPtr<raw::RedisModuleCtx>,
+}
+
+impl DetachedContext {
+    pub const fn new() -> Self {
+        DetachedContext {
+            ctx: AtomicPtr::new(ptr::null_mut()),
+        }
+    }
 }
 
 impl Default for DetachedContext {
     fn default() -> Self {
-        DetachedContext {
-            ctx: AtomicPtr::new(ptr::null_mut()),
-        }
+        Self::new()
     }
 }
 

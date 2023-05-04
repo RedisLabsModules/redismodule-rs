@@ -41,6 +41,12 @@ pub use crate::raw::*;
 pub use crate::redismodule::*;
 use backtrace::Backtrace;
 
+/// The detached Redis module context (the context of this module). It
+/// is only set to a proper value after the module is initialised via the
+/// provided [redis_module] macro.
+/// See [DetachedContext].
+pub static MODULE_CONTEXT: DetachedContext = DetachedContext::new();
+
 pub fn base_info_func(
     ctx: &InfoContext,
     for_crash_report: bool,
