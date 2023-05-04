@@ -10,7 +10,6 @@ use syn::Ident;
 use syn::ItemFn;
 use syn::{self, bracketed, parse_macro_input, ReturnType, Token, Type, TypeTuple};
 
-#[derive(Debug)]
 struct Args {
     requested_apis: Vec<Ident>,
     function: ItemFn,
