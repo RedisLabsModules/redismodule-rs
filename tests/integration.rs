@@ -499,3 +499,42 @@ fn test_response() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_command_proc_macro() -> Result<()> {
+    let port: u16 = 6497;
+    let _guards = vec![start_redis_server_with_module("proc_macro_commands", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: Vec<String> = redis::cmd("COMMAND")
+        .arg(&["GETKEYS", "classic_keys", "x", "foo", "y", "bar"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(&res, &["x", "y"]);
+
+    let res: Vec<String> = redis::cmd("COMMAND")
+        .arg(&["GETKEYS", "keyword_keys", "foo", "x", "1", "y", "2"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(&res, &["x", "y"]);
+
+    let res: Vec<String> = redis::cmd("COMMAND")
+        .arg(&["GETKEYS", "num_keys", "3", "x", "y", "z", "foo", "bar"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(&res, &["x", "y", "z"]);
+
+    let res: Vec<String> = redis::cmd("COMMAND")
+        .arg(&["GETKEYS", "num_keys", "0", "foo", "bar"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert!(res.is_empty());
+
+    Ok(())
+}

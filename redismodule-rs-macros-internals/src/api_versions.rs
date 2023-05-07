@@ -19,6 +19,9 @@ lazy_static::lazy_static! {
         ("RedisModule_BlockClientSetPrivateData".to_string(), 70200),
         ("RedisModule_BlockClientOnAuth".to_string(), 70200),
         ("RedisModule_ACLAddLogEntryByUserName".to_string(), 70200),
+        ("RedisModule_GetCommand".to_string(), 70000),
+        ("RedisModule_SetCommandInfo".to_string(), 70000),
+
     ]);
 
     pub(crate) static ref API_OLDEST_VERSION: usize = 60000;
