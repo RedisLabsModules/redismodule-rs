@@ -3,7 +3,7 @@ use crate::{
     CallReply, RedisError, RedisString,
 };
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     hash::Hash,
 };
 
@@ -30,8 +30,10 @@ pub enum RedisValue {
     VerbatimString((VerbatimStringFormat, Vec<u8>)),
     Array(Vec<RedisValue>),
     StaticError(&'static str),
-    Map(BTreeMap<RedisValueKey, RedisValue>),
-    Set(BTreeSet<RedisValueKey>),
+    Map(HashMap<RedisValueKey, RedisValue>),
+    Set(HashSet<RedisValueKey>),
+    OrderedMap(BTreeMap<RedisValueKey, RedisValue>),
+    OrderedSet(BTreeSet<RedisValueKey>),
     Null,
     NoReply, // No reply at all (as opposed to a Null reply)
 }

@@ -26,7 +26,7 @@ fn map_mget(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
                     RedisValue::BulkRedisString(value),
                 );
             }
-            RedisValue::Map(map)
+            RedisValue::OrderedMap(map)
         }
     };
 
@@ -52,7 +52,7 @@ fn map_unique(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
             for (_, value) in values.into_iter() {
                 set.insert(RedisValueKey::BulkRedisString(value));
             }
-            RedisValue::Set(set)
+            RedisValue::OrderedSet(set)
         }
     };
 
