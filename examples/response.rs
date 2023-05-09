@@ -2,7 +2,7 @@ use redis_module::{
     redis_module, redisvalue::RedisValueKey, Context, NextArg, RedisError, RedisResult,
     RedisString, RedisValue,
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 fn map_mget(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     if args.len() < 2 {
@@ -19,7 +19,7 @@ fn map_mget(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let res = match values {
         None => RedisValue::Null,
         Some(values) => {
-            let mut map: HashMap<RedisValueKey, RedisValue> = HashMap::with_capacity(fields.len());
+            let mut map: BTreeMap<RedisValueKey, RedisValue> = BTreeMap::new();
             for (field, value) in values.into_iter() {
                 map.insert(
                     RedisValueKey::BulkRedisString(field),
@@ -48,7 +48,7 @@ fn map_unique(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let res = match values {
         None => RedisValue::Null,
         Some(values) => {
-            let mut set: HashSet<RedisValueKey> = HashSet::new();
+            let mut set: BTreeSet<RedisValueKey> = BTreeSet::new();
             for (_, value) in values.into_iter() {
                 set.insert(RedisValueKey::BulkRedisString(value));
             }
