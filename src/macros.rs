@@ -212,6 +212,9 @@ macro_rules! redis_module {
             ) } == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
 
             let context = $crate::Context::new(ctx);
+            unsafe {
+                let _ = $crate::MODULE_CONTEXT.set_context(&context);
+            }
             let args = $crate::decode_args(ctx, argv, argc);
 
             $(
