@@ -1,7 +1,4 @@
-//#![allow(dead_code)]
-
 pub use crate::context::InfoContext;
-use strum_macros::AsRefStr;
 extern crate num_traits;
 
 pub mod alloc;
@@ -44,15 +41,11 @@ pub use crate::raw::*;
 pub use crate::redismodule::*;
 use backtrace::Backtrace;
 
-/// `LogLevel` is a level of logging to be specified with a Redis log directive.
-#[derive(Clone, Copy, Debug, AsRefStr)]
-#[strum(serialize_all = "snake_case")]
-pub enum LogLevel {
-    Debug,
-    Notice,
-    Verbose,
-    Warning,
-}
+/// The detached Redis module context (the context of this module). It
+/// is only set to a proper value after the module is initialised via the
+/// provided [redis_module] macro.
+/// See [DetachedContext].
+pub static MODULE_CONTEXT: DetachedContext = DetachedContext::new();
 
 pub fn base_info_func(
     ctx: &InfoContext,

@@ -548,20 +548,15 @@ impl TryFrom<&str> for VerbatimStringFormat {
             )));
         }
         let mut res = VerbatimStringFormat::default();
-        value
-            .chars()
-            .into_iter()
-            .take(3)
-            .enumerate()
-            .try_for_each(|(i, c)| {
-                if c as u32 >= 127 {
-                    return Err(RedisError::String(
-                        "Verbatim format must contains only ASCI values.".to_owned(),
-                    ));
-                }
-                res.0[i] = c as c_char;
-                Ok(())
-            })?;
+        value.chars().take(3).enumerate().try_for_each(|(i, c)| {
+            if c as u32 >= 127 {
+                return Err(RedisError::String(
+                    "Verbatim format must contains only ASCI values.".to_owned(),
+                ));
+            }
+            res.0[i] = c as c_char;
+            Ok(())
+        })?;
         Ok(res)
     }
 }
