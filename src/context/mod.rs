@@ -6,11 +6,12 @@ use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr::{self, NonNull};
 use std::sync::atomic::{AtomicPtr, Ordering};
 
+use crate::add_info_section;
 use crate::key::{RedisKey, RedisKeyWritable};
+use crate::logging::RedisLogLevel;
 use crate::raw::{ModuleOptions, Version};
 use crate::redisvalue::RedisValueKey;
 use crate::{add_info_field_long_long, add_info_field_str, raw, utils, Status};
-use crate::{add_info_section, LogLevel};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
 use std::ffi::CStr;
@@ -124,37 +125,43 @@ impl CallOptionsBuilder {
 /// It is implemented `Send` and `Sync` so it can safely be used
 /// from within different threads.
 pub struct DetachedContext {
-    ctx: AtomicPtr<raw::RedisModuleCtx>,
+    pub(crate) ctx: AtomicPtr<raw::RedisModuleCtx>,
 }
 
-impl Default for DetachedContext {
-    fn default() -> Self {
+impl DetachedContext {
+    pub const fn new() -> Self {
         DetachedContext {
             ctx: AtomicPtr::new(ptr::null_mut()),
         }
     }
 }
 
+impl Default for DetachedContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DetachedContext {
-    pub fn log(&self, level: LogLevel, message: &str) {
+    pub fn log(&self, level: RedisLogLevel, message: &str) {
         let c = self.ctx.load(Ordering::Relaxed);
         crate::logging::log_internal(c, level, message);
     }
 
     pub fn log_debug(&self, message: &str) {
-        self.log(LogLevel::Debug, message);
+        self.log(RedisLogLevel::Debug, message);
     }
 
     pub fn log_notice(&self, message: &str) {
-        self.log(LogLevel::Notice, message);
+        self.log(RedisLogLevel::Notice, message);
     }
 
     pub fn log_verbose(&self, message: &str) {
-        self.log(LogLevel::Verbose, message);
+        self.log(RedisLogLevel::Verbose, message);
     }
 
     pub fn log_warning(&self, message: &str) {
-        self.log(LogLevel::Warning, message);
+        self.log(RedisLogLevel::Warning, message);
     }
 
     pub fn set_context(&self, ctx: &Context) -> Result<(), RedisError> {
@@ -267,24 +274,24 @@ impl Context {
         }
     }
 
-    pub fn log(&self, level: LogLevel, message: &str) {
+    pub fn log(&self, level: RedisLogLevel, message: &str) {
         crate::logging::log_internal(self.ctx, level, message);
     }
 
     pub fn log_debug(&self, message: &str) {
-        self.log(LogLevel::Debug, message);
+        self.log(RedisLogLevel::Debug, message);
     }
 
     pub fn log_notice(&self, message: &str) {
-        self.log(LogLevel::Notice, message);
+        self.log(RedisLogLevel::Notice, message);
     }
 
     pub fn log_verbose(&self, message: &str) {
-        self.log(LogLevel::Verbose, message);
+        self.log(RedisLogLevel::Verbose, message);
     }
 
     pub fn log_warning(&self, message: &str) {
-        self.log(LogLevel::Warning, message);
+        self.log(RedisLogLevel::Warning, message);
     }
 
     /// # Panics
