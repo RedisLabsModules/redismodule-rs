@@ -36,16 +36,16 @@ bitflags! {
     /// write that's not an INSERT or a DELETE would be UPDATE.
     pub struct KeySpecFlags : u32 {
         /// Read-Only. Reads the value of the key, but doesn't necessarily return it.
-        const RO = raw::REDISMODULE_CMD_KEY_RO;
+        const READ_ONLY = raw::REDISMODULE_CMD_KEY_RO;
 
         /// Read-Write. Modifies the data stored in the value of the key or its metadata.
-        const RW = raw::REDISMODULE_CMD_KEY_RW;
+        const READ_WRITE = raw::REDISMODULE_CMD_KEY_RW;
 
         /// Overwrite. Overwrites the data stored in the value of the key.
-        const OW = raw::REDISMODULE_CMD_KEY_OW;
+        const OVERWRITE = raw::REDISMODULE_CMD_KEY_OW;
 
         /// Deletes the key.
-        const RM = raw::REDISMODULE_CMD_KEY_RM;
+        const REMOVE = raw::REDISMODULE_CMD_KEY_RM;
 
         /// Returns, copies or uses the user data from the value of the key.
         const ACCESS = raw::REDISMODULE_CMD_KEY_ACCESS;
@@ -74,10 +74,10 @@ impl TryFrom<&str> for KeySpecFlags {
     type Error = RedisError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "RO" => Ok(KeySpecFlags::RO),
-            "RW" => Ok(KeySpecFlags::RW),
-            "OW" => Ok(KeySpecFlags::OW),
-            "RM" => Ok(KeySpecFlags::RM),
+            "READ_ONLY" => Ok(KeySpecFlags::READ_ONLY),
+            "READ_WRITE" => Ok(KeySpecFlags::READ_WRITE),
+            "OVERWRITE" => Ok(KeySpecFlags::OVERWRITE),
+            "REMOVE" => Ok(KeySpecFlags::REMOVE),
             "ACCESS" => Ok(KeySpecFlags::ACCESS),
             "UPDATE" => Ok(KeySpecFlags::UPDATE),
             "INSERT" => Ok(KeySpecFlags::INSERT),

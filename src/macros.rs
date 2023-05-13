@@ -227,7 +227,7 @@ macro_rules! redis_module {
                 $crate::redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep);
             )*
 
-            if $crate::commnads::register_commands(&context) == raw::Status::Err {
+            if $crate::commands::register_commands(&context) == raw::Status::Err {
                 return raw::Status::Err as c_int;
             }
 

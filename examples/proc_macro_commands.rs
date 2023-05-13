@@ -1,7 +1,7 @@
 use redis_module::{redis_module, Context, RedisResult, RedisString, RedisValue};
-use redis_module_macros::redis_command;
+use redis_module_macros::command;
 
-#[redis_command(
+#[command(
     {
         name: "classic_keys",
         flags: "readonly",
@@ -9,9 +9,9 @@ use redis_module_macros::redis_command;
         key_spec: [
             {
                 notes: "test command that define all the arguments at even possition as keys",
-                flags: ["RO", "ACCESS"],
-                begin_search: Index(1),
-                find_keys: Range((-1, 2, 0)),
+                flags: ["READ_ONLY", "ACCESS"],
+                begin_search: Index({ index : 1 }),
+                find_keys: Range({ last_key :- 1, steps : 2, limit : 0 }),
             }
         ]
     }
@@ -20,7 +20,7 @@ fn classic_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     Ok(RedisValue::SimpleStringStatic("OK"))
 }
 
-#[redis_command(
+#[command(
     {
         name: "keyword_keys",
         flags: "readonly",
@@ -28,9 +28,9 @@ fn classic_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
         key_spec: [
             {
                 notes: "test command that define all the arguments at even possition as keys",
-                flags: ["RO", "ACCESS"],
-                begin_search: Keyword(("foo", 1)),
-                find_keys: Range((-1, 2, 0)),
+                flags: ["READ_ONLY", "ACCESS"],
+                begin_search: Keyword({ keyword : "foo", startfrom : 1 }),
+                find_keys: Range({ last_key :- 1, steps : 2, limit : 0 }),
             }
         ]
     }
@@ -39,7 +39,7 @@ fn keyword_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     Ok(RedisValue::SimpleStringStatic("OK"))
 }
 
-#[redis_command(
+#[command(
     {
         name: "num_keys",
         flags: "readonly no-mandatory-keys",
@@ -47,9 +47,9 @@ fn keyword_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
         key_spec: [
             {
                 notes: "test command that define all the arguments at even possition as keys",
-                flags: ["RO", "ACCESS"],
-                begin_search: Index(1),
-                find_keys: Keynum((0, 1, 1)),
+                flags: ["READ_ONLY", "ACCESS"],
+                begin_search: Index({ index : 1 }),
+                find_keys: Keynum({ key_num_idx : 0, first_key : 1, key_step : 1 }),
             }
         ]
     }

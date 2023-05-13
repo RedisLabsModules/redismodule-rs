@@ -23,7 +23,7 @@ mod timer;
 
 pub mod blocked;
 pub mod call_reply;
-pub mod commnads;
+pub mod commands;
 pub mod info;
 pub mod keys_cursor;
 pub mod server_events;

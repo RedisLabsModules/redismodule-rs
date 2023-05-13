@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::ItemFn;
 
-mod redis_command;
+mod command;
 
 /// This proc macro allow to specify that the follow function is a Redis command.
 /// The macro accept the following arguments that discribe the command properties:
@@ -57,7 +57,7 @@ mod redis_command;
 /// Example:
 /// The following example will register a command called `foo`.
 /// ```rust,no_run,ignore
-/// #[redis_command(
+/// #[command(
 /// {
 ///    name: "foo",
 ///    arity: 3,
@@ -78,8 +78,8 @@ mod redis_command;
 ///
 /// **Notice**, by default Redis does not validate the command spec. User should validate the command keys on the module command code. The command spec is used for validation on cluster so Redis can raise a cross slot error when needed.
 #[proc_macro_attribute]
-pub fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream {
-    redis_command::redis_command(attr, item)
+pub fn command(attr: TokenStream, item: TokenStream) -> TokenStream {
+    command::redis_command(attr, item)
 }
 
 #[proc_macro_attribute]

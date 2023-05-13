@@ -10,15 +10,40 @@ use syn::{
 };
 
 #[derive(Debug, Deserialize)]
+pub struct FindKeysRange {
+    last_key: i32,
+    steps: i32,
+    limit: i32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FindKeysNum {
+    key_num_idx: i32,
+    first_key: i32,
+    key_step: i32,
+}
+
+#[derive(Debug, Deserialize)]
 pub enum FindKeys {
-    Range((i32, i32, i32)),  // (last_key, steps, limit)
-    Keynum((i32, i32, i32)), // (keynumidx, firstkey, keystep)
+    Range(FindKeysRange),
+    Keynum(FindKeysNum),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BeginSearchIndex {
+    index: i32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BeginSearchKeyword {
+    keyword: String,
+    startfrom: i32,
 }
 
 #[derive(Debug, Deserialize)]
 pub enum BeginSearch {
-    Index(i32),
-    Keyword((String, i32)), // (keyword, startfrom)
+    Index(BeginSearchIndex),
+    Keyword(BeginSearchKeyword), // (keyword, startfrom)
 }
 
 #[derive(Debug, Deserialize)]
@@ -31,7 +56,7 @@ pub struct KeySpecArg {
 
 #[derive(Debug, Deserialize)]
 struct Args {
-    name: String,
+    name: Option<String>,
     flags: Option<String>,
     summary: Option<String>,
     complexity: Option<String>,
@@ -71,7 +96,9 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
         func.sig.ident.span(),
     );
 
-    let name_literal = args.name;
+    let name_literal = args
+        .name
+        .unwrap_or_else(|| original_function_name.to_string());
     let flags_literal = to_token_stream(args.flags);
     let summary_literal = to_token_stream(args.summary);
     let complexity_literal = to_token_stream(args.complexity);
@@ -95,7 +122,7 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
         .map(|v| {
             let flags = &v.flags;
             quote! {
-                vec![#(redis_module::commnads::KeySpecFlags::try_from(#flags)?, )*]
+                vec![#(redis_module::commands::KeySpecFlags::try_from(#flags)?, )*]
             }
         })
         .collect();
@@ -105,13 +132,16 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
         .iter()
         .map(|v| match &v.begin_search {
             BeginSearch::Index(i) => {
+                let i = i.index;
                 quote! {
-                    redis_module::commnads::BeginSearch::Index(#i)
+                    redis_module::commands::BeginSearch::Index(#i)
                 }
             }
-            BeginSearch::Keyword((k, i)) => {
+            BeginSearch::Keyword(begin_search_keyword) => {
+                let k = begin_search_keyword.keyword.as_str();
+                let i = begin_search_keyword.startfrom;
                 quote! {
-                    redis_module::commnads::BeginSearch::Keyword((#k.to_owned(), #i))
+                    redis_module::commands::BeginSearch::Keyword((#k.to_owned(), #i))
                 }
             }
         })
@@ -121,14 +151,20 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
         .key_spec
         .iter()
         .map(|v| match &v.find_keys {
-            FindKeys::Keynum((keynumidx, firstkey, keystep)) => {
+            FindKeys::Keynum(find_keys_num) => {
+                let keynumidx = find_keys_num.key_num_idx;
+                let firstkey = find_keys_num.first_key;
+                let keystep = find_keys_num.key_step;
                 quote! {
-                    redis_module::commnads::FindKeys::Keynum((#keynumidx, #firstkey, #keystep))
+                    redis_module::commands::FindKeys::Keynum((#keynumidx, #firstkey, #keystep))
                 }
             }
-            FindKeys::Range((last_key, steps, limit)) => {
+            FindKeys::Range(find_keys_range) => {
+                let last_key = find_keys_range.last_key;
+                let steps = find_keys_range.steps;
+                let limit = find_keys_range.limit;
                 quote! {
-                    redis_module::commnads::FindKeys::Range((#last_key, #steps, #limit))
+                    redis_module::commands::FindKeys::Range((#last_key, #steps, #limit))
                 }
             }
         })
@@ -149,11 +185,11 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
             context.reply(response) as i32
         }
 
-        #[linkme::distributed_slice(redis_module::commnads::COMMNADS_LIST)]
-        fn #get_command_info_function_name() -> Result<redis_module::commnads::CommandInfo, redis_module::RedisError> {
+        #[linkme::distributed_slice(redis_module::commands::COMMNADS_LIST)]
+        fn #get_command_info_function_name() -> Result<redis_module::commands::CommandInfo, redis_module::RedisError> {
             let key_spec = vec![
                 #(
-                    redis_module::commnads::KeySpec::new(
+                    redis_module::commands::KeySpec::new(
                         #key_spec_notes,
                         #key_spec_flags.into(),
                         #key_spec_begin_search,
@@ -161,7 +197,7 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
                     ),
                 )*
             ];
-            Ok(redis_module::commnads::CommandInfo::new(
+            Ok(redis_module::commands::CommandInfo::new(
                 #name_literal.to_owned(),
                 #flags_literal,
                 #summary_literal,
