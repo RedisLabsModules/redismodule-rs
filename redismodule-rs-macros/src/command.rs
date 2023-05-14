@@ -42,7 +42,7 @@ pub enum RedisCommandKeySpecFlags {
     Incomplete,
 
     /// Some keys might have different flags depending on arguments.
-    VariableFlag,
+    VariableFlags,
 }
 
 impl From<&RedisCommandKeySpecFlags> for &'static str {
@@ -58,7 +58,7 @@ impl From<&RedisCommandKeySpecFlags> for &'static str {
             RedisCommandKeySpecFlags::Delete => "DELETE",
             RedisCommandKeySpecFlags::NotKey => "NOT_KEY",
             RedisCommandKeySpecFlags::Incomplete => "INCOMPLETE",
-            RedisCommandKeySpecFlags::VariableFlag => "VARIABLE_FLAGS",
+            RedisCommandKeySpecFlags::VariableFlags => "VARIABLE_FLAGS",
         }
     }
 }

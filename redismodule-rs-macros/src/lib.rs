@@ -6,7 +6,7 @@ mod command;
 
 /// This proc macro allow to specify that the follow function is a Redis command.
 /// The macro accept the following arguments that discribe the command properties:
-/// * name - The command name,
+/// * name (optional) - The command name. in case not given, the function name will be taken.
 /// * flags (optional) - Command flags such as `readonly`, for the full list please refer to https://redis.io/docs/reference/modules/modules-api-ref/#redismodule_createcommand
 /// * summary (optional) - Command summary
 /// * complexity (optional) - Command compexity
@@ -17,17 +17,17 @@ mod command;
 /// * key_spec - A list of specs representing how to find the keys that the command might touch. the following options are available:
 ///    * notes (optional) - Some note about the key spec.
 ///    * flags - List of flags reprenting how the keys are accessed, the following options are available:
-///       * RO - Read-Only. Reads the value of the key, but doesn't necessarily return it.
-///       * RW - Read-Write. Modifies the data stored in the value of the key or its metadata.
-///       * OW - Overwrite. Overwrites the data stored in the value of the key.
-///       * RM - Deletes the key.
-///       * ACCESS - Returns, copies or uses the user data from the value of the key.
-///       * UPDATE - Updates data to the value, new value may depend on the old value.
-///       * INSERT - Adds data to the value with no chance of modification or deletion of existing data.
-///       * DELETE - Explicitly deletes some content from the value of the key.
-///       * NOT_KEY - The key is not actually a key, but should be routed in cluster mode as if it was a key.
-///       * INCOMPLETE - The keyspec might not point out all the keys it should cover.
-///       * VARIABLE_FLAGS - Some keys might have different flags depending on arguments.
+///       * Readonly - Read-Only. Reads the value of the key, but doesn't necessarily return it.
+///       * ReadWrite - Read-Write. Modifies the data stored in the value of the key or its metadata.
+///       * Overwrite - Overwrite. Overwrites the data stored in the value of the key.
+///       * Remove - Deletes the key.
+///       * Access - Returns, copies or uses the user data from the value of the key.
+///       * Update - Updates data to the value, new value may depend on the old value.
+///       * Insert - Adds data to the value with no chance of modification or deletion of existing data.
+///       * Delete - Explicitly deletes some content from the value of the key.
+///       * NotKey - The key is not actually a key, but should be routed in cluster mode as if it was a key.
+///       * Incomplete - The keyspec might not point out all the keys it should cover.
+///       * VariableFlags - Some keys might have different flags depending on arguments.
 ///    * begin_search - Represents how Redis should start looking for keys.
 ///      There are 2 possible options:
 ///       * Index - start looking for keys from a given position.
