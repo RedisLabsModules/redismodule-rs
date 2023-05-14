@@ -9,7 +9,7 @@ use redis_module_macros::command;
         key_spec: [
             {
                 notes: "test command that define all the arguments at even possition as keys",
-                flags: ["READ_ONLY", "ACCESS"],
+                flags: [ReadOnly, Access],
                 begin_search: Index({ index : 1 }),
                 find_keys: Range({ last_key :- 1, steps : 2, limit : 0 }),
             }
@@ -28,7 +28,7 @@ fn classic_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
         key_spec: [
             {
                 notes: "test command that define all the arguments at even possition as keys",
-                flags: ["READ_ONLY", "ACCESS"],
+                flags: [ReadOnly, Access],
                 begin_search: Keyword({ keyword : "foo", startfrom : 1 }),
                 find_keys: Range({ last_key :- 1, steps : 2, limit : 0 }),
             }
@@ -47,7 +47,7 @@ fn keyword_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
         key_spec: [
             {
                 notes: "test command that define all the arguments at even possition as keys",
-                flags: ["READ_ONLY", "ACCESS"],
+                flags: [ReadOnly, Access],
                 begin_search: Index({ index : 1 }),
                 find_keys: Keynum({ key_num_idx : 0, first_key : 1, key_step : 1 }),
             }

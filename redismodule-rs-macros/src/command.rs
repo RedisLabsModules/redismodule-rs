@@ -10,6 +10,60 @@ use syn::{
 };
 
 #[derive(Debug, Deserialize)]
+pub enum RedisCommandKeySpecFlags {
+    /// Read-Only. Reads the value of the key, but doesn't necessarily return it.
+    ReadOnly,
+
+    /// Read-Write. Modifies the data stored in the value of the key or its metadata.
+    ReadWrite,
+
+    /// Overwrite. Overwrites the data stored in the value of the key.
+    Overwrite,
+
+    /// Deletes the key.
+    Remove,
+
+    /// Returns, copies or uses the user data from the value of the key.
+    Access,
+
+    /// Updates data to the value, new value may depend on the old value.
+    Update,
+
+    /// Adds data to the value with no chance of modification or deletion of existing data.
+    Insert,
+
+    /// Explicitly deletes some content from the value of the key.
+    Delete,
+
+    /// The key is not actually a key, but should be routed in cluster mode as if it was a key.
+    NotKey,
+
+    /// The keyspec might not point out all the keys it should cover.
+    Incomplete,
+
+    /// Some keys might have different flags depending on arguments.
+    VariableFlag,
+}
+
+impl From<&RedisCommandKeySpecFlags> for &'static str {
+    fn from(value: &RedisCommandKeySpecFlags) -> Self {
+        match value {
+            RedisCommandKeySpecFlags::ReadOnly => "READ_ONLY",
+            RedisCommandKeySpecFlags::ReadWrite => "READ_WRITE",
+            RedisCommandKeySpecFlags::Overwrite => "OVERWRITE",
+            RedisCommandKeySpecFlags::Remove => "REMOVE",
+            RedisCommandKeySpecFlags::Access => "ACCESS",
+            RedisCommandKeySpecFlags::Update => "UPDATE",
+            RedisCommandKeySpecFlags::Insert => "INSERT",
+            RedisCommandKeySpecFlags::Delete => "DELETE",
+            RedisCommandKeySpecFlags::NotKey => "NOT_KEY",
+            RedisCommandKeySpecFlags::Incomplete => "INCOMPLETE",
+            RedisCommandKeySpecFlags::VariableFlag => "VARIABLE_FLAGS",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
 pub struct FindKeysRange {
     last_key: i32,
     steps: i32,
@@ -49,7 +103,7 @@ pub enum BeginSearch {
 #[derive(Debug, Deserialize)]
 pub struct KeySpecArg {
     notes: Option<String>,
-    flags: Vec<String>,
+    flags: Vec<RedisCommandKeySpecFlags>,
     begin_search: BeginSearch,
     find_keys: FindKeys,
 }
@@ -120,7 +174,7 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
         .key_spec
         .iter()
         .map(|v| {
-            let flags = &v.flags;
+            let flags: Vec<&'static str> = v.flags.iter().map(|v| v.into()).collect();
             quote! {
                 vec![#(redis_module::commands::KeySpecFlags::try_from(#flags)?, )*]
             }

@@ -4,7 +4,7 @@ use crate::RedisError;
 use crate::Status;
 use bitflags::bitflags;
 use linkme::distributed_slice;
-use redis_module_macros_internals::redismodule_api;
+use redis_module_macros_internals::api;
 use std::ffi::CString;
 use std::mem::MaybeUninit;
 use std::os::raw::c_int;
@@ -109,14 +109,14 @@ pub enum BeginSearch {
     Keyword((String, i32)), // (keyword, startfrom)
 }
 
-impl BeginSearch {
-    fn get_redis_begin_search(
-        &self,
-    ) -> (
+impl From<&BeginSearch>
+    for (
         raw::RedisModuleKeySpecBeginSearchType,
         raw::RedisModuleCommandKeySpec__bindgen_ty_1,
-    ) {
-        match self {
+    )
+{
+    fn from(value: &BeginSearch) -> Self {
+        match value {
             BeginSearch::Index(i) => (
                 raw::RedisModuleKeySpecBeginSearchType_REDISMODULE_KSPEC_BS_INDEX,
                 raw::RedisModuleCommandKeySpec__bindgen_ty_1 {
@@ -152,14 +152,14 @@ pub enum FindKeys {
     Keynum((i32, i32, i32)), // (keynumidx, firstkey, keystep)
 }
 
-impl FindKeys {
-    fn get_redis_find_keys(
-        &self,
-    ) -> (
+impl From<&FindKeys>
+    for (
         raw::RedisModuleKeySpecFindKeysType,
         raw::RedisModuleCommandKeySpec__bindgen_ty_2,
-    ) {
-        match self {
+    )
+{
+    fn from(value: &FindKeys) -> Self {
+        match value {
             FindKeys::Range((lastkey, keystep, limit)) => (
                 raw::RedisModuleKeySpecFindKeysType_REDISMODULE_KSPEC_FK_RANGE,
                 raw::RedisModuleCommandKeySpec__bindgen_ty_2 {
@@ -184,6 +184,10 @@ impl FindKeys {
     }
 }
 
+/// A struct that specify how to find keys from a command.
+/// It is devided into 2 parts:
+/// 1. begin_search - indicate how to find the first command argument from where to start searching for keys.
+/// 2. find_keys - the methose to use in order to find the keys.
 pub struct KeySpec {
     notes: Option<String>,
     flags: KeySpecFlags,
@@ -205,16 +209,19 @@ impl KeySpec {
             find_keys,
         }
     }
-    fn get_redis_key_spec(&self) -> raw::RedisModuleCommandKeySpec {
-        let (begin_search_type, bs) = self.begin_search.get_redis_begin_search();
-        let (find_keys_type, fk) = self.find_keys.get_redis_find_keys();
+}
+
+impl From<&KeySpec> for raw::RedisModuleCommandKeySpec {
+    fn from(value: &KeySpec) -> Self {
+        let (begin_search_type, bs) = (&value.begin_search).into();
+        let (find_keys_type, fk) = (&value.find_keys).into();
         raw::RedisModuleCommandKeySpec {
-            notes: self
+            notes: value
                 .notes
                 .as_ref()
                 .map(|v| CString::new(v.as_str()).unwrap().into_raw())
                 .unwrap_or(ptr::null_mut()),
-            flags: self.flags.bits() as u64,
+            flags: value.flags.bits() as u64,
             begin_search_type,
             bs,
             find_keys_type,
@@ -269,10 +276,8 @@ impl CommandInfo {
 pub static COMMNADS_LIST: [fn() -> Result<CommandInfo, RedisError>] = [..];
 
 pub fn get_redis_key_spec(key_spec: Vec<KeySpec>) -> *mut raw::RedisModuleCommandKeySpec {
-    let mut redis_key_spec: Vec<raw::RedisModuleCommandKeySpec> = key_spec
-        .into_iter()
-        .map(|v| v.get_redis_key_spec())
-        .collect();
+    let mut redis_key_spec: Vec<raw::RedisModuleCommandKeySpec> =
+        key_spec.into_iter().map(|v| (&v).into()).collect();
     let zerod: raw::RedisModuleCommandKeySpec = unsafe { MaybeUninit::zeroed().assume_init() };
     redis_key_spec.push(zerod);
     let res = redis_key_spec.as_ptr();
@@ -280,7 +285,7 @@ pub fn get_redis_key_spec(key_spec: Vec<KeySpec>) -> *mut raw::RedisModuleComman
     res as *mut raw::RedisModuleCommandKeySpec
 }
 
-redismodule_api! {[
+api! {[
         RedisModule_CreateCommand,
         RedisModule_GetCommand,
         RedisModule_SetCommandInfo,
