@@ -35,7 +35,7 @@ mod command;
 ///    * FindKeys - After Redis finds the location from where it needs to start looking for keys,
 ///      Redis will start finding keys base on the information in this struct.
 ///      There are 2 possible options:
-///       * Range - A tuple represent a range of `(last_key, steps, limit)`.
+///       * Range - An object of three element `last_key`, `steps`, `limit`.
 ///          * last_key - Index of the last key relative to the result of the
 ///            begin search step. Can be negative, in which case it's not
 ///            relative. -1 indicates the last argument, -2 one before the
@@ -45,7 +45,7 @@ mod command;
 ///          * limit - If `lastkey` is -1, we use `limit` to stop the search
 ///            by a factor. 0 and 1 mean no limit. 2 means 1/2 of the
 ///            remaining args, 3 means 1/3, and so on.
-///       * Keynum -  A tuple of 3 elements `(keynumidx, firstkey, keystep)`.
+///       * Keynum -  An object of 3 elements `keynumidx`, `firstkey`, `keystep`.
 ///          * keynumidx - Index of the argument containing the number of
 ///            keys to come, relative to the result of the begin search step.
 ///          * firstkey - Index of the fist key relative to the result of the
@@ -59,14 +59,15 @@ mod command;
 /// ```rust,no_run,ignore
 /// #[command(
 /// {
-///    name: "foo",
-///    arity: 3,
+///    name: "test",
+///    flags: "readonly",
+///    arity: -2,
 ///    key_spec: [
 ///        {
-///            notes: "some notes",
-///            flags: ["RW", "ACCESS"],
-///            begin_search: Keyword(("foo", 1)),
-///            find_keys: Range((1, 2, 3)),
+///            notes: "test command that define all the arguments at even possition as keys",
+///            flags: [ReadOnly, Access],
+///            begin_search: Keyword({ keyword : "foo", startfrom : 1 }),
+///            find_keys: Range({ last_key :- 1, steps : 2, limit : 0 }),
 ///        }
 ///    ]
 /// }
