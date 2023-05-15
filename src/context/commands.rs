@@ -230,7 +230,7 @@ impl From<&KeySpec> for raw::RedisModuleCommandKeySpec {
     }
 }
 
-type CommnadCallback =
+type CommandCallback =
     extern "C" fn(*mut raw::RedisModuleCtx, *mut *mut raw::RedisModuleString, i32) -> i32;
 
 /// A struct represent a CommandInfo
@@ -243,7 +243,7 @@ pub struct CommandInfo {
     tips: Option<String>,
     arity: i64,
     key_spec: Vec<KeySpec>,
-    callback: CommnadCallback,
+    callback: CommandCallback,
 }
 
 impl CommandInfo {
@@ -256,7 +256,7 @@ impl CommandInfo {
         tips: Option<String>,
         arity: i64,
         key_spec: Vec<KeySpec>,
-        callback: CommnadCallback,
+        callback: CommandCallback,
     ) -> CommandInfo {
         CommandInfo {
             name,
