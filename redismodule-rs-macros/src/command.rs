@@ -296,14 +296,14 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
             BeginSearch::Index(i) => {
                 let i = i.index;
                 quote! {
-                    redis_module::commands::BeginSearch::Index(#i)
+                    redis_module::commands::BeginSearch::new_index(#i)
                 }
             }
             BeginSearch::Keyword(begin_search_keyword) => {
                 let k = begin_search_keyword.keyword.as_str();
                 let i = begin_search_keyword.startfrom;
                 quote! {
-                    redis_module::commands::BeginSearch::Keyword((#k.to_owned(), #i))
+                    redis_module::commands::BeginSearch::new_keyword(#k.to_owned(), #i)
                 }
             }
         })
@@ -318,7 +318,7 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
                 let firstkey = find_keys_num.first_key;
                 let keystep = find_keys_num.key_step;
                 quote! {
-                    redis_module::commands::FindKeys::Keynum((#keynumidx, #firstkey, #keystep))
+                    redis_module::commands::FindKeys::new_keys_num(#keynumidx, #firstkey, #keystep)
                 }
             }
             FindKeys::Range(find_keys_range) => {
@@ -326,7 +326,7 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
                 let steps = find_keys_range.steps;
                 let limit = find_keys_range.limit;
                 quote! {
-                    redis_module::commands::FindKeys::Range((#last_key, #steps, #limit))
+                    redis_module::commands::FindKeys::new_range(#last_key, #steps, #limit)
                 }
             }
         })

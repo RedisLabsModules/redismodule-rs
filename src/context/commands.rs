@@ -101,13 +101,38 @@ impl From<Vec<KeySpecFlags>> for KeySpecFlags {
     }
 }
 
+/// A version of begin search spec that finds the index
+/// indicating where to start search for keys based on
+/// an index.
+pub struct BeginSearchIndex {
+    index: i32,
+}
+
+/// A version of begin search spec that finds the index
+/// indicating where to start search for keys based on
+/// a keyword.
+pub struct BeginSearchKeyword {
+    keyword: String,
+    startfrom: i32,
+}
+
 /// This struct represents how Redis should start looking for keys.
 /// There are 2 possible options:
 /// 1. Index - start looking for keys from a given position.
 /// 2. Keyword - Search for a specific keyward and start looking for keys from this keyword
 pub enum BeginSearch {
-    Index(i32),
-    Keyword((String, i32)), // (keyword, startfrom)
+    Index(BeginSearchIndex),
+    Keyword(BeginSearchKeyword),
+}
+
+impl BeginSearch {
+    pub fn new_index(index: i32) -> BeginSearch {
+        BeginSearch::Index(BeginSearchIndex { index })
+    }
+
+    pub fn new_keyword(keyword: String, startfrom: i32) -> BeginSearch {
+        BeginSearch::Keyword(BeginSearchKeyword { keyword, startfrom })
+    }
 }
 
 impl From<&BeginSearch>
@@ -118,20 +143,24 @@ impl From<&BeginSearch>
 {
     fn from(value: &BeginSearch) -> Self {
         match value {
-            BeginSearch::Index(i) => (
+            BeginSearch::Index(index_spec) => (
                 raw::RedisModuleKeySpecBeginSearchType_REDISMODULE_KSPEC_BS_INDEX,
                 raw::RedisModuleCommandKeySpec__bindgen_ty_1 {
-                    index: raw::RedisModuleCommandKeySpec__bindgen_ty_1__bindgen_ty_1 { pos: *i },
+                    index: raw::RedisModuleCommandKeySpec__bindgen_ty_1__bindgen_ty_1 {
+                        pos: index_spec.index,
+                    },
                 },
             ),
-            BeginSearch::Keyword((k, i)) => {
-                let keyword = CString::new(k.as_str()).unwrap().into_raw();
+            BeginSearch::Keyword(keyword_spec) => {
+                let keyword = CString::new(keyword_spec.keyword.as_str())
+                    .unwrap()
+                    .into_raw();
                 (
                     raw::RedisModuleKeySpecBeginSearchType_REDISMODULE_KSPEC_BS_KEYWORD,
                     raw::RedisModuleCommandKeySpec__bindgen_ty_1 {
                         keyword: raw::RedisModuleCommandKeySpec__bindgen_ty_1__bindgen_ty_2 {
                             keyword,
-                            startfrom: *i,
+                            startfrom: keyword_spec.startfrom,
                         },
                     },
                 )
@@ -140,17 +169,65 @@ impl From<&BeginSearch>
     }
 }
 
+/// A version of find keys base on range.
+/// * `last_key` - Index of the last key relative to the result of the
+///   begin search step. Can be negative, in which case it's not
+///   relative. -1 indicates the last argument, -2 one before the
+///   last and so on.
+/// * `steps` - How many arguments should we skip after finding a
+///   key, in order to find the next one.
+/// * `limit` - If `lastkey` is -1, we use `limit` to stop the search
+///   by a factor. 0 and 1 mean no limit. 2 means 1/2 of the
+///   remaining args, 3 means 1/3, and so on.
+pub struct FindKeysRange {
+    last_key: i32,
+    steps: i32,
+    limit: i32,
+}
+
+/// A version of find keys base on some argument representing the number of keys
+/// * keynumidx - Index of the argument containing the number of
+///   keys to come, relative to the result of the begin search step.
+/// * firstkey - Index of the fist key relative to the result of the
+///   begin search step. (Usually it's just after `keynumidx`, in
+///   which case it should be set to `keynumidx + 1`.)
+/// * keystep - How many arguments should we skip after finding a
+///   key, in order to find the next one?
+pub struct FindKeysNum {
+    key_num_idx: i32,
+    first_key: i32,
+    key_step: i32,
+}
+
 /// After Redis finds the location from where it needs to start looking for keys,
-/// Redis will start finding keys base on the information in this struct.
+/// Redis will start finding keys base on the information in this enum.
 /// There are 2 possible options:
-/// 1. Range - A tuple represent a range of `(last_key, steps, limit)`.
-/// 2. Keynum -  A tuple of 3 elements `(keynumidx, firstkey, keystep)`.
+/// 1. Range -   Required to specify additional 3 more values, `last_key`, `steps`, and `limit`.
+/// 2. Keynum -  Required to specify additional 3 more values, `keynumidx`, `firstkey`, and `keystep`.
 ///              Redis will consider the argument at `keynumidx` as an indicator
 ///              to the number of keys that will follow. Then it will start
 ///              from `firstkey` and jump each `keystep` to find the keys.
 pub enum FindKeys {
-    Range((i32, i32, i32)),  // (last_key, steps, limit)
-    Keynum((i32, i32, i32)), // (keynumidx, firstkey, keystep)
+    Range(FindKeysRange),
+    Keynum(FindKeysNum),
+}
+
+impl FindKeys {
+    pub fn new_range(last_key: i32, steps: i32, limit: i32) -> FindKeys {
+        FindKeys::Range(FindKeysRange {
+            last_key,
+            steps,
+            limit,
+        })
+    }
+
+    pub fn new_keys_num(key_num_idx: i32, first_key: i32, key_step: i32) -> FindKeys {
+        FindKeys::Keynum(FindKeysNum {
+            key_num_idx,
+            first_key,
+            key_step,
+        })
+    }
 }
 
 impl From<&FindKeys>
@@ -161,23 +238,23 @@ impl From<&FindKeys>
 {
     fn from(value: &FindKeys) -> Self {
         match value {
-            FindKeys::Range((lastkey, keystep, limit)) => (
+            FindKeys::Range(range_spec) => (
                 raw::RedisModuleKeySpecFindKeysType_REDISMODULE_KSPEC_FK_RANGE,
                 raw::RedisModuleCommandKeySpec__bindgen_ty_2 {
                     range: raw::RedisModuleCommandKeySpec__bindgen_ty_2__bindgen_ty_1 {
-                        lastkey: *lastkey,
-                        keystep: *keystep,
-                        limit: *limit,
+                        lastkey: range_spec.last_key,
+                        keystep: range_spec.steps,
+                        limit: range_spec.limit,
                     },
                 },
             ),
-            FindKeys::Keynum((keynumidx, firstkey, keystep)) => (
+            FindKeys::Keynum(keynum_spec) => (
                 raw::RedisModuleKeySpecFindKeysType_REDISMODULE_KSPEC_FK_KEYNUM,
                 raw::RedisModuleCommandKeySpec__bindgen_ty_2 {
                     keynum: raw::RedisModuleCommandKeySpec__bindgen_ty_2__bindgen_ty_2 {
-                        keynumidx: *keynumidx,
-                        firstkey: *firstkey,
-                        keystep: *keystep,
+                        keynumidx: keynum_spec.key_num_idx,
+                        firstkey: keynum_spec.first_key,
+                        keystep: keynum_spec.key_step,
                     },
                 },
             ),
