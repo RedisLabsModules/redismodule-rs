@@ -10,6 +10,106 @@ use syn::{
 };
 
 #[derive(Debug, Deserialize)]
+pub enum RedisCommandFlags {
+    /// The command may modify the data set (it may also read from it).
+    Write,
+
+    /// The command returns data from keys but never writes.
+    ReadOnly,
+
+    /// The command is an administrative command (may change replication or perform similar tasks).
+    Admin,
+
+    /// The command may use additional memory and should be denied during out of memory conditions.
+    DenyOOM,
+
+    /// Don't allow this command in Lua scripts.
+    DenyScript,
+
+    /// Allow this command while the server is loading data. Only commands not interacting with the data set
+    /// should be allowed to run in this mode. If not sure don't use this flag.
+    AllowLoading,
+
+    /// The command publishes things on Pub/Sub channels.
+    PubSub,
+
+    /// The command may have different outputs even starting from the same input arguments and key values.
+    /// Starting from Redis 7.0 this flag has been deprecated. Declaring a command as "random" can be done using
+    /// command tips, see https://redis.io/topics/command-tips.
+    Random,
+
+    /// The command is allowed to run on slaves that don't serve stale data. Don't use if you don't know what
+    /// this means.
+    AllowStale,
+
+    /// Don't propagate the command on monitor. Use this if the command has sensitive data among the arguments.
+    NoMonitor,
+
+    /// Don't log this command in the slowlog. Use this if the command has sensitive data among the arguments.
+    NoSlowlog,
+
+    /// The command time complexity is not greater than O(log(N)) where N is the size of the collection or
+    /// anything else representing the normal scalability issue with the command.
+    Fast,
+
+    /// The command implements the interface to return the arguments that are keys. Used when start/stop/step
+    /// is not enough because of the command syntax.
+    GetkeysApi,
+
+    /// The command should not register in Redis Cluster since is not designed to work with it because, for
+    /// example, is unable to report the position of the keys, programmatically creates key names, or any
+    /// other reason.
+    NoCluster,
+
+    /// This command can be run by an un-authenticated client. Normally this is used by a command that is used
+    /// to authenticate a client.
+    NoAuth,
+
+    /// This command may generate replication traffic, even though it's not a write command.
+    MayReplicate,
+
+    /// All the keys this command may take are optional
+    NoMandatoryKeys,
+
+    /// The command has the potential to block the client.
+    Blocking,
+
+    /// Permit the command while the server is blocked either by a script or by a slow module command, see
+    /// RM_Yield.
+    AllowBusy,
+
+    /// The command implements the interface to return the arguments that are channels.
+    GetchannelsApi,
+}
+
+impl From<&RedisCommandFlags> for &'static str {
+    fn from(value: &RedisCommandFlags) -> Self {
+        match value {
+            RedisCommandFlags::Write => "write",
+            RedisCommandFlags::ReadOnly => "readonly",
+            RedisCommandFlags::Admin => "admin",
+            RedisCommandFlags::DenyOOM => "deny-oom",
+            RedisCommandFlags::DenyScript => "deny-script",
+            RedisCommandFlags::AllowLoading => "allow-loading",
+            RedisCommandFlags::PubSub => "pubsub",
+            RedisCommandFlags::Random => "random",
+            RedisCommandFlags::AllowStale => "allow-stale",
+            RedisCommandFlags::NoMonitor => "no-monitor",
+            RedisCommandFlags::NoSlowlog => "no-slowlog",
+            RedisCommandFlags::Fast => "fast",
+            RedisCommandFlags::GetkeysApi => "getkeys-api",
+            RedisCommandFlags::NoCluster => "no-cluster",
+            RedisCommandFlags::NoAuth => "no-auth",
+            RedisCommandFlags::MayReplicate => "may-replicate",
+            RedisCommandFlags::NoMandatoryKeys => "no-mandatory-keys",
+            RedisCommandFlags::Blocking => "blocking",
+            RedisCommandFlags::AllowBusy => "allow-busy",
+            RedisCommandFlags::GetchannelsApi => "getchannels-api",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
 pub enum RedisCommandKeySpecFlags {
     /// Read-Only. Reads the value of the key, but doesn't necessarily return it.
     ReadOnly,
@@ -111,7 +211,7 @@ pub struct KeySpecArg {
 #[derive(Debug, Deserialize)]
 struct Args {
     name: Option<String>,
-    flags: Option<String>,
+    flags: Vec<RedisCommandFlags>,
     summary: Option<String>,
     complexity: Option<String>,
     since: Option<String>,
@@ -153,7 +253,15 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
     let name_literal = args
         .name
         .unwrap_or_else(|| original_function_name.to_string());
-    let flags_literal = to_token_stream(args.flags);
+    let flags_str = args
+        .flags
+        .into_iter()
+        .fold(String::new(), |s, v| {
+            format!("{} {}", s, Into::<&'static str>::into(&v))
+        })
+        .trim()
+        .to_owned();
+    let flags_literal = quote!(#flags_str);
     let summary_literal = to_token_stream(args.summary);
     let complexity_literal = to_token_stream(args.complexity);
     let since_literal = to_token_stream(args.since);
@@ -253,7 +361,7 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
             ];
             Ok(redis_module::commands::CommandInfo::new(
                 #name_literal.to_owned(),
-                #flags_literal,
+                Some(#flags_literal.to_owned()),
                 #summary_literal,
                 #complexity_literal,
                 #since_literal,

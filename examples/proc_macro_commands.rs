@@ -4,7 +4,7 @@ use redis_module_macros::command;
 #[command(
     {
         name: "classic_keys",
-        flags: "readonly",
+        flags: [ReadOnly],
         arity: -2,
         key_spec: [
             {
@@ -23,7 +23,7 @@ fn classic_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
 #[command(
     {
         name: "keyword_keys",
-        flags: "readonly",
+        flags: [ReadOnly],
         arity: -2,
         key_spec: [
             {
@@ -42,7 +42,7 @@ fn keyword_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
 #[command(
     {
         name: "num_keys",
-        flags: "readonly no-mandatory-keys",
+        flags: [ReadOnly, NoMandatoryKeys],
         arity: -2,
         key_spec: [
             {
