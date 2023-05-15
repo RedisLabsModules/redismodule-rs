@@ -3,6 +3,7 @@ use crate::Context;
 use crate::RedisError;
 use crate::Status;
 use bitflags::bitflags;
+use libc::c_char;
 use linkme::distributed_slice;
 use redis_module_macros_internals::api;
 use std::ffi::CString;
@@ -275,14 +276,12 @@ impl CommandInfo {
 #[distributed_slice()]
 pub static COMMNADS_LIST: [fn() -> Result<CommandInfo, RedisError>] = [..];
 
-pub fn get_redis_key_spec(key_spec: Vec<KeySpec>) -> *mut raw::RedisModuleCommandKeySpec {
+pub fn get_redis_key_spec(key_spec: Vec<KeySpec>) -> Vec<raw::RedisModuleCommandKeySpec> {
     let mut redis_key_spec: Vec<raw::RedisModuleCommandKeySpec> =
         key_spec.into_iter().map(|v| (&v).into()).collect();
     let zerod: raw::RedisModuleCommandKeySpec = unsafe { MaybeUninit::zeroed().assume_init() };
     redis_key_spec.push(zerod);
-    let res = redis_key_spec.as_ptr();
-    std::mem::forget(redis_key_spec);
-    res as *mut raw::RedisModuleCommandKeySpec
+    redis_key_spec
 }
 
 api! {[
@@ -335,42 +334,57 @@ api! {[
             let summary = command_info
                 .summary
                 .as_ref()
-                .map(|v| CString::new(v.as_str()).unwrap().into_raw())
-                .unwrap_or(ptr::null_mut());
+                .map(|v| Some(CString::new(v.as_str()).unwrap()))
+                .unwrap_or(None);
             let complexity = command_info
                 .complexity
                 .as_ref()
-                .map(|v| CString::new(v.as_str()).unwrap().into_raw())
-                .unwrap_or(ptr::null_mut());
+                .map(|v| Some(CString::new(v.as_str()).unwrap()))
+                .unwrap_or(None);
             let since = command_info
                 .since
                 .as_ref()
-                .map(|v| CString::new(v.as_str()).unwrap().into_raw())
-                .unwrap_or(ptr::null_mut());
+                .map(|v| Some(CString::new(v.as_str()).unwrap()))
+                .unwrap_or(None);
             let tips = command_info
                 .tips
                 .as_ref()
-                .map(|v| CString::new(v.as_str()).unwrap().into_raw())
-                .unwrap_or(ptr::null_mut());
+                .map(|v| Some(CString::new(v.as_str()).unwrap()))
+                .unwrap_or(None);
 
-            let redis_command_info = Box::into_raw(Box::new(raw::RedisModuleCommandInfo {
+            let key_specs = get_redis_key_spec(command_info.key_spec);
+
+            let mut redis_command_info = raw::RedisModuleCommandInfo {
                 version: &COMMNAD_INFO_VERSION,
-                summary,
-                complexity,
-                since,
+                summary: summary.as_ref().map(|v| v.as_ptr()).unwrap_or(ptr::null_mut()),
+                complexity: complexity.as_ref().map(|v| v.as_ptr()).unwrap_or(ptr::null_mut()),
+                since: since.as_ref().map(|v| v.as_ptr()).unwrap_or(ptr::null_mut()),
                 history: ptr::null_mut(), // currently we will not support history
-                tips,
+                tips: tips.as_ref().map(|v| v.as_ptr()).unwrap_or(ptr::null_mut()),
                 arity: command_info.arity as c_int,
-                key_specs: get_redis_key_spec(command_info.key_spec),
+                key_specs: key_specs.as_ptr() as *mut raw::RedisModuleCommandKeySpec,
                 args: ptr::null_mut(),
-            }));
+            };
 
-            if unsafe { RedisModule_SetCommandInfo(command, redis_command_info) } == raw::Status::Err as i32 {
+            if unsafe { RedisModule_SetCommandInfo(command, &mut redis_command_info as *mut raw::RedisModuleCommandInfo) } == raw::Status::Err as i32 {
                 return Err(RedisError::String(format!(
                     "Failed setting info for command {}.",
                     command_info.name
                 )));
             }
+
+            // the only CString pointers which are not freed are those of the key_specs, lets free them here.
+            key_specs.into_iter().for_each(|v|{
+                if !v.notes.is_null() {
+                    unsafe{CString::from_raw(v.notes as *mut c_char)};
+                }
+                if v.begin_search_type == raw::RedisModuleKeySpecBeginSearchType_REDISMODULE_KSPEC_BS_KEYWORD {
+                    let keyword = unsafe{v.bs.keyword.keyword};
+                    if !keyword.is_null() {
+                        unsafe{CString::from_raw(v.bs.keyword.keyword as *mut c_char)};
+                    }
+                }
+            });
 
             Ok(())
         })
