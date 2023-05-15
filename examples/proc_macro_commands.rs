@@ -3,7 +3,6 @@ use redis_module_macros::command;
 
 #[command(
     {
-        name: "classic_keys",
         flags: [ReadOnly],
         arity: -2,
         key_spec: [

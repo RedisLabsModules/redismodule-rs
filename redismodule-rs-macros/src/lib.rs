@@ -7,7 +7,7 @@ mod command;
 /// This proc macro allow to specify that the follow function is a Redis command.
 /// The macro accept the following arguments that discribe the command properties:
 /// * name (optional) - The command name. in case not given, the function name will be taken.
-/// * flags (optional) - Command flags such as `readonly`, for the full list please refer to https://redis.io/docs/reference/modules/modules-api-ref/#redismodule_createcommand
+/// * flags - An array of `RedisCommandFlags`.
 /// * summary (optional) - Command summary
 /// * complexity (optional) - Command compexity
 /// * since (optional) - At which module version the command was first introduce
@@ -60,7 +60,7 @@ mod command;
 /// #[command(
 /// {
 ///    name: "test",
-///    flags: "readonly",
+///    flags: [ReadOnly],
 ///    arity: -2,
 ///    key_spec: [
 ///        {

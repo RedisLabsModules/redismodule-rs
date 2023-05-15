@@ -73,18 +73,18 @@ bitflags! {
 impl TryFrom<&str> for KeySpecFlags {
     type Error = RedisError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "READ_ONLY" => Ok(KeySpecFlags::READ_ONLY),
-            "READ_WRITE" => Ok(KeySpecFlags::READ_WRITE),
-            "OVERWRITE" => Ok(KeySpecFlags::OVERWRITE),
-            "REMOVE" => Ok(KeySpecFlags::REMOVE),
-            "ACCESS" => Ok(KeySpecFlags::ACCESS),
-            "UPDATE" => Ok(KeySpecFlags::UPDATE),
-            "INSERT" => Ok(KeySpecFlags::INSERT),
-            "DELETE" => Ok(KeySpecFlags::DELETE),
-            "NOT_KEY" => Ok(KeySpecFlags::NOT_KEY),
-            "INCOMPLETE" => Ok(KeySpecFlags::INCOMPLETE),
-            "VARIABLE_FLAGS" => Ok(KeySpecFlags::VARIABLE_FLAGS),
+        match value.to_lowercase().as_str() {
+            "read_only" => Ok(KeySpecFlags::READ_ONLY),
+            "read_write" => Ok(KeySpecFlags::READ_WRITE),
+            "overwrite" => Ok(KeySpecFlags::OVERWRITE),
+            "remove" => Ok(KeySpecFlags::REMOVE),
+            "access" => Ok(KeySpecFlags::ACCESS),
+            "update" => Ok(KeySpecFlags::UPDATE),
+            "insert" => Ok(KeySpecFlags::INSERT),
+            "delete" => Ok(KeySpecFlags::DELETE),
+            "not_key" => Ok(KeySpecFlags::NOT_KEY),
+            "incomplete" => Ok(KeySpecFlags::INCOMPLETE),
+            "variable_flags" => Ok(KeySpecFlags::VARIABLE_FLAGS),
             _ => Err(RedisError::String(format!(
                 "Value {value} is not a valid key spec flag."
             ))),
