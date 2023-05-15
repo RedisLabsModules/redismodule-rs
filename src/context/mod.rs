@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use redis_module_macros_internals::redismodule_api;
+use redis_module_macros_internals::api;
 use std::ffi::CString;
 use std::os::raw::c_void;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
@@ -23,6 +23,7 @@ mod timer;
 
 pub mod blocked;
 pub mod call_reply;
+pub mod commands;
 pub mod info;
 pub mod keys_cursor;
 pub mod server_events;
@@ -695,7 +696,7 @@ impl Context {
         acl_permission_result.map_err(|_e| RedisError::Str("User does not have permissions on key"))
     }
 
-    redismodule_api!(
+    api!(
         [RedisModule_AddPostNotificationJob],
         /// When running inside a key space notification callback, it is dangerous and highly discouraged to perform any write
         /// operation. In order to still perform write actions in this scenario, Redis provides this API ([add_post_notification_job])

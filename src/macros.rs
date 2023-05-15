@@ -227,6 +227,10 @@ macro_rules! redis_module {
                 $crate::redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep);
             )*
 
+            if $crate::commands::register_commands(&context) == raw::Status::Err {
+                return raw::Status::Err as c_int;
+            }
+
             $(
                 $(
                     $crate::redis_event_handler!(ctx, $(raw::NotifyEvent::$event_type |)+ raw::NotifyEvent::empty(), $event_handler);

@@ -24,6 +24,10 @@ name = "configuration"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "proc_macro_commands"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "acl"
 crate-type = ["cdylib"]
 
