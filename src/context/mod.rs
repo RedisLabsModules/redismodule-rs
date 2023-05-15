@@ -709,8 +709,8 @@ impl Context {
         /// as a logical bug that need to be fixed in the module, an attempt to protect against
         /// infinite loops by halting the execution could result in violation of the feature correctness
         /// and so Redis will make no attempt to protect the module from infinite loops.
-        pub fn add_post_notification_job<F: Fn(&Context)>(&self, callback: F) -> Status {
-            let callback = Box::into_raw(Box::new(callback));
+        pub fn add_post_notification_job<F: FnOnce(&Context)>(&self, callback: F) -> Status {
+            let callback = Box::into_raw(Box::new(Some(callback)));
             unsafe {
                 RedisModule_AddPostNotificationJob(
                     self.ctx,
@@ -724,17 +724,27 @@ impl Context {
     );
 }
 
-extern "C" fn post_notification_job_free_callback<F: Fn(&Context)>(pd: *mut c_void) {
-    unsafe { Box::from_raw(pd as *mut F) };
+extern "C" fn post_notification_job_free_callback<F: FnOnce(&Context)>(pd: *mut c_void) {
+    unsafe { Box::from_raw(pd as *mut Option<F>) };
 }
 
-extern "C" fn post_notification_job<F: Fn(&Context)>(
+extern "C" fn post_notification_job<F: FnOnce(&Context)>(
     ctx: *mut raw::RedisModuleCtx,
     pd: *mut c_void,
 ) {
-    let callback = unsafe { &*(pd as *mut F) };
+    let callback = unsafe { &mut *(pd as *mut Option<F>) };
     let ctx = Context::new(ctx);
-    callback(&ctx);
+    callback.take().map_or_else(
+        || {
+            ctx.log(
+                RedisLogLevel::Warning,
+                "Got a None callback on post notification job.",
+            )
+        },
+        |callback| {
+            callback(&ctx);
+        },
+    );
 }
 
 unsafe impl RedisLockIndicator for Context {}
