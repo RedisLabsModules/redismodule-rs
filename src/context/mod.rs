@@ -16,7 +16,7 @@ use crate::{RedisError, RedisResult, RedisString, RedisValue};
 
 use std::ffi::CStr;
 
-use self::call_reply::CallResult;
+use self::call_reply::{create_promise_call_reply, CallResult, PromiseCallReply};
 use self::thread_safe::RedisLockIndicator;
 
 mod timer;
@@ -43,6 +43,12 @@ impl Default for CallOptionsBuilder {
 
 #[derive(Clone)]
 pub struct CallOptions {
+    options: CString,
+}
+
+#[derive(Clone)]
+#[cfg(feature = "min-redis-compatibility-version-7-2")]
+pub struct BlockingCallOptions {
     options: CString,
 }
 
@@ -116,6 +122,17 @@ impl CallOptionsBuilder {
     /// Construct a CallOption object that can be used to run commands using call_ext
     pub fn build(self) -> CallOptions {
         CallOptions {
+            options: CString::new(self.options).unwrap(), // the data will never contains internal \0 so it is safe to unwrap.
+        }
+    }
+
+    /// Construct a CallOption object that can be used to run commands using call_blocking.
+    /// The commands can be either blocking or none blocking. In case the command are blocking
+    /// (like `blpop`) a [FutureCallReply] will be returned.
+    #[cfg(feature = "min-redis-compatibility-version-7-2")]
+    pub fn build_blocking(mut self) -> BlockingCallOptions {
+        self.add_flag("K");
+        BlockingCallOptions {
             options: CString::new(self.options).unwrap(), // the data will never contains internal \0 so it is safe to unwrap.
         }
     }
@@ -327,8 +344,13 @@ impl Context {
         }
     }
 
-    fn call_internal<'a, T: Into<StrCallArgs<'a>>, R: From<CallResult<'static>>>(
-        &self,
+    fn call_internal<
+        'ctx,
+        'a,
+        T: Into<StrCallArgs<'a>>,
+        R: From<PromiseCallReply<'static, 'ctx>>,
+    >(
+        &'ctx self,
         command: &str,
         fmt: *const c_char,
         args: T,
@@ -347,7 +369,8 @@ impl Context {
                 final_args.len(),
             )
         };
-        R::from(call_reply::create_root_call_reply(NonNull::new(reply)))
+        let promise = create_promise_call_reply(self, NonNull::new(reply));
+        R::from(promise)
     }
 
     pub fn call<'a, T: Into<StrCallArgs<'a>>>(&self, command: &str, args: T) -> RedisResult {
@@ -362,6 +385,24 @@ impl Context {
         &self,
         command: &str,
         options: &CallOptions,
+        args: T,
+    ) -> R {
+        let res: CallResult<'static> =
+            self.call_internal(command, options.options.as_ptr() as *const c_char, args);
+        R::from(res)
+    }
+
+    /// Same as [call_ext] but also allow to perform blocking commands like BLPOP.
+    #[cfg(feature = "min-redis-compatibility-version-7-2")]
+    pub fn call_blocking<
+        'ctx,
+        'a,
+        T: Into<StrCallArgs<'a>>,
+        R: From<PromiseCallReply<'static, 'ctx>>,
+    >(
+        &'ctx self,
+        command: &str,
+        options: &BlockingCallOptions,
         args: T,
     ) -> R {
         self.call_internal(command, options.options.as_ptr() as *const c_char, args)

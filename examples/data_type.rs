@@ -24,6 +24,7 @@ static MY_REDIS_TYPE: RedisType = RedisType::new(
         // Aux data
         aux_load: None,
         aux_save: None,
+        aux_save2: None,
         aux_save_triggers: 0,
 
         free_effort: None,

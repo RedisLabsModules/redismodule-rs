@@ -1,6 +1,6 @@
 use redis_module::{
-    redis_module, CallOptionResp, CallOptionsBuilder, CallReply, CallResult, Context, RedisError,
-    RedisResult, RedisString,
+    redis_module, CallOptionResp, CallOptionsBuilder, CallReply, CallResult, Context,
+    PromiseCallReply, RedisError, RedisResult, RedisString, RedisValue, ThreadSafeContext,
 };
 
 fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
@@ -110,6 +110,22 @@ fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
     Ok("pass".into())
 }
 
+fn call_blocking(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
+    let call_options = CallOptionsBuilder::new().build_blocking();
+    let res = ctx.call_blocking("blpop", &call_options, &["list", "1"]);
+    match res {
+        PromiseCallReply::Resolved(r) => r.map_or_else(|e| Err(e.into()), |v| Ok((&v).into())),
+        PromiseCallReply::Future(f) => {
+            let blocked_client = ctx.block_client();
+            f.set_unblock_handler(move |_ctx, reply| {
+                let thread_ctx = ThreadSafeContext::with_blocked_client(blocked_client);
+                thread_ctx.reply(reply.map_or_else(|e| Err(e.into()), |v| Ok((&v).into())));
+            });
+            Ok(RedisValue::NoReply)
+        }
+    }
+}
+
 //////////////////////////////////////////////////////
 
 redis_module! {
@@ -119,5 +135,6 @@ redis_module! {
     data_types: [],
     commands: [
         ["call.test", call_test, "", 0, 0, 0],
+        ["call.blocking", call_blocking, "", 0, 0, 0],
     ],
 }
