@@ -190,6 +190,34 @@ macro_rules! redis_module {
             use $crate::configuration::get_bool_default_config_value;
             use $crate::configuration::get_enum_default_config_value;
 
+            if ctx.is_null() {
+                $crate::logging::log_warning(
+                    "The module context pointer is null."
+                );
+                return raw::Status::Err as _;
+            }
+
+            if argv.is_null() && argc != 0 {
+                $crate::logging::log_warning(
+                    "The module argv is null but the argc is not zero."
+                );
+                return raw::Status::Err as _;
+            }
+
+            if !argv.is_null() && unsafe { (*argv).is_null() } {
+                $crate::logging::log_warning(
+                    "The module argv is initialised but has no data."
+                );
+                return raw::Status::Err as _;
+            }
+
+            if !argv.is_null() && unsafe { !(*argv).is_null() } && (argc <= 0) {
+                $crate::logging::log_warning(
+                    "Incorrect number of module arguments."
+                );
+                return raw::Status::Err as _;
+            }
+
             // We use a statically sized buffer to avoid allocating.
             // This is needed since we use a custom allocator that relies on the Redis allocator,
             // which isn't yet ready at this point.
