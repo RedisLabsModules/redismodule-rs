@@ -3,6 +3,7 @@ use quote::quote;
 use syn::ItemFn;
 
 mod command;
+mod redis_value;
 
 /// This proc macro allow to specify that the follow function is a Redis command.
 /// The macro accept the following arguments that discribe the command properties:
@@ -133,4 +134,92 @@ pub fn module_changed_event_handler(_attr: TokenStream, item: TokenStream) -> To
         #ast
     };
     gen.into()
+}
+
+/// The macro auto generate a [From] implementation that can convert the struct into [RedisValue].
+///
+/// Example:
+///
+/// ```rust,no_run,ignore
+/// #[derive(RedisValue)]
+/// struct RedisValueDeriveInner {
+///     i: i64,
+/// }
+///
+/// #[derive(RedisValue)]
+/// struct RedisValueDerive {
+///     i: i64,
+///     f: f64,
+///     s: String,
+///     u: usize,
+///     v: Vec<i64>,
+///     v2: Vec<RedisValueDeriveInner>,
+///     hash_map: HashMap<String, String>,
+///     hash_set: HashSet<String>,
+///     ordered_map: BTreeMap<String, RedisValueDeriveInner>,
+///     ordered_set: BTreeSet<String>,
+/// }
+///
+/// #[command(
+///     {
+///         flags: [ReadOnly, NoMandatoryKeys],
+///         arity: -1,
+///         key_spec: [
+///             {
+///                 notes: "test redis value derive macro",
+///                 flags: [ReadOnly, Access],
+///                 begin_search: Index({ index : 0 }),
+///                 find_keys: Range({ last_key : 0, steps : 0, limit : 0 }),
+///             }
+///         ]
+///     }
+/// )]
+/// fn redis_value_derive(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+///     Ok(RedisValueDerive {
+///         i: 10,
+///         f: 1.1,
+///         s: "s".to_owned(),
+///         u: 20,
+///         v: vec![1, 2, 3],
+///         v2: vec![
+///             RedisValueDeriveInner { i: 1 },
+///             RedisValueDeriveInner { i: 2 },
+///         ],
+///         hash_map: HashMap::from([("key".to_owned(), "val`".to_owned())]),
+///         hash_set: HashSet::from(["key".to_owned()]),
+///         ordered_map: BTreeMap::from([("key".to_owned(), RedisValueDeriveInner { i: 10 })]),
+///         ordered_set: BTreeSet::from(["key".to_owned()]),
+///     }
+///     .into())
+/// }
+/// ```
+///
+/// The [From] implementation generates a [RedisValue::OrderMap] such that the fields names
+/// are the map keys and the values are the result of running [Into] function on the field
+/// value and convert it into a [RedisValue].
+///
+/// The code above will generate the following reply (in resp3):
+///
+/// ```bash
+/// 127.0.0.1:6379> redis_value_derive
+/// 1# "f" => (double) 1.1
+/// 2# "hash_map" => 1# "key" => "val"
+/// 3# "hash_set" => 1~ "key"
+/// 4# "i" => (integer) 10
+/// 5# "ordered_map" => 1# "key" => 1# "i" => (integer) 10
+/// 6# "ordered_set" => 1~ "key"
+/// 7# "s" => "s"
+/// 8# "u" => (integer) 20
+/// 9# "v" =>
+///    1) (integer) 1
+///    2) (integer) 2
+///    3) (integer) 3
+/// 10# "v2" =>
+///    1) 1# "i" => (integer) 1
+///    2) 1# "i" => (integer) 2
+/// ```
+///
+#[proc_macro_derive(RedisValue)]
+pub fn redis_value(item: TokenStream) -> TokenStream {
+    redis_value::redis_value(item)
 }
