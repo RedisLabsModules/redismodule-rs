@@ -1,6 +1,7 @@
 use crate::utils::{get_redis_connection, start_redis_server_with_module};
 use anyhow::Context;
 use anyhow::Result;
+use redis::Value;
 use redis::{RedisError, RedisResult};
 
 mod utils;
@@ -535,6 +536,23 @@ fn test_command_proc_macro() -> Result<()> {
         .with_context(|| "failed to run string.set")?;
 
     assert!(res.is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn test_redis_value_derive() -> Result<()> {
+    let port: u16 = 6497;
+    let _guards = vec![start_redis_server_with_module("proc_macro_commands", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: Value = redis::cmd("redis_value_derive")
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(res.as_sequence().unwrap().len(), 20);
 
     Ok(())
 }
