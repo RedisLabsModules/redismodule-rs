@@ -106,6 +106,12 @@ impl From<i64> for RedisValue {
     }
 }
 
+impl From<bool> for RedisValue {
+    fn from(b: bool) -> Self {
+        Self::Bool(b)
+    }
+}
+
 impl From<usize> for RedisValue {
     fn from(i: usize) -> Self {
         (i as i64).into()
