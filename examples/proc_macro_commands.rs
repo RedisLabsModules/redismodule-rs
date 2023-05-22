@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
+use redis_module::RedisError;
 use redis_module::{redis_module, Context, RedisResult, RedisString, RedisValue};
 use redis_module_macros::{command, RedisValue};
 
@@ -36,7 +37,10 @@ struct RedisValueDerive {
         ]
     }
 )]
-fn redis_value_derive(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+fn redis_value_derive(
+    _ctx: &Context,
+    _args: Vec<RedisString>,
+) -> Result<RedisValueDerive, RedisError> {
     Ok(RedisValueDerive {
         i: 10,
         f: 1.1,
@@ -51,8 +55,7 @@ fn redis_value_derive(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
         hash_set: HashSet::from(["key".to_owned()]),
         ordered_map: BTreeMap::from([("key".to_owned(), RedisValueDeriveInner { i: 10 })]),
         ordered_set: BTreeSet::from(["key".to_owned()]),
-    }
-    .into())
+    })
 }
 
 #[command(

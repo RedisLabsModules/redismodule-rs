@@ -20,7 +20,7 @@ macro_rules! redis_command {
 
             let args = $crate::decode_args(ctx, argv, argc);
             let response = $command_handler(&context, args);
-            context.reply(response) as c_int
+            context.reply(response.map(|v| v.into())) as c_int
         }
         /////////////////////
 
