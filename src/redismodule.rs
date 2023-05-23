@@ -101,6 +101,9 @@ pub fn decode_args(
     argv: *mut *mut raw::RedisModuleString,
     argc: c_int,
 ) -> Vec<RedisString> {
+    if argv.is_null() {
+        return Vec::new();
+    }
     unsafe { slice::from_raw_parts(argv, argc as usize) }
         .iter()
         .map(|&arg| RedisString::new(NonNull::new(ctx), arg))
