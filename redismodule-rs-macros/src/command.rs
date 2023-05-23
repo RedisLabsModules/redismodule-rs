@@ -79,7 +79,10 @@ pub enum RedisCommandFlags {
     AllowBusy,
 
     /// The command implements the interface to return the arguments that are channels.
-    GetchannelsApi,
+    GetChannelsApi,
+
+    /// The command isn't allowed inside the context of a transaction.
+    NoMulti,
 }
 
 impl From<&RedisCommandFlags> for &'static str {
@@ -104,7 +107,8 @@ impl From<&RedisCommandFlags> for &'static str {
             RedisCommandFlags::NoMandatoryKeys => "no-mandatory-keys",
             RedisCommandFlags::Blocking => "blocking",
             RedisCommandFlags::AllowBusy => "allow-busy",
-            RedisCommandFlags::GetchannelsApi => "getchannels-api",
+            RedisCommandFlags::GetChannelsApi => "getchannels-api",
+            RedisCommandFlags::NoMulti => "no-multi",
         }
     }
 }
