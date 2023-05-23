@@ -219,7 +219,63 @@ pub fn module_changed_event_handler(_attr: TokenStream, item: TokenStream) -> To
 ///    2) 1# "i" => (integer) 2
 /// ```
 ///
-#[proc_macro_derive(RedisValue)]
+/// The derive proc macro can also be set on an Enum. In this case, the generated
+/// code will check the enum varient (using a match statement) and perform [Into]
+/// on the matched varient. This is usefull in case the command returns more than
+/// a single reply type and the reply type need to be decided at runtime.
+///
+/// It is possible to specify a field attribute that will define a specific behavior
+/// about the field. Supported attributes:
+///
+/// * flatten - indicate to inlines keys from a field into the parent struct.
+///
+/// Example:
+///
+/// ```rust,no_run,ignore
+/// #[derive(RedisValue)]
+/// struct RedisValueDeriveInner {
+///     i2: i64,
+/// }
+///
+/// #[derive(RedisValue)]
+/// struct RedisValueDerive {
+///     i1: i64,
+///     #[RedisValueAttr{flatten: true}]
+///     inner: RedisValueDeriveInner
+/// }
+///
+/// #[command(
+///     {
+///         flags: [ReadOnly, NoMandatoryKeys],
+///         arity: -1,
+///         key_spec: [
+///             {
+///                 notes: "test redis value derive macro",
+///                 flags: [ReadOnly, Access],
+///                 begin_search: Index({ index : 0 }),
+///                 find_keys: Range({ last_key : 0, steps : 0, limit : 0 }),
+///             }
+///         ]
+///     }
+/// )]
+/// fn redis_value_derive(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+///     Ok(RedisValueDerive {
+///         i1: 10,
+///         inner: RedisValueDeriveInner{ i2: 10 },
+///     }
+///     .into())
+/// }
+/// ```
+///
+/// The code above will generate the following reply (in resp3):
+///
+/// ```bash
+/// 127.0.0.1:6379> redis_value_derive
+/// 1# "i1" => 10
+/// 2# "i2" => 10
+/// ```
+///
+#[proc_macro_derive(RedisValue, attributes(RedisValueAttr))]
 pub fn redis_value(item: TokenStream) -> TokenStream {
     redis_value::redis_value(item)
 }
