@@ -6,7 +6,7 @@ use redis_module_macros::{command, RedisValue};
 
 #[derive(RedisValue)]
 struct RedisValueDeriveInner {
-    i: i64,
+    i1: i64,
 }
 
 #[derive(RedisValue)]
@@ -16,11 +16,19 @@ struct RedisValueDerive {
     s: String,
     u: usize,
     v: Vec<i64>,
+    #[RedisValueAttr{flatten: true}]
+    inner: RedisValueDeriveInner,
     v2: Vec<RedisValueDeriveInner>,
     hash_map: HashMap<String, String>,
     hash_set: HashSet<String>,
     ordered_map: BTreeMap<String, RedisValueDeriveInner>,
     ordered_set: BTreeSet<String>,
+}
+
+#[derive(RedisValue)]
+enum RedisValueEnum {
+    Str(String),
+    RedisValue(RedisValueDerive),
 }
 
 #[command(
@@ -39,23 +47,28 @@ struct RedisValueDerive {
 )]
 fn redis_value_derive(
     _ctx: &Context,
-    _args: Vec<RedisString>,
-) -> Result<RedisValueDerive, RedisError> {
-    Ok(RedisValueDerive {
-        i: 10,
-        f: 1.1,
-        s: "s".to_owned(),
-        u: 20,
-        v: vec![1, 2, 3],
-        v2: vec![
-            RedisValueDeriveInner { i: 1 },
-            RedisValueDeriveInner { i: 2 },
-        ],
-        hash_map: HashMap::from([("key".to_owned(), "val".to_owned())]),
-        hash_set: HashSet::from(["key".to_owned()]),
-        ordered_map: BTreeMap::from([("key".to_owned(), RedisValueDeriveInner { i: 10 })]),
-        ordered_set: BTreeSet::from(["key".to_owned()]),
-    })
+    args: Vec<RedisString>,
+) -> Result<RedisValueEnum, RedisError> {
+    if args.len() > 1 {
+        Ok(RedisValueEnum::Str("OK".to_owned()))
+    } else {
+        Ok(RedisValueEnum::RedisValue(RedisValueDerive {
+            i: 10,
+            f: 1.1,
+            s: "s".to_owned(),
+            u: 20,
+            v: vec![1, 2, 3],
+            inner: RedisValueDeriveInner { i1: 1 },
+            v2: vec![
+                RedisValueDeriveInner { i1: 1 },
+                RedisValueDeriveInner { i1: 2 },
+            ],
+            hash_map: HashMap::from([("key".to_owned(), "val".to_owned())]),
+            hash_set: HashSet::from(["key".to_owned()]),
+            ordered_map: BTreeMap::from([("key".to_owned(), RedisValueDeriveInner { i1: 10 })]),
+            ordered_set: BTreeSet::from(["key".to_owned()]),
+        }))
+    }
 }
 
 #[command(
