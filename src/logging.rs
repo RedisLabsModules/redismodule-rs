@@ -22,8 +22,8 @@ impl From<log::Level> for RedisLogLevel {
         match value {
             log::Level::Error | log::Level::Warn => Self::Warning,
             log::Level::Info => Self::Notice,
-            log::Level::Debug => Self::Debug,
-            log::Level::Trace => Self::Verbose,
+            log::Level::Debug => Self::Verbose,
+            log::Level::Trace => Self::Debug,
         }
     }
 }
