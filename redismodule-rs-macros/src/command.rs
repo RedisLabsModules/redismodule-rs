@@ -344,7 +344,7 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
 
             let args = redis_module::decode_args(ctx, argv, argc);
             let response = #original_function_name(&context, args);
-            context.reply(response) as i32
+            context.reply(response.map(|v| v.into())) as i32
         }
 
         #[linkme::distributed_slice(redis_module::commands::COMMNADS_LIST)]

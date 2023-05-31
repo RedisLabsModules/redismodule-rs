@@ -48,6 +48,12 @@ use backtrace::Backtrace;
 /// See [DetachedContext].
 pub static MODULE_CONTEXT: DetachedContext = DetachedContext::new();
 
+#[deprecated(
+    since = "2.1.0",
+    note = "Please use the redis_module::logging::RedisLogLevel directly instead."
+)]
+pub type LogLevel = logging::RedisLogLevel;
+
 pub fn base_info_func(
     ctx: &InfoContext,
     for_crash_report: bool,

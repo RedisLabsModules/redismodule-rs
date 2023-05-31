@@ -52,6 +52,48 @@ impl TryFrom<RedisValue> for String {
     }
 }
 
+impl From<String> for RedisValueKey {
+    fn from(s: String) -> Self {
+        Self::String(s)
+    }
+}
+
+impl From<i64> for RedisValueKey {
+    fn from(i: i64) -> Self {
+        Self::Integer(i)
+    }
+}
+
+impl From<RedisString> for RedisValueKey {
+    fn from(rs: RedisString) -> Self {
+        Self::BulkRedisString(rs)
+    }
+}
+
+impl From<Vec<u8>> for RedisValueKey {
+    fn from(s: Vec<u8>) -> Self {
+        Self::BulkString(s)
+    }
+}
+
+impl From<&str> for RedisValueKey {
+    fn from(s: &str) -> Self {
+        s.to_owned().into()
+    }
+}
+
+impl From<&String> for RedisValueKey {
+    fn from(s: &String) -> Self {
+        s.clone().into()
+    }
+}
+
+impl From<bool> for RedisValueKey {
+    fn from(b: bool) -> Self {
+        Self::Bool(b)
+    }
+}
+
 impl From<()> for RedisValue {
     fn from(_: ()) -> Self {
         Self::Null
@@ -61,6 +103,12 @@ impl From<()> for RedisValue {
 impl From<i64> for RedisValue {
     fn from(i: i64) -> Self {
         Self::Integer(i)
+    }
+}
+
+impl From<bool> for RedisValue {
+    fn from(b: bool) -> Self {
+        Self::Bool(b)
     }
 }
 
@@ -121,6 +169,40 @@ impl<T: Into<Self>> From<Option<T>> for RedisValue {
 impl<T: Into<Self>> From<Vec<T>> for RedisValue {
     fn from(items: Vec<T>) -> Self {
         Self::Array(items.into_iter().map(Into::into).collect())
+    }
+}
+
+impl<K: Into<RedisValueKey>, V: Into<RedisValue>> From<HashMap<K, V>> for RedisValue {
+    fn from(items: HashMap<K, V>) -> Self {
+        Self::Map(
+            items
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
+        )
+    }
+}
+
+impl<K: Into<RedisValueKey>, V: Into<RedisValue>> From<BTreeMap<K, V>> for RedisValue {
+    fn from(items: BTreeMap<K, V>) -> Self {
+        Self::OrderedMap(
+            items
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
+        )
+    }
+}
+
+impl<K: Into<RedisValueKey>> From<HashSet<K>> for RedisValue {
+    fn from(items: HashSet<K>) -> Self {
+        Self::Set(items.into_iter().map(Into::into).collect())
+    }
+}
+
+impl<K: Into<RedisValueKey>> From<BTreeSet<K>> for RedisValue {
+    fn from(items: BTreeSet<K>) -> Self {
+        Self::OrderedSet(items.into_iter().map(Into::into).collect())
     }
 }
 

@@ -75,6 +75,7 @@ extern "C" fn loading_event_callback(
     let loading_sub_event = match subevent {
         raw::REDISMODULE_SUBEVENT_LOADING_RDB_START => LoadingSubevent::RdbStarted,
         raw::REDISMODULE_SUBEVENT_LOADING_REPL_START => LoadingSubevent::ReplStarted,
+        raw::REDISMODULE_SUBEVENT_LOADING_AOF_START => LoadingSubevent::AofStarted,
         raw::REDISMODULE_SUBEVENT_LOADING_ENDED => LoadingSubevent::Ended,
         _ => LoadingSubevent::Failed,
     };
