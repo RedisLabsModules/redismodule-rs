@@ -76,3 +76,8 @@ pub fn base_info_func(
 pub fn init_api(ctx: &Context) {
     unsafe { crate::raw::Export_RedisModule_InitAPI(ctx.ctx) };
 }
+
+pub(crate) unsafe fn deallocate_pointer<P>(p: *mut P) {
+    std::ptr::drop_in_place(p);
+    std::alloc::dealloc(p as *mut u8, std::alloc::Layout::new::<P>());
+}

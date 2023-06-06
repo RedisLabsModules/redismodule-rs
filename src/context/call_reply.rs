@@ -9,7 +9,7 @@ use std::{
 
 use libc::c_void;
 
-use crate::{raw::*, Context, RedisError, RedisLockIndicator};
+use crate::{deallocate_pointer, raw::*, Context, RedisError, RedisLockIndicator};
 
 pub struct StringCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
@@ -746,7 +746,7 @@ where
         }.into();
 
         if !callback.is_null() {
-            let _ = unsafe { Box::from_raw(callback) };
+            unsafe { deallocate_pointer(callback) };
         }
 
         self.dispose(lock_indicator);
