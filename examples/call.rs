@@ -117,10 +117,11 @@ fn call_blocking(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
         PromiseCallReply::Resolved(r) => r.map_or_else(|e| Err(e.into()), |v| Ok((&v).into())),
         PromiseCallReply::Future(f) => {
             let blocked_client = ctx.block_client();
-            f.set_unblock_handler(move |_ctx, reply| {
+            let future_handler = f.set_unblock_handler(move |_ctx, reply| {
                 let thread_ctx = ThreadSafeContext::with_blocked_client(blocked_client);
                 thread_ctx.reply(reply.map_or_else(|e| Err(e.into()), |v| Ok((&v).into())));
             });
+            future_handler.dispose(ctx);
             Ok(RedisValue::NoReply)
         }
     }
