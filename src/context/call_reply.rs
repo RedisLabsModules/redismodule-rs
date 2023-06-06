@@ -716,7 +716,10 @@ pub struct FutureHandler<C: FnOnce(&Context, CallResult<'static>)> {
     reply_freed: bool,
 }
 
-impl<C: FnOnce(&Context, CallResult<'static>)> FutureHandler<C> {
+impl<C> FutureHandler<C>
+where
+    C: FnOnce(&Context, CallResult<'static>),
+{
     /// Dispose the future, handler. This function must be called in order to
     /// release the [FutureHandler]. The reason we must have a dispose function
     /// and we can not use the Drop is that [FutureHandler] must be released
@@ -736,7 +739,7 @@ impl<C: FnOnce(&Context, CallResult<'static>)> FutureHandler<C> {
         lock_indicator: &LockIndicator,
     ) -> Status {
         let mut callback: *mut C = std::ptr::null_mut();
-        let res = unsafe{
+        let res = unsafe {
             RedisModule_CallReplyPromiseAbort
                 .expect("RedisModule_CallReplyPromiseAbort is expected to be available if we got a promise call reply")
                 (self.reply.as_ptr(), &mut callback as *mut *mut C as *mut *mut c_void)
