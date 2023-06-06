@@ -27,7 +27,7 @@ pub use crate::raw::NotifyEvent;
 
 pub use crate::configuration::ConfigurationValue;
 pub use crate::configuration::EnumConfigurationValue;
-pub use crate::context::call_reply::{CallReply, CallResult, ErrorReply};
+pub use crate::context::call_reply::{CallReply, CallResult, ErrorReply, PromiseCallReply};
 pub use crate::context::commands;
 pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::server_events;
@@ -75,4 +75,9 @@ pub fn base_info_func(
 /// Initialize RedisModuleAPI without register as a module.
 pub fn init_api(ctx: &Context) {
     unsafe { crate::raw::Export_RedisModule_InitAPI(ctx.ctx) };
+}
+
+pub(crate) unsafe fn deallocate_pointer<P>(p: *mut P) {
+    std::ptr::drop_in_place(p);
+    std::alloc::dealloc(p as *mut u8, std::alloc::Layout::new::<P>());
 }

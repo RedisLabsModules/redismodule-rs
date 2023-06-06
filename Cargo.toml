@@ -34,6 +34,7 @@ crate-type = ["cdylib"]
 [[example]]
 name = "call"
 crate-type = ["cdylib"]
+required-features = ["min-redis-compatibility-version-7-2"]
 
 [[example]]
 name = "keys_pos"
@@ -115,7 +116,7 @@ anyhow = "1"
 redis = "0.23"
 lazy_static = "1"
 redis-module-macros = { path = "./redismodule-rs-macros"}
-redis-module = { path = "./" }
+redis-module = { path = "./", default-features = false, features = ["min-redis-compatibility-version-7-2"] }
 
 [build-dependencies]
 bindgen = "0.65"

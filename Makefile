@@ -57,7 +57,7 @@ RUST_SOEXT.freebsd=so
 RUST_SOEXT.macos=dylib
 
 build:
-	cargo build --all --all-targets  $(CARGO_FLAGS)
+	cargo build --all --all-targets --no-default-features $(CARGO_FLAGS)
 	# cp $(TARGET_DIR)/librejson.$(RUST_SOEXT.$(OS)) $(TARGET)
 
 clean:
@@ -74,8 +74,8 @@ endif
 test: cargo_test
 
 cargo_test:
-	cargo test --workspace $(CARGO_FLAGS)
-	cargo test --doc --workspace $(CARGO_FLAGS)
+	cargo test --workspace --no-default-features $(CARGO_FLAGS)
+	cargo test --doc --workspace --no-default-features $(CARGO_FLAGS)
 
 .PHONY: test cargo_test
 

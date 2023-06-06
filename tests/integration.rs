@@ -563,3 +563,20 @@ fn test_redis_value_derive() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_call_blocking() -> Result<()> {
+    let port: u16 = 6499;
+    let _guards = vec![start_redis_server_with_module("call", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: Option<String> = redis::cmd("call.blocking")
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(res, None);
+
+    Ok(())
+}

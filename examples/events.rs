@@ -1,4 +1,3 @@
-use redis_module::apierror::APIResult;
 use redis_module::{
     redis_module, Context, NotifyEvent, RedisError, RedisResult, RedisString, RedisValue, Status,
 };
@@ -19,7 +18,7 @@ fn on_event(ctx: &Context, event_type: NotifyEvent, event: &str, key: &[u8]) {
         event
     );
     ctx.log_notice(msg.as_str());
-    let _: APIResult<Status> = ctx.add_post_notification_job(|ctx| {
+    let _ = ctx.add_post_notification_job(|ctx| {
         // it is not safe to write inside the notification callback itself.
         // So we perform the write on a post job notificaiton.
         if let Err(e) = ctx.call("incr", &["num_sets"]) {
