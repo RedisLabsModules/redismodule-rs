@@ -141,21 +141,18 @@ extern "C" fn config_change_event_callback(
             CStr::from_ptr(name)
         })
         .collect();
+    let config_names: Vec<_> = config_names
+        .iter()
+        .map(|v| {
+            v.to_str()
+                .expect("Got a configuration name which is not a valid utf8")
+        })
+        .collect();
     let ctx = Context::new(ctx);
     CONFIG_CHANGED_SERVER_EVENTS_LIST
         .iter()
         .for_each(|callback| {
-            callback(
-                &ctx,
-                config_names
-                    .iter()
-                    .map(|v| {
-                        v.to_str()
-                            .expect("Got a configuration name which is not a valid utd8")
-                    })
-                    .collect::<Vec<_>>()
-                    .as_slice(),
-            );
+            callback(&ctx, config_names.as_slice());
         });
 }
 
