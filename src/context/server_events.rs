@@ -137,7 +137,7 @@ extern "C" fn config_change_event_callback(
     let config_names: Vec<_> = (0..data.num_changes)
         .into_iter()
         .map(|i| unsafe {
-            let name = *data.config_names.offset(i as isize) as *mut i8;
+            let name = *data.config_names.offset(i as isize);
             CStr::from_ptr(name)
         })
         .collect();
