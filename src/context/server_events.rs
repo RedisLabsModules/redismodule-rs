@@ -1,3 +1,5 @@
+use std::ffi::CStr;
+
 use crate::raw;
 use crate::{context::Context, RedisError};
 use linkme::distributed_slice;
@@ -48,6 +50,9 @@ pub static FLUSH_SERVER_EVENTS_LIST: [fn(&Context, FlushSubevent)] = [..];
 
 #[distributed_slice()]
 pub static MODULE_CHANGED_SERVER_EVENTS_LIST: [fn(&Context, ModuleChangeSubevent)] = [..];
+
+#[distributed_slice()]
+pub static CONFIG_CHANGED_SERVER_EVENTS_LIST: [fn(&Context, &[&str])] = [..];
 
 extern "C" fn role_changed_callback(
     ctx: *mut raw::RedisModuleCtx,
@@ -121,6 +126,36 @@ extern "C" fn module_change_event_callback(
         });
 }
 
+extern "C" fn config_change_event_callback(
+    ctx: *mut raw::RedisModuleCtx,
+    _eid: raw::RedisModuleEvent,
+    _subevent: u64,
+    data: *mut ::std::os::raw::c_void,
+) {
+    let data: &raw::RedisModuleConfigChange =
+        unsafe { &*(data as *mut raw::RedisModuleConfigChange) };
+    let config_names: Vec<_> = (0..data.num_changes)
+        .into_iter()
+        .map(|i| unsafe {
+            let name = *data.config_names.offset(i as isize) as *mut i8;
+            CStr::from_ptr(name)
+        })
+        .collect();
+    let config_names: Vec<_> = config_names
+        .iter()
+        .map(|v| {
+            v.to_str()
+                .expect("Got a configuration name which is not a valid utf8")
+        })
+        .collect();
+    let ctx = Context::new(ctx);
+    CONFIG_CHANGED_SERVER_EVENTS_LIST
+        .iter()
+        .for_each(|callback| {
+            callback(&ctx, config_names.as_slice());
+        });
+}
+
 fn register_single_server_event_type<T>(
     ctx: &Context,
     callbacks: &[fn(&Context, T)],
@@ -170,6 +205,12 @@ pub fn register_server_events(ctx: &Context) -> Result<(), RedisError> {
         &MODULE_CHANGED_SERVER_EVENTS_LIST,
         raw::REDISMODULE_EVENT_MODULE_CHANGE,
         Some(module_change_event_callback),
+    )?;
+    register_single_server_event_type(
+        ctx,
+        &CONFIG_CHANGED_SERVER_EVENTS_LIST,
+        raw::REDISMODULE_EVENT_CONFIG,
+        Some(config_change_event_callback),
     )?;
     Ok(())
 }

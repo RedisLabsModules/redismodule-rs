@@ -393,6 +393,24 @@ fn test_server_event() -> Result<()> {
 
     assert_eq!(res, 2);
 
+    redis::cmd("config")
+        .arg(&["set", "maxmemory", "1"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    let res: i64 = redis::cmd("num_max_memory_changes").query(&mut con)?;
+
+    assert_eq!(res, 1);
+
+    redis::cmd("config")
+        .arg(&["set", "maxmemory", "0"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    let res: i64 = redis::cmd("num_max_memory_changes").query(&mut con)?;
+
+    assert_eq!(res, 2);
+
     Ok(())
 }
 
