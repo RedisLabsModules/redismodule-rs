@@ -84,6 +84,15 @@ pub fn command(attr: TokenStream, item: TokenStream) -> TokenStream {
     command::redis_command(attr, item)
 }
 
+/// Proc macro which is set on a function that need to be called whenever the server role changes.
+/// The function must accept a [Context] and [ServerRole].
+///
+/// Example:
+///
+/// ```rust,no_run,ignore
+/// #[role_changed_event_handler]
+/// fn role_changed_event_handler(ctx: &Context, values: ServerRole) { ... }
+/// ```
 #[proc_macro_attribute]
 pub fn role_changed_event_handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let ast: ItemFn = match syn::parse(item) {
@@ -97,6 +106,15 @@ pub fn role_changed_event_handler(_attr: TokenStream, item: TokenStream) -> Toke
     gen.into()
 }
 
+/// Proc macro which is set on a function that need to be called whenever a loading event happened.
+/// The function must accept a [Context] and [LoadingSubevent].
+///
+/// Example:
+///
+/// ```rust,no_run,ignore
+/// #[loading_event_handler]
+/// fn loading_event_handler(ctx: &Context, values: LoadingSubevent) { ... }
+/// ```
 #[proc_macro_attribute]
 pub fn loading_event_handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let ast: ItemFn = match syn::parse(item) {
@@ -110,6 +128,15 @@ pub fn loading_event_handler(_attr: TokenStream, item: TokenStream) -> TokenStre
     gen.into()
 }
 
+/// Proc macro which is set on a function that need to be called whenever a flush event happened.
+/// The function must accept a [Context] and [FlushSubevent].
+///
+/// Example:
+///
+/// ```rust,no_run,ignore
+/// #[flush_event_handler]
+/// fn flush_event_handler(ctx: &Context, values: FlushSubevent) { ... }
+/// ```
 #[proc_macro_attribute]
 pub fn flush_event_handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let ast: ItemFn = match syn::parse(item) {
@@ -123,6 +150,15 @@ pub fn flush_event_handler(_attr: TokenStream, item: TokenStream) -> TokenStream
     gen.into()
 }
 
+/// Proc macro which is set on a function that need to be called whenever a module is loaded or unloaded on the server.
+/// The function must accept a [Context] and [ModuleChangeSubevent].
+///
+/// Example:
+///
+/// ```rust,no_run,ignore
+/// #[module_changed_event_handler]
+/// fn module_changed_event_handler(ctx: &Context, values: ModuleChangeSubevent) { ... }
+/// ```
 #[proc_macro_attribute]
 pub fn module_changed_event_handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let ast: ItemFn = match syn::parse(item) {
@@ -131,6 +167,29 @@ pub fn module_changed_event_handler(_attr: TokenStream, item: TokenStream) -> To
     };
     let gen = quote! {
         #[linkme::distributed_slice(redis_module::server_events::MODULE_CHANGED_SERVER_EVENTS_LIST)]
+        #ast
+    };
+    gen.into()
+}
+
+/// Proc macro which is set on a function that need to be called whenever a configuration change
+/// event is happening. The function must accept a [Context] and [&[&str]] that contains the names
+/// of the configiration values that was changed.
+///
+/// Example:
+///
+/// ```rust,no_run,ignore
+/// #[config_changed_event_handler]
+/// fn configuration_changed_event_handler(ctx: &Context, values: &[&str]) { ... }
+/// ```
+#[proc_macro_attribute]
+pub fn config_changed_event_handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let ast: ItemFn = match syn::parse(item) {
+        Ok(res) => res,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    let gen = quote! {
+        #[linkme::distributed_slice(redis_module::server_events::CONFIG_CHANGED_SERVER_EVENTS_LIST)]
         #ast
     };
     gen.into()
