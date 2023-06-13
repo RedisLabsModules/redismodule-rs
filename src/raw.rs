@@ -125,6 +125,7 @@ bitflags! {
         const LOADED = REDISMODULE_NOTIFY_LOADED;
         const MISSED = REDISMODULE_NOTIFY_KEY_MISS;
         const ALL = REDISMODULE_NOTIFY_ALL;
+        const TRIMMED = REDISMODULE_NOTIFY_TRIMMED;
     }
 }
 
