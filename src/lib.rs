@@ -32,6 +32,7 @@ pub use crate::context::commands;
 pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::server_events;
 pub use crate::context::AclPermissions;
+pub use crate::context::BlockingCallOptions;
 pub use crate::context::CallOptionResp;
 pub use crate::context::CallOptions;
 pub use crate::context::CallOptionsBuilder;
