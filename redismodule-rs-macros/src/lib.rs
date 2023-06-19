@@ -195,6 +195,28 @@ pub fn config_changed_event_handler(_attr: TokenStream, item: TokenStream) -> To
     gen.into()
 }
 
+/// Proc macro which is set on a function that need to be called on Redis cron.
+/// The function must accept a [Context] and [u64] that represent the cron hz.
+///
+/// Example:
+///
+/// ```rust,no_run,ignore
+/// #[cron_event_handler]
+/// fn cron_event_handler(ctx: &Context, hz: u64) { ... }
+/// ```
+#[proc_macro_attribute]
+pub fn cron_event_handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let ast: ItemFn = match syn::parse(item) {
+        Ok(res) => res,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    let gen = quote! {
+        #[linkme::distributed_slice(redis_module::server_events::CRON_SERVER_EVENTS_LIST)]
+        #ast
+    };
+    gen.into()
+}
+
 /// The macro auto generate a [From] implementation that can convert the struct into [RedisValue].
 ///
 /// Example:

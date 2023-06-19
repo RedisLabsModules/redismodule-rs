@@ -411,6 +411,10 @@ fn test_server_event() -> Result<()> {
 
     assert_eq!(res, 2);
 
+    let res: i64 = redis::cmd("num_crons").query(&mut con)?;
+
+    assert!(res > 0);
+
     Ok(())
 }
 

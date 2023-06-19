@@ -109,6 +109,13 @@ pub enum ErrorReply<'root> {
     RedisError(ErrorCallReply<'root>),
 }
 
+/// Send implementation to [ErrorCallReply].
+/// We need to implements this trait because [ErrorCallReply] hold
+/// raw pointers to C data which does not auto implement the [Send] trait.
+/// By implementing [Send] on [ErrorCallReply] we basically tells the compiler
+/// that it is safe to send the underline C data between threads.
+unsafe impl<'root> Send for ErrorCallReply<'root> {}
+
 impl<'root> ErrorReply<'root> {
     /// Convert [ErrorCallReply] to [String] or [None] if its not a valid utf8.
     pub fn to_utf8_string(&self) -> Option<String> {
@@ -631,6 +638,13 @@ pub enum CallReply<'root> {
     BigNumber(BigNumberCallReply<'root>),
     VerbatimString(VerbatimStringCallReply<'root>),
 }
+
+/// Send implementation to [CallReply].
+/// We need to implements this trait because [CallReply] hold
+/// raw pointers to C data which does not auto implement the [Send] trait.
+/// By implementing [Send] on [CallReply] we basically tells the compiler
+/// that it is safe to send the underline C data between threads.
+unsafe impl<'root> Send for CallReply<'root> {}
 
 impl<'root> Display for CallReply<'root> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
