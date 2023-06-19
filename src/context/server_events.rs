@@ -54,6 +54,23 @@ pub static MODULE_CHANGED_SERVER_EVENTS_LIST: [fn(&Context, ModuleChangeSubevent
 #[distributed_slice()]
 pub static CONFIG_CHANGED_SERVER_EVENTS_LIST: [fn(&Context, &[&str])] = [..];
 
+#[distributed_slice()]
+pub static CRON_SERVER_EVENTS_LIST: [fn(&Context, u64)] = [..];
+
+extern "C" fn cron_callback(
+    ctx: *mut raw::RedisModuleCtx,
+    _eid: raw::RedisModuleEvent,
+    _subevent: u64,
+    data: *mut ::std::os::raw::c_void,
+) {
+    let data: &raw::RedisModuleConfigChangeV1 =
+        unsafe { &*(data as *mut raw::RedisModuleConfigChangeV1) };
+    let ctx = Context::new(ctx);
+    CRON_SERVER_EVENTS_LIST.iter().for_each(|callback| {
+        callback(&ctx, data.version);
+    });
+}
+
 extern "C" fn role_changed_callback(
     ctx: *mut raw::RedisModuleCtx,
     _eid: raw::RedisModuleEvent,
@@ -211,6 +228,12 @@ pub fn register_server_events(ctx: &Context) -> Result<(), RedisError> {
         &CONFIG_CHANGED_SERVER_EVENTS_LIST,
         raw::REDISMODULE_EVENT_CONFIG,
         Some(config_change_event_callback),
+    )?;
+    register_single_server_event_type(
+        ctx,
+        &CRON_SERVER_EVENTS_LIST,
+        raw::REDISMODULE_EVENT_CRON_LOOP,
+        Some(cron_callback),
     )?;
     Ok(())
 }
