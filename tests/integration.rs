@@ -600,5 +600,11 @@ fn test_call_blocking() -> Result<()> {
 
     assert_eq!(res, None);
 
+    let res: Option<String> = redis::cmd("call.blocking_from_detached_ctx")
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(res, None);
+
     Ok(())
 }

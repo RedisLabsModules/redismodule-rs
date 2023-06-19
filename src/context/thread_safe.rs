@@ -86,7 +86,7 @@ unsafe impl<T> Sync for RedisGILGuard<T> {}
 unsafe impl<T> Send for RedisGILGuard<T> {}
 
 pub struct ContextGuard {
-    ctx: Context,
+    pub(crate) ctx: Context,
 }
 
 unsafe impl RedisLockIndicator for ContextGuard {}

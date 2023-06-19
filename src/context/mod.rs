@@ -13,6 +13,7 @@ use crate::raw::{ModuleOptions, Version};
 use crate::redisvalue::RedisValueKey;
 use crate::{add_info_field_long_long, add_info_field_str, raw, utils, Status};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
+use std::ops::Deref;
 
 use std::ffi::CStr;
 
@@ -159,6 +160,33 @@ impl Default for DetachedContext {
     }
 }
 
+/// This object is returned after locking Redis from [DetachedContext].
+/// On dispose, Redis will be unlocked.
+/// This object implements [Deref<Target = Context>] so it can be used
+/// just like any Redis [Context] for command invocation.
+/// **This object should not be used to return replies**.
+pub struct DetachedContextGuard {
+    pub(crate) ctx: Context,
+}
+
+unsafe impl RedisLockIndicator for DetachedContextGuard {}
+
+impl Drop for DetachedContextGuard {
+    fn drop(&mut self) {
+        unsafe {
+            raw::RedisModule_ThreadSafeContextUnlock.unwrap()(self.ctx.ctx);
+        };
+    }
+}
+
+impl Deref for DetachedContextGuard {
+    type Target = Context;
+
+    fn deref(&self) -> &Self::Target {
+        &self.ctx
+    }
+}
+
 impl DetachedContext {
     pub fn log(&self, level: RedisLogLevel, message: &str) {
         let c = self.ctx.load(Ordering::Relaxed);
@@ -189,6 +217,16 @@ impl DetachedContext {
         let ctx = unsafe { raw::RedisModule_GetDetachedThreadSafeContext.unwrap()(ctx.ctx) };
         self.ctx.store(ctx, Ordering::Relaxed);
         Ok(())
+    }
+
+    /// Lock Redis for command invocation. Returns [DetachedContextGuard] which will unlock Redis when dispose.
+    /// [DetachedContextGuard] implements [Deref<Target = Context>] so it can be used just like any Redis [Context] for command invocation.
+    /// Locking Redis when Redis is already locked by the current thread is consider undefined behavior.
+    pub fn lock(&self) -> DetachedContextGuard {
+        let c = self.ctx.load(Ordering::Relaxed);
+        unsafe { raw::RedisModule_ThreadSafeContextLock.unwrap()(c) };
+        let ctx = Context::new(c);
+        DetachedContextGuard { ctx }
     }
 }
 
