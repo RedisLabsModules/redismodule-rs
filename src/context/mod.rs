@@ -162,9 +162,10 @@ impl Default for DetachedContext {
 
 /// This object is returned after locking Redis from [DetachedContext].
 /// On dispose, Redis will be unlocked.
-/// This object implements [Deref<Target = Context>] so it can be used
+/// This object implements [Deref] for [Context] so it can be used
 /// just like any Redis [Context] for command invocation.
-/// **This object should not be used to return replies**.
+/// **This object should not be used to return replies** because there is
+/// no real client behind this context to return replies to.
 pub struct DetachedContextGuard {
     pub(crate) ctx: Context,
 }
