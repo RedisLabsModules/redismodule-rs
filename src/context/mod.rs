@@ -222,7 +222,8 @@ impl DetachedContext {
 
     /// Lock Redis for command invocation. Returns [DetachedContextGuard] which will unlock Redis when dispose.
     /// [DetachedContextGuard] implements [Deref<Target = Context>] so it can be used just like any Redis [Context] for command invocation.
-    /// Locking Redis when Redis is already locked by the current thread is consider undefined behavior.
+    /// Locking Redis when Redis is already locked by the current thread is left unspecified.
+    /// However, this function will not return on the second call (it might panic or deadlock, for example)..
     pub fn lock(&self) -> DetachedContextGuard {
         let c = self.ctx.load(Ordering::Relaxed);
         unsafe { raw::RedisModule_ThreadSafeContextLock.unwrap()(c) };
