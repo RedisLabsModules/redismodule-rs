@@ -27,11 +27,13 @@ pub use crate::raw::NotifyEvent;
 
 pub use crate::configuration::ConfigurationValue;
 pub use crate::configuration::EnumConfigurationValue;
+pub use crate::context::call_reply::FutureCallReply;
 pub use crate::context::call_reply::{CallReply, CallResult, ErrorReply, PromiseCallReply};
 pub use crate::context::commands;
 pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::server_events;
 pub use crate::context::AclPermissions;
+#[cfg(feature = "min-redis-compatibility-version-7-2")]
 pub use crate::context::BlockingCallOptions;
 pub use crate::context::CallOptionResp;
 pub use crate::context::CallOptions;
@@ -39,6 +41,7 @@ pub use crate::context::CallOptionsBuilder;
 pub use crate::context::Context;
 pub use crate::context::ContextFlags;
 pub use crate::context::DetachedContext;
+pub use crate::context::DetachedContextGuard;
 pub use crate::raw::*;
 pub use crate::redismodule::*;
 use backtrace::Backtrace;
