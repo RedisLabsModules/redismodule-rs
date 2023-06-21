@@ -473,7 +473,7 @@ where
 {
     assert_eq!(fields.len(), values.len());
 
-    let mut fi = fields.iter();
+    let mut fi = fields.iter().map(|s| CString::new(s.clone()).unwrap());
     let mut vi = values.iter_mut();
 
     macro_rules! rm {
@@ -491,9 +491,7 @@ where
     }
     macro_rules! f {
         () => {
-            CString::new((*fi.next().unwrap()).clone())
-                .unwrap()
-                .as_ptr()
+            fi.next().unwrap().as_ptr()
         };
     }
     macro_rules! v {
