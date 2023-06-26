@@ -182,11 +182,7 @@ pub mod standard_log_implementation {
                     )
                 }
                 _ => {
-                    format!(
-                        "'{}' {}",
-                        record.module_path().unwrap_or_default(),
-                        record.args()
-                    )
+                    format!("{}", record.args())
                 }
             };
 
