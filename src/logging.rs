@@ -181,13 +181,7 @@ pub mod standard_log_implementation {
                         record.args()
                     )
                 }
-                _ => {
-                    format!(
-                        "'{}' {}",
-                        record.module_path().unwrap_or_default(),
-                        record.args()
-                    )
-                }
+                _ => record.args().to_string(),
             };
 
             log_internal(self.0, record.level(), &message);
