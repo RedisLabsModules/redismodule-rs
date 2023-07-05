@@ -1,12 +1,12 @@
 use redis_module::{
     redis_module, BlockedClient, CallOptionResp, CallOptionsBuilder, CallReply, CallResult,
-    Context, FutureCallReply, PromiseCallReply, RedisError, RedisResult, RedisString, RedisValue,
-    ThreadSafeContext,
+    Context, FutureCallReply, PromiseCallReply, RedisError, RedisString, RedisValue,
+    RedisValueResult, ThreadSafeContext,
 };
 
 use std::thread;
 
-fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
+fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisValueResult {
     let res: String = ctx.call("ECHO", &["TEST"])?.try_into()?;
     if "TEST" != &res {
         return Err(RedisError::Str("Failed calling 'ECHO TEST'"));
@@ -126,7 +126,7 @@ fn call_blocking_handle_future(ctx: &Context, f: FutureCallReply, blocked_client
     future_handler.dispose(ctx);
 }
 
-fn call_blocking(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
+fn call_blocking(ctx: &Context, _: Vec<RedisString>) -> RedisValueResult {
     let res = call_blocking_internal(ctx);
     match res {
         PromiseCallReply::Resolved(r) => r.map_or_else(|e| Err(e.into()), |v| Ok((&v).into())),
@@ -138,7 +138,7 @@ fn call_blocking(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
     }
 }
 
-fn call_blocking_from_detach_ctx(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
+fn call_blocking_from_detach_ctx(ctx: &Context, _: Vec<RedisString>) -> RedisValueResult {
     let blocked_client = ctx.block_client();
     thread::spawn(move || {
         let ctx_guard = redis_module::MODULE_CONTEXT.lock();

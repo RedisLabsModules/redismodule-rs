@@ -1,13 +1,13 @@
 use redis_module::raw::KeyType;
 use redis_module::{
-    redis_module, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue,
+    redis_module, Context, NextArg, RedisError, RedisString, RedisValue, RedisValueResult,
 };
 
 // LPOPRPUSH source destination
 // Pops and returns the first element (head) of the list stored at 'source'
 // and pushes the element to the last position (tail) of the list stored at
 // 'destination'.
-fn lpoprpush(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+fn lpoprpush(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
     let mut args = args.into_iter().skip(1);
 
     let src = args.next_arg()?;

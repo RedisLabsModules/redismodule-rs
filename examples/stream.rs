@@ -1,9 +1,9 @@
 use redis_module::raw::{KeyType, RedisModuleStreamID};
 use redis_module::{
-    redis_module, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue,
+    redis_module, Context, NextArg, RedisError, RedisString, RedisValue, RedisValueResult,
 };
 
-fn stream_read_from(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+fn stream_read_from(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
     let mut args = args.into_iter().skip(1);
 
     let stream_key = args.next_arg()?;

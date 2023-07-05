@@ -42,9 +42,14 @@ pub use crate::context::Context;
 pub use crate::context::ContextFlags;
 pub use crate::context::DetachedContext;
 pub use crate::context::DetachedContextGuard;
+pub use crate::context::{
+    InfoContextBuilderFieldBottomLevelValue, InfoContextBuilderFieldTopLevelValue,
+    InfoContextFieldBottomLevelData, InfoContextFieldTopLevelData, OneInfoSectionData,
+};
 pub use crate::raw::*;
 pub use crate::redismodule::*;
 use backtrace::Backtrace;
+use context::server_events::INFO_COMMAND_HANDLER_LIST;
 
 /// The detached Redis module context (the context of this module). It
 /// is only set to a proper value after the module is initialised via the
@@ -58,22 +63,44 @@ pub static MODULE_CONTEXT: DetachedContext = DetachedContext::new();
 )]
 pub type LogLevel = logging::RedisLogLevel;
 
-pub fn base_info_func(
-    ctx: &InfoContext,
-    for_crash_report: bool,
-    extended_info_func: Option<fn(&InfoContext, bool)>,
-) {
-    // If needed, add rust trace into the crash report (before module info)
-    if for_crash_report && ctx.add_info_section(Some("trace")) == Status::Ok {
-        let current_backtrace = Backtrace::new();
-        let trace = format!("{current_backtrace:?}");
-        ctx.add_info_field_str("trace", &trace);
+fn add_trace_info(ctx: &InfoContext) -> RedisResult {
+    const SECTION_NAME: &str = "trace";
+    const FIELD_NAME: &str = "backtrace";
+
+    let current_backtrace = Backtrace::new();
+    let trace = format!("{current_backtrace:?}");
+
+    ctx.builder()
+        .add_section(SECTION_NAME)
+        .field(FIELD_NAME, trace)?
+        .build_section()?
+        .build_info()?;
+
+    Ok(())
+}
+
+/// A type alias for the custom info command handler.
+/// The function may optionally return an object of one section to add.
+/// If nothing is returned, it is assumed that the function has already
+/// filled all the information required via [`InfoContext::builder`].
+pub type InfoHandlerFunctionType = fn(&InfoContext, bool) -> RedisResult;
+
+/// Default "INFO" command handler for the module.
+///
+/// This function can be invoked, for example, by sending `INFO modules`
+/// through the RESP protocol.
+pub fn basic_info_command_handler(ctx: &InfoContext, for_crash_report: bool) {
+    if for_crash_report {
+        if let Err(e) = add_trace_info(ctx) {
+            log::error!("Couldn't send info for the module: {e}");
+            return;
+        }
     }
 
-    if let Some(func) = extended_info_func {
-        // Add module info
-        func(ctx, for_crash_report);
-    }
+    INFO_COMMAND_HANDLER_LIST
+        .iter()
+        .filter_map(|callback| callback(ctx, for_crash_report).err())
+        .for_each(|e| log::error!("Couldn't build info for the module's custom handler: {e}"));
 }
 
 /// Initialize RedisModuleAPI without register as a module.

@@ -1,13 +1,13 @@
 use lazy_static::lazy_static;
 use redis_module::{
-    redis_module, Context, NextArg, RedisGILGuard, RedisResult, RedisString, RedisValue,
+    redis_module, Context, NextArg, RedisGILGuard, RedisString, RedisValue, RedisValueResult,
     ThreadSafeContext,
 };
 use std::mem::drop;
 use std::thread;
 use std::time::Duration;
 
-fn threads(_: &Context, _args: Vec<RedisString>) -> RedisResult {
+fn threads(_: &Context, _args: Vec<RedisString>) -> RedisValueResult {
     thread::spawn(move || {
         let thread_ctx = ThreadSafeContext::new();
 
@@ -32,7 +32,7 @@ lazy_static! {
     static ref STATIC_DATA: RedisGILGuard<StaticData> = RedisGILGuard::new(StaticData::default());
 }
 
-fn set_static_data(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+fn set_static_data(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
     let mut args = args.into_iter().skip(1);
     let val = args.next_str()?;
     let mut static_data = STATIC_DATA.lock(ctx);
@@ -40,12 +40,12 @@ fn set_static_data(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     Ok(RedisValue::SimpleStringStatic("OK"))
 }
 
-fn get_static_data(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+fn get_static_data(ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
     let static_data = STATIC_DATA.lock(ctx);
     Ok(RedisValue::BulkString(static_data.data.clone()))
 }
 
-fn get_static_data_on_thread(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+fn get_static_data_on_thread(ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
     let blocked_client = ctx.block_client();
     let _ = thread::spawn(move || {
         let thread_ctx = ThreadSafeContext::with_blocked_client(blocked_client);

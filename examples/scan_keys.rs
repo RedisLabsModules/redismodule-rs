@@ -1,8 +1,8 @@
 use redis_module::{
-    key::RedisKey, redis_module, Context, KeysCursor, RedisResult, RedisString, RedisValue,
+    key::RedisKey, redis_module, Context, KeysCursor, RedisString, RedisValue, RedisValueResult,
 };
 
-fn scan_keys(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+fn scan_keys(ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
     let cursor = KeysCursor::new();
     let mut res = Vec::new();
 

@@ -1,6 +1,6 @@
-use redis_module::{redis_module, Context, RedisError, RedisResult, RedisString};
+use redis_module::{redis_module, Context, RedisError, RedisString, RedisValueResult};
 
-fn hello_mul(_: &Context, args: Vec<RedisString>) -> RedisResult {
+fn hello_mul(_: &Context, args: Vec<RedisString>) -> RedisValueResult {
     if args.len() < 2 {
         return Err(RedisError::WrongArity);
     }

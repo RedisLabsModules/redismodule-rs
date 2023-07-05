@@ -1,9 +1,9 @@
 use redis_module::{
-    redis_module, AclPermissions, Context, NextArg, RedisError, RedisResult, RedisString,
-    RedisValue,
+    redis_module, AclPermissions, Context, NextArg, RedisError, RedisString, RedisValue,
+    RedisValueResult,
 };
 
-fn verify_key_access_for_user(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+fn verify_key_access_for_user(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
     let mut args = args.into_iter().skip(1);
     let user = args.next_arg()?;
     let key = args.next_arg()?;
@@ -14,7 +14,7 @@ fn verify_key_access_for_user(ctx: &Context, args: Vec<RedisString>) -> RedisRes
     Ok(RedisValue::SimpleStringStatic("OK"))
 }
 
-fn get_current_user(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+fn get_current_user(ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
     Ok(RedisValue::BulkRedisString(ctx.get_current_user()))
 }
 

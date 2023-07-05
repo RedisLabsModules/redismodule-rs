@@ -1,8 +1,8 @@
 use redis_module::{
-    redis_module, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue,
+    redis_module, Context, NextArg, RedisError, RedisString, RedisValue, RedisValueResult,
 };
 
-fn string_set(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+fn string_set(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
     if args.len() < 3 {
         return Err(RedisError::WrongArity);
     }
@@ -17,7 +17,7 @@ fn string_set(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
         .map(|_| RedisValue::SimpleStringStatic("OK"))
 }
 
-fn string_get(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+fn string_get(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
     if args.len() < 2 {
         return Err(RedisError::WrongArity);
     }

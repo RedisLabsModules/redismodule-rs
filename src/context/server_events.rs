@@ -1,7 +1,7 @@
 use std::ffi::CStr;
 
-use crate::raw;
 use crate::{context::Context, RedisError};
+use crate::{raw, InfoContext, RedisResult};
 use linkme::distributed_slice;
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug)]
@@ -56,6 +56,9 @@ pub static CONFIG_CHANGED_SERVER_EVENTS_LIST: [fn(&Context, &[&str])] = [..];
 
 #[distributed_slice()]
 pub static CRON_SERVER_EVENTS_LIST: [fn(&Context, u64)] = [..];
+
+#[distributed_slice()]
+pub static INFO_COMMAND_HANDLER_LIST: [fn(&InfoContext, bool) -> RedisResult] = [..];
 
 extern "C" fn cron_callback(
     ctx: *mut raw::RedisModuleCtx,
@@ -152,7 +155,6 @@ extern "C" fn config_change_event_callback(
     let data: &raw::RedisModuleConfigChange =
         unsafe { &*(data as *mut raw::RedisModuleConfigChange) };
     let config_names: Vec<_> = (0..data.num_changes)
-        .into_iter()
         .map(|i| unsafe {
             let name = *data.config_names.offset(i as isize);
             CStr::from_ptr(name)

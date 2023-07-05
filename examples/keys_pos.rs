@@ -1,6 +1,6 @@
-use redis_module::{redis_module, Context, RedisError, RedisResult, RedisString, RedisValue};
+use redis_module::{redis_module, Context, RedisError, RedisString, RedisValue, RedisValueResult};
 
-fn keys_pos(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+fn keys_pos(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
     // Number of args (excluding command name) must be even
     if (args.len() - 1) % 2 != 0 {
         return Err(RedisError::WrongArity);

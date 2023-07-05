@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use redis_module::RedisError;
-use redis_module::{redis_module, Context, RedisResult, RedisString, RedisValue};
+use redis_module::{redis_module, Context, RedisString, RedisValue, RedisValueResult};
 use redis_module_macros::{command, RedisValue};
 
 #[derive(RedisValue)]
@@ -85,7 +85,7 @@ fn redis_value_derive(
         ]
     }
 )]
-fn classic_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+fn classic_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
     Ok(RedisValue::SimpleStringStatic("OK"))
 }
 
@@ -104,7 +104,7 @@ fn classic_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
         ]
     }
 )]
-fn keyword_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+fn keyword_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
     Ok(RedisValue::SimpleStringStatic("OK"))
 }
 
@@ -123,7 +123,7 @@ fn keyword_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
         ]
     }
 )]
-fn num_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+fn num_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
     Ok(RedisValue::SimpleStringStatic("OK"))
 }
 

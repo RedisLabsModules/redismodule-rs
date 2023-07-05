@@ -1,5 +1,5 @@
 use redis_module::native_types::RedisType;
-use redis_module::{raw, redis_module, Context, NextArg, RedisResult, RedisString};
+use redis_module::{raw, redis_module, Context, NextArg, RedisString, RedisValueResult};
 use std::os::raw::c_void;
 
 #[derive(Debug)]
@@ -43,7 +43,7 @@ unsafe extern "C" fn free(value: *mut c_void) {
     drop(Box::from_raw(value.cast::<MyType>()));
 }
 
-fn alloc_set(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+fn alloc_set(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
     let mut args = args.into_iter().skip(1);
     let key = args.next_arg()?;
     let size = args.next_i64()?;
@@ -64,7 +64,7 @@ fn alloc_set(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     Ok(size.into())
 }
 
-fn alloc_get(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+fn alloc_get(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
     let mut args = args.into_iter().skip(1);
     let key = args.next_arg()?;
 

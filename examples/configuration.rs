@@ -6,8 +6,8 @@ use std::sync::{
 use lazy_static::lazy_static;
 use redis_module::{
     configuration::{ConfigurationContext, ConfigurationFlags},
-    enum_configuration, redis_module, ConfigurationValue, Context, RedisGILGuard, RedisResult,
-    RedisString, RedisValue,
+    enum_configuration, redis_module, ConfigurationValue, Context, RedisGILGuard, RedisString,
+    RedisValue, RedisValueResult,
 };
 
 enum_configuration! {
@@ -42,7 +42,7 @@ fn on_configuration_changed<G, T: ConfigurationValue<G>>(
     *val += 1
 }
 
-fn num_changes(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
+fn num_changes(ctx: &Context, _: Vec<RedisString>) -> RedisValueResult {
     let val = NUM_OF_CONFIGURATION_CHANGES.lock(ctx);
     Ok(RedisValue::Integer(*val))
 }

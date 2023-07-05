@@ -1,26 +1,30 @@
-use redis_module::InfoContext;
-use redis_module::Status;
-use redis_module::{redis_module, Context, RedisError, RedisResult, RedisString};
+use std::collections::HashMap;
 
-fn test_helper_version(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+use redis_module::InfoContext;
+use redis_module::RedisResult;
+use redis_module::{redis_module, Context, RedisError, RedisString, RedisValueResult};
+use redis_module_macros::info_command_handler;
+use redis_module_macros::InfoSection;
+
+fn test_helper_version(ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
     let ver = ctx.get_redis_version()?;
     let response: Vec<i64> = vec![ver.major.into(), ver.minor.into(), ver.patch.into()];
 
     Ok(response.into())
 }
 
-fn test_helper_version_rm_call(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+fn test_helper_version_rm_call(ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
     let ver = ctx.get_redis_version_rm_call()?;
     let response: Vec<i64> = vec![ver.major.into(), ver.minor.into(), ver.patch.into()];
 
     Ok(response.into())
 }
 
-fn test_helper_command_name(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+fn test_helper_command_name(ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
     Ok(ctx.current_command_name()?.into())
 }
 
-fn test_helper_err(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+fn test_helper_err(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
     if args.len() < 1 {
         return Err(RedisError::WrongArity);
     }
@@ -31,10 +35,21 @@ fn test_helper_err(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     Ok(().into())
 }
 
-fn add_info(ctx: &InfoContext, _for_crash_report: bool) {
-    if ctx.add_info_section(Some("test_helper")) == Status::Ok {
-        ctx.add_info_field_str("field", "test_helper_value");
-    }
+#[derive(Debug, Clone, InfoSection)]
+struct InfoData {
+    field: String,
+    dictionary: HashMap<String, String>,
+}
+
+#[info_command_handler]
+fn add_info(ctx: &InfoContext, _for_crash_report: bool) -> RedisResult {
+    let mut dictionary = HashMap::new();
+    dictionary.insert("key".to_owned(), "value".into());
+    let data = InfoData {
+        field: "test_helper_value".to_owned(),
+        dictionary,
+    };
+    ctx.build_from(data)
 }
 
 //////////////////////////////////////////////////////
@@ -44,7 +59,6 @@ redis_module! {
     version: 1,
     allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
-    info: add_info,
     commands: [
         ["test_helper.version", test_helper_version, "", 0, 0, 0],
         ["test_helper._version_rm_call", test_helper_version_rm_call, "", 0, 0, 0],

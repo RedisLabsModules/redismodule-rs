@@ -15,8 +15,8 @@ use crate::raw;
 use crate::redismodule::REDIS_OK;
 use crate::stream::StreamIterator;
 use crate::RedisError;
-use crate::RedisResult;
 use crate::RedisString;
+use crate::RedisValueResult;
 
 /// `RedisKey` is an abstraction over a Redis key that allows readonly
 /// operations.
@@ -271,7 +271,7 @@ impl RedisKeyWritable {
         Some(RedisString::new(NonNull::new(self.ctx), ptr))
     }
 
-    pub fn set_expire(&self, expire: Duration) -> RedisResult {
+    pub fn set_expire(&self, expire: Duration) -> RedisValueResult {
         let exp_millis = expire.as_millis();
 
         let exp_time = i64::try_from(exp_millis).map_err(|_| {
@@ -287,7 +287,7 @@ impl RedisKeyWritable {
         }
     }
 
-    pub fn write(&self, val: &str) -> RedisResult {
+    pub fn write(&self, val: &str) -> RedisValueResult {
         let val_str = RedisString::create(NonNull::new(self.ctx), val);
         match raw::string_set(self.key_inner, val_str.inner) {
             raw::Status::Ok => REDIS_OK,
@@ -298,7 +298,7 @@ impl RedisKeyWritable {
     /// # Panics
     ///
     /// Will panic if `RedisModule_DeleteKey` is missing in redismodule.h
-    pub fn delete(&self) -> RedisResult {
+    pub fn delete(&self) -> RedisValueResult {
         unsafe { raw::RedisModule_DeleteKey.unwrap()(self.key_inner) };
         REDIS_OK
     }
@@ -306,7 +306,7 @@ impl RedisKeyWritable {
     /// # Panics
     ///
     /// Will panic if `RedisModule_UnlinkKey` is missing in redismodule.h
-    pub fn unlink(&self) -> RedisResult {
+    pub fn unlink(&self) -> RedisValueResult {
         unsafe { raw::RedisModule_UnlinkKey.unwrap()(self.key_inner) };
         REDIS_OK
     }
@@ -452,7 +452,7 @@ where
     /// Provides an iterator over the multi-get results in the form of (field-name, field-value)
     /// pairs. The type of field-name elements is the same as that passed to the original multi-
     /// get call, while the field-value elements may be of any type for which a `RedisString` `Into`
-    /// conversion is implemented.  
+    /// conversion is implemented.
     ///
     /// # Examples
     ///
@@ -563,15 +563,6 @@ impl<'a> StringDMA<'a> {
     }
 }
 
-impl From<raw::Status> for Result<(), RedisError> {
-    fn from(s: raw::Status) -> Self {
-        match s {
-            raw::Status::Ok => Ok(()),
-            raw::Status::Err => Err(RedisError::String("Generic error".to_string())),
-        }
-    }
-}
-
 impl Drop for RedisKeyWritable {
     // Frees resources appropriately as a RedisKey goes out of scope.
     fn drop(&mut self) {
@@ -620,7 +611,10 @@ fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
 ///
 /// Will panic if `RedisModule_KeyType` or `RedisModule_ModuleTypeGetType` are missing in redismodule.h
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> RedisResult {
+pub fn verify_type(
+    key_inner: *mut raw::RedisModuleKey,
+    redis_type: &RedisType,
+) -> RedisValueResult {
     let key_type: KeyType = unsafe { raw::RedisModule_KeyType.unwrap()(key_inner) }.into();
 
     if key_type != KeyType::Empty {

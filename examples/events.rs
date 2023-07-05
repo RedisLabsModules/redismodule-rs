@@ -1,5 +1,6 @@
 use redis_module::{
-    redis_module, Context, NotifyEvent, RedisError, RedisResult, RedisString, RedisValue, Status,
+    redis_module, Context, NotifyEvent, RedisError, RedisString, RedisValue, RedisValueResult,
+    Status,
 };
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicI64, Ordering};
@@ -31,7 +32,7 @@ fn on_stream(ctx: &Context, _event_type: NotifyEvent, _event: &str, _key: &[u8])
     ctx.log_debug("Stream event received!");
 }
 
-fn event_send(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+fn event_send(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
     if args.len() > 1 {
         return Err(RedisError::WrongArity);
     }
@@ -48,7 +49,7 @@ fn on_key_miss(_ctx: &Context, _event_type: NotifyEvent, _event: &str, _key: &[u
     NUM_KEY_MISSES.fetch_add(1, Ordering::SeqCst);
 }
 
-fn num_key_miss(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+fn num_key_miss(_ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
     Ok(RedisValue::Integer(NUM_KEY_MISSES.load(Ordering::SeqCst)))
 }
 

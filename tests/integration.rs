@@ -124,6 +124,7 @@ fn test_helper_info() -> Result<()> {
         .query(&mut con)
         .with_context(|| "failed to run INFO TEST_HELPER")?;
     assert!(res.contains("test_helper_field:test_helper_value"));
+    assert!(res.contains("dictionary:key=value"));
 
     Ok(())
 }
