@@ -283,6 +283,23 @@ fn test_get_current_user() -> Result<()> {
 }
 
 #[test]
+fn test_authenticate_client_with_user() -> Result<()> {
+    let port: u16 = 6490;
+    let _guards = vec![start_redis_server_with_module("acl", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: String = redis::cmd("authenticate_with_user").query(&mut con)?;
+    assert_eq!(&res, "OK");
+
+    let res: String = redis::cmd("get_current_user").query(&mut con)?;
+    assert_eq!(&res, "acl");
+
+    Ok(())
+}
+
+#[test]
 fn test_verify_acl_on_user() -> Result<()> {
     let port: u16 = 6491;
     let _guards = vec![start_redis_server_with_module("acl", port)
