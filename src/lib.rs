@@ -9,6 +9,7 @@ pub mod raw;
 pub mod rediserror;
 mod redismodule;
 pub mod redisraw;
+pub mod redisuser;
 pub mod redisvalue;
 pub mod stream;
 

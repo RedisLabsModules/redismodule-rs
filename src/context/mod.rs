@@ -6,12 +6,12 @@ use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr::{self, NonNull};
 use std::sync::atomic::{AtomicPtr, Ordering};
 
-use crate::add_info_section;
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::logging::RedisLogLevel;
 use crate::raw::{ModuleOptions, Version};
 use crate::redisvalue::RedisValueKey;
 use crate::{add_info_field_long_long, add_info_field_str, raw, utils, Status};
+use crate::{add_info_section, RedisUser};
 use crate::{RedisError, RedisResult, RedisString, RedisValue};
 use std::ops::Deref;
 
@@ -731,6 +731,16 @@ impl Context {
         RedisString::from_redis_module_string(ptr::null_mut(), user)
     }
 
+    /// Return the current user as a [RedisUser] object
+    pub fn get_module_user(&self, user_name: &RedisString) -> Option<RedisUser> {
+        let user = unsafe { raw::RedisModule_GetModuleUserFromUserName.unwrap()(user_name.inner) };
+        if user.is_null() {
+            return None;
+        }
+
+        Some(RedisUser::from_redis_module_user(user))
+    }
+
     /// Attach the given user to the current context so each operation performed from
     /// now on using this context will be validated againts this new user.
     /// Return [ContextUserScope] which make sure to unset the user when freed and
@@ -747,6 +757,25 @@ impl Context {
         Ok(ContextUserScope::new(self, user))
     }
 
+    /// Authenticate the current context's user with the provided [RedisUser].
+    pub fn authenticate_client_with_user(&self, user: &RedisUser) -> Result<(), RedisError> {
+        let result = unsafe {
+            raw::RedisModule_AuthenticateClientWithUser.unwrap()(
+                self.ctx,
+                user.user,
+                None,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            )
+        };
+
+        if result != raw::REDISMODULE_OK as i32 {
+            return Err(RedisError::Str("Error authenticating user client"));
+        }
+
+        Ok(())
+    }
+
     fn deautenticate_user(&self) {
         unsafe { raw::RedisModule_SetContextUser.unwrap()(self.ctx, ptr::null_mut()) };
     }
@@ -760,21 +789,10 @@ impl Context {
         key_name: &RedisString,
         permissions: &AclPermissions,
     ) -> Result<(), RedisError> {
-        let user = unsafe { raw::RedisModule_GetModuleUserFromUserName.unwrap()(user_name.inner) };
-        if user.is_null() {
-            return Err(RedisError::Str("User does not exists or disabled"));
+        match self.get_module_user(user_name) {
+            Some(user) => user.acl_check_key_permission(key_name, permissions),
+            None => Err(RedisError::Str("User does not exists or disabled")),
         }
-        let acl_permission_result: raw::Status = unsafe {
-            raw::RedisModule_ACLCheckKeyPermissions.unwrap()(
-                user,
-                key_name.inner,
-                permissions.bits(),
-            )
-        }
-        .into();
-        unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
-        let acl_permission_result: Result<(), &str> = acl_permission_result.into();
-        acl_permission_result.map_err(|_e| RedisError::Str("User does not have permissions on key"))
     }
 
     api!(

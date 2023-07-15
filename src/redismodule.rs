@@ -15,6 +15,7 @@ use serde::de::{Error, SeqAccess};
 
 pub use crate::raw;
 pub use crate::rediserror::RedisError;
+pub use crate::redisuser::RedisUser;
 pub use crate::redisvalue::RedisValue;
 use crate::Context;
 
