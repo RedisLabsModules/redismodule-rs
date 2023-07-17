@@ -3,9 +3,20 @@ use proc_macro2::Ident;
 use quote::{quote, ToTokens};
 use syn::{parse_macro_input, Data, DataStruct, DeriveInput, Fields};
 
-/// A list of supported maps which can be converted to a dictionary for
-/// the [`redis_module::InfoContext`].
-const SUPPORTED_MAPS_LIST: [&str; 2] = ["BTreeMap", "HashMap"];
+struct SupportedMaps;
+impl SupportedMaps {
+    /// A list of supported maps which can be converted to a dictionary for
+    /// the [`redis_module::InfoContext`].
+    const ALL: [&str; 2] = ["BTreeMap", "HashMap"];
+
+    /// Returns `true` if the `type_string` provided is a type of a map
+    /// supported by the [`crate::InfoSection`].
+    pub fn supports(type_string: &str) -> bool {
+        Self::ALL
+            .iter()
+            .any(|m| type_string.contains(&m.to_lowercase()))
+    }
+}
 
 /// Generate a [`From`] implementation for this struct so that it is
 /// possible to generate a [`redis_module::InfoContext`] information
@@ -18,19 +29,13 @@ fn struct_info_section(struct_name: Ident, struct_data: DataStruct) -> TokenStre
         }
     };
 
-    let supported_maps: Vec<String> = SUPPORTED_MAPS_LIST
-        .iter()
-        .map(|s| s.to_lowercase())
-        .collect();
-
-    let is_supported_map = |ty: &str| -> bool { supported_maps.iter().any(|m| ty.contains(m)) };
-
     let fields = fields
         .named
         .into_iter()
         .map(|v| {
-            let is_dictionary =
-                is_supported_map(&v.ty.clone().into_token_stream().to_string().to_lowercase());
+            let is_dictionary = SupportedMaps::supports(
+                &v.ty.clone().into_token_stream().to_string().to_lowercase(),
+            );
             let name = v.ident.ok_or(
                 "Structs with unnamed fields are not supported by the InfoSection.".to_owned(),
             )?;
