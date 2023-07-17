@@ -21,6 +21,14 @@ impl SupportedMaps {
 /// Generate a [`From`] implementation for this struct so that it is
 /// possible to generate a [`redis_module::InfoContext`] information
 /// from it.
+///
+/// A struct is compatible to be used with [`crate::InfoSection`] when
+/// it has fields, whose types are convertible to
+/// [`redis_module::InfoContextBuilderFieldTopLevelValue`] and (for
+/// the dictionaries) if it has fields which are compatible maps of
+/// objects, where a key is a [`String`] and a value is any type
+/// convertible to
+/// [`redis_module::InfoContextBuilderFieldBottomLevelValue`].
 fn struct_info_section(struct_name: Ident, struct_data: DataStruct) -> TokenStream {
     let fields = match struct_data.fields {
         Fields::Named(f) => f,
