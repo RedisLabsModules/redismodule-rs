@@ -1,8 +1,6 @@
-use redis_module::{
-    redis_module, Context, ContextFlags, RedisString, RedisValue, RedisValueResult,
-};
+use redis_module::{redis_module, Context, ContextFlags, RedisResult, RedisString, RedisValue};
 
-fn role(ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
+fn role(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     Ok(RedisValue::SimpleStringStatic(
         if ctx.get_flags().contains(ContextFlags::MASTER) {
             "master"

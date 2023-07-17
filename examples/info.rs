@@ -1,8 +1,8 @@
 use redis_module::{
-    redis_module, Context, NextArg, RedisError, RedisString, RedisValue, RedisValueResult,
+    redis_module, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue,
 };
 
-fn info_cmd(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
+fn info_cmd(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     if args.len() < 3 {
         return Err(RedisError::WrongArity);
     }

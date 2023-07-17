@@ -63,7 +63,7 @@ pub static MODULE_CONTEXT: DetachedContext = DetachedContext::new();
 )]
 pub type LogLevel = logging::RedisLogLevel;
 
-fn add_trace_info(ctx: &InfoContext) -> RedisResult {
+fn add_trace_info(ctx: &InfoContext) -> RedisResult<()> {
     const SECTION_NAME: &str = "trace";
     const FIELD_NAME: &str = "backtrace";
 
@@ -83,7 +83,7 @@ fn add_trace_info(ctx: &InfoContext) -> RedisResult {
 /// The function may optionally return an object of one section to add.
 /// If nothing is returned, it is assumed that the function has already
 /// filled all the information required via [`InfoContext::builder`].
-pub type InfoHandlerFunctionType = fn(&InfoContext, bool) -> RedisResult;
+pub type InfoHandlerFunctionType = fn(&InfoContext, bool) -> RedisResult<()>;
 
 /// Default "INFO" command handler for the module.
 ///

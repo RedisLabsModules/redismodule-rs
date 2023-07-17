@@ -20,7 +20,7 @@ use crate::Context;
 
 /// A short-hand type that stores a [std::result::Result] with custom
 /// type and [RedisError].
-pub type RedisResult<T = ()> = Result<T, RedisError>;
+pub type RedisResult<T = RedisValue> = Result<T, RedisError>;
 /// A [RedisResult] with [RedisValue].
 pub type RedisValueResult = RedisResult<RedisValue>;
 

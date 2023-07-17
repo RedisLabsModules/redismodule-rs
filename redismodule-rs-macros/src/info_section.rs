@@ -31,9 +31,9 @@ fn struct_info_section(struct_name: Ident, struct_data: DataStruct) -> TokenStre
         .map(|v| {
             let is_dictionary =
                 is_supported_map(&v.ty.clone().into_token_stream().to_string().to_lowercase());
-            let name = v
-                .ident
-                .ok_or("Structs with unnamed fields are not supported by the InfoSection.".to_owned())?;
+            let name = v.ident.ok_or(
+                "Structs with unnamed fields are not supported by the InfoSection.".to_owned(),
+            )?;
             Ok((is_dictionary, name))
         })
         .collect::<Result<Vec<_>, String>>();
@@ -89,7 +89,7 @@ fn struct_info_section(struct_name: Ident, struct_data: DataStruct) -> TokenStre
 
 /// Implementation for the [`crate::info_section`] derive macro.
 /// Runs the relevant code generation base on the element
-/// the proc macro was used on. Currently supports `struct`s only.
+/// the macro was used on. Currently supports `struct`s only.
 pub fn info_section(item: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(item);
     let ident = input.ident;

@@ -58,7 +58,7 @@ pub static CONFIG_CHANGED_SERVER_EVENTS_LIST: [fn(&Context, &[&str])] = [..];
 pub static CRON_SERVER_EVENTS_LIST: [fn(&Context, u64)] = [..];
 
 #[distributed_slice()]
-pub static INFO_COMMAND_HANDLER_LIST: [fn(&InfoContext, bool) -> RedisResult] = [..];
+pub static INFO_COMMAND_HANDLER_LIST: [fn(&InfoContext, bool) -> RedisResult<()>] = [..];
 
 extern "C" fn cron_callback(
     ctx: *mut raw::RedisModuleCtx,

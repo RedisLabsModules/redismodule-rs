@@ -1,10 +1,10 @@
 use redis_module::{
-    redis_module, Context, RedisString, RedisValue, RedisValueResult, ThreadSafeContext,
+    redis_module, Context, RedisResult, RedisString, RedisValue, ThreadSafeContext,
 };
 use std::thread;
 use std::time::Duration;
 
-fn block(ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
+fn block(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     let blocked_client = ctx.block_client();
 
     thread::spawn(move || {

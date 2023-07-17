@@ -1,10 +1,10 @@
 use redis_module::{
-    redis_module, redisvalue::RedisValueKey, Context, NextArg, RedisError, RedisString, RedisValue,
-    RedisValueResult,
+    redis_module, redisvalue::RedisValueKey, Context, NextArg, RedisError, RedisResult,
+    RedisString, RedisValue,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
-fn map_mget(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
+fn map_mget(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     if args.len() < 2 {
         return Err(RedisError::WrongArity);
     }
@@ -33,7 +33,7 @@ fn map_mget(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
     Ok(res)
 }
 
-fn map_unique(ctx: &Context, args: Vec<RedisString>) -> RedisValueResult {
+fn map_unique(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     if args.len() < 2 {
         return Err(RedisError::WrongArity);
     }

@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicI64, Ordering};
 
 use redis_module::{
-    redis_module, server_events::FlushSubevent, Context, RedisString, RedisValue, RedisValueResult,
+    redis_module, server_events::FlushSubevent, Context, RedisResult, RedisString, RedisValue,
 };
 use redis_module_macros::{config_changed_event_handler, cron_event_handler, flush_event_handler};
 
@@ -29,15 +29,15 @@ fn cron_event_handler(_ctx: &Context, _hz: u64) {
     NUM_CRONS.fetch_add(1, Ordering::SeqCst);
 }
 
-fn num_flushed(_ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
+fn num_flushed(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     Ok(RedisValue::Integer(NUM_FLUSHES.load(Ordering::SeqCst)))
 }
 
-fn num_crons(_ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
+fn num_crons(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     Ok(RedisValue::Integer(NUM_CRONS.load(Ordering::SeqCst)))
 }
 
-fn num_maxmemory_changes(_ctx: &Context, _args: Vec<RedisString>) -> RedisValueResult {
+fn num_maxmemory_changes(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     Ok(RedisValue::Integer(
         NUM_MAX_MEMORY_CONFIGURATION_CHANGES.load(Ordering::SeqCst),
     ))

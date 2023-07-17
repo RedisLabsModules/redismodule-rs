@@ -17,7 +17,7 @@ use crate::{
     Status,
 };
 use crate::{add_info_section, RedisResult};
-use crate::{RedisError, RedisString, RedisValue, RedisValueResult};
+use crate::{RedisError, RedisString, RedisValue};
 use std::ops::Deref;
 
 use std::ffi::CStr;
@@ -418,7 +418,7 @@ impl Context {
         R::from(promise)
     }
 
-    pub fn call<'a, T: Into<StrCallArgs<'a>>>(&self, command: &str, args: T) -> RedisValueResult {
+    pub fn call<'a, T: Into<StrCallArgs<'a>>>(&self, command: &str, args: T) -> RedisResult {
         self.call_internal::<_, CallResult>(command, raw::FMT, args)
             .map_or_else(|e| Err(e.into()), |v| Ok((&v).into()))
     }
@@ -496,7 +496,7 @@ impl Context {
     ///
     /// Will panic if methods used are missing in redismodule.h
     #[allow(clippy::must_use_candidate)]
-    pub fn reply(&self, result: RedisValueResult) -> raw::Status {
+    pub fn reply(&self, result: RedisResult) -> raw::Status {
         match result {
             Ok(RedisValue::Bool(v)) => raw::reply_with_bool(self.ctx, v.into()),
             Ok(RedisValue::Integer(v)) => raw::reply_with_long_long(self.ctx, v),
@@ -898,7 +898,7 @@ pub enum InfoContextBuilderFieldTopLevelValue {
     /// A dictionary value.
     ///
     /// An example of what it looks like:
-    /// ```
+    /// ```no_run,ignore,
     /// > redis-cli: INFO
     /// >
     /// > # <section name>
@@ -912,8 +912,8 @@ pub enum InfoContextBuilderFieldTopLevelValue {
     /// module is named "redisgears_2", we can call `INFO redisgears_2`
     /// to obtain this information:
     ///
-    /// ```
-    /// /// > redis-cli: INFO
+    /// ```no_run,ignore,
+    /// > redis-cli: INFO
     /// >
     /// > # redisgears_2_my_info
     /// module:name=redisgears_2,ver=999999
@@ -1121,48 +1121,47 @@ impl<'a> InfoContextBuilder<'a> {
         &self,
         key: &str,
         value: &InfoContextBuilderFieldBottomLevelValue,
-    ) -> RedisResult {
+    ) -> RedisResult<()> {
         use InfoContextBuilderFieldBottomLevelValue as BottomLevel;
 
         match value {
-            BottomLevel::String(string) => {
-                Into::<RedisResult>::into(add_info_field_str(self.context.ctx, key, string))?
+            BottomLevel::String(string) => add_info_field_str(self.context.ctx, key, string),
+            BottomLevel::I64(number) => add_info_field_long_long(self.context.ctx, key, *number),
+            BottomLevel::U64(number) => {
+                add_info_field_unsigned_long_long(self.context.ctx, key, *number)
             }
-            BottomLevel::I64(number) => {
-                Into::<RedisResult>::into(add_info_field_long_long(self.context.ctx, key, *number))?
-            }
-            BottomLevel::U64(number) => Into::<RedisResult>::into(
-                add_info_field_unsigned_long_long(self.context.ctx, key, *number),
-            )?,
-            BottomLevel::F64(number) => {
-                Into::<RedisResult>::into(add_info_field_double(self.context.ctx, key, *number))?
-            }
+            BottomLevel::F64(number) => add_info_field_double(self.context.ctx, key, *number),
         }
-
-        Ok(())
+        .into()
     }
     /// Adds fields. Make sure that the corresponding section/dictionary
     /// have been added before calling this method.
-    fn add_top_level_fields(&self, fields: &InfoContextFieldTopLevelData) -> RedisResult {
+    fn add_top_level_fields(&self, fields: &InfoContextFieldTopLevelData) -> RedisResult<()> {
         use InfoContextBuilderFieldTopLevelValue as TopLevel;
 
         fields.iter().try_for_each(|(key, value)| match value {
             TopLevel::Value(bottom_level) => self.add_bottom_level_field(key, bottom_level),
             TopLevel::Dictionary { name, fields } => {
-                Into::<RedisResult>::into(add_info_begin_dict_field(self.context.ctx, name))?;
+                std::convert::Into::<RedisResult<()>>::into(add_info_begin_dict_field(
+                    self.context.ctx,
+                    name,
+                ))?;
                 fields
                     .iter()
                     .try_for_each(|f| self.add_bottom_level_field(&f.0 .0, &f.0 .1))?;
-                Into::<RedisResult>::into(add_info_end_dict_field(self.context.ctx))
+                add_info_end_dict_field(self.context.ctx).into()
             }
         })
     }
 
-    fn finalise_data(&self) -> RedisResult {
+    fn finalise_data(&self) -> RedisResult<()> {
         self.sections
             .iter()
-            .try_for_each(|(section_name, section_fields)| -> RedisResult {
-                Into::<RedisResult>::into(add_info_section(self.context.ctx, Some(section_name)))?;
+            .try_for_each(|(section_name, section_fields)| -> RedisResult<()> {
+                Into::<RedisResult<()>>::into(add_info_section(
+                    self.context.ctx,
+                    Some(section_name),
+                ))?;
 
                 self.add_top_level_fields(section_fields)
             })
@@ -1215,7 +1214,7 @@ impl InfoContext {
     }
 
     /// Returns a build result for the passed [`OneInfoSectionData`].
-    pub fn build_from<T: Into<OneInfoSectionData>>(&self, data: T) -> RedisResult {
+    pub fn build_from<T: Into<OneInfoSectionData>>(&self, data: T) -> RedisResult<()> {
         self.builder()
             .add_section_unchecked(data.into())
             .build_info()?;
@@ -1223,17 +1222,17 @@ impl InfoContext {
     }
 
     #[deprecated = "Please use [`InfoContext::builder`] instead."]
-    pub fn add_info_section(&self, name: Option<&str>) -> RedisResult {
+    pub fn add_info_section(&self, name: Option<&str>) -> RedisResult<()> {
         add_info_section(self.ctx, name).into()
     }
 
     #[deprecated = "Please use [`InfoContext::builder`] instead."]
-    pub fn add_info_field_str(&self, name: &str, content: &str) -> RedisResult {
+    pub fn add_info_field_str(&self, name: &str, content: &str) -> RedisResult<()> {
         add_info_field_str(self.ctx, name, content).into()
     }
 
     #[deprecated = "Please use [`InfoContext::builder`] instead."]
-    pub fn add_info_field_long_long(&self, name: &str, value: c_longlong) -> RedisResult {
+    pub fn add_info_field_long_long(&self, name: &str, value: c_longlong) -> RedisResult<()> {
         add_info_field_long_long(self.ctx, name, value).into()
     }
 }

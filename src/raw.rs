@@ -97,7 +97,7 @@ pub enum Status {
     Err = REDISMODULE_ERR,
 }
 
-impl From<Status> for RedisResult {
+impl From<Status> for RedisResult<()> {
     fn from(value: Status) -> Self {
         match value {
             Status::Ok => Ok(()),
