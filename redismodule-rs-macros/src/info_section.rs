@@ -3,16 +3,14 @@ use proc_macro2::Ident;
 use quote::{quote, ToTokens};
 use syn::{parse_macro_input, Data, DataStruct, DeriveInput, Fields};
 
-mod supported_maps {
+/// Returns `true` if the `type_string` provided is a type of a map
+/// supported by the [`crate::InfoSection`].
+pub fn is_supported_map(type_string: &str) -> bool {
     /// A list of supported maps which can be converted to a dictionary for
     /// the [`redis_module::InfoContext`].
     const ALL: [&str; 2] = ["BTreeMap", "HashMap"];
 
-    /// Returns `true` if the `type_string` provided is a type of a map
-    /// supported by the [`crate::InfoSection`].
-    pub fn is_supported(type_string: &str) -> bool {
-        ALL.iter().any(|m| type_string.contains(&m.to_lowercase()))
-    }
+    ALL.iter().any(|m| type_string.contains(&m.to_lowercase()))
 }
 
 /// Generate a [`From`] implementation for this struct so that it is
@@ -38,9 +36,8 @@ fn struct_info_section(struct_name: Ident, struct_data: DataStruct) -> TokenStre
         .named
         .into_iter()
         .map(|v| {
-            let is_dictionary = supported_maps::is_supported(
-                &v.ty.clone().into_token_stream().to_string().to_lowercase(),
-            );
+            let is_dictionary =
+                is_supported_map(&v.ty.clone().into_token_stream().to_string().to_lowercase());
             let name = v.ident.ok_or(
                 "Structs with unnamed fields are not supported by the InfoSection.".to_owned(),
             )?;
