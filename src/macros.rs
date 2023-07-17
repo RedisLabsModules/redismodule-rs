@@ -99,6 +99,7 @@ macro_rules! redis_module {
         ],
         $(init: $init_func:ident,)* $(,)*
         $(deinit: $deinit_func:ident,)* $(,)*
+        $(info: $info_func:ident,)?
         commands: [
             $([
                 $name:expr,
@@ -154,6 +155,15 @@ macro_rules! redis_module {
         /// Redis module allocator.
         #[global_allocator]
         static REDIS_MODULE_ALLOCATOR: $allocator_type = $allocator_init;
+
+        // The info handler, if specified.
+        $(
+            #[redis_module_macros::info_command_handler]
+            #[inline]
+            fn module_info(ctx: &InfoContext, for_crash_report: bool) -> RedisResult<()> {
+                $info_func(ctx, for_crash_report)
+            }
+        )?
 
         extern "C" fn __info_func(
             ctx: *mut $crate::raw::RedisModuleInfoCtx,
