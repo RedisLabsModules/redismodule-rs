@@ -905,7 +905,7 @@ pub enum InfoContextBuilderFieldTopLevelValue {
     /// <dictionary name>:<key 1>=<value 1>,<key 2>=<value 2>
     /// ```
     ///
-    /// Let's suppose we added a section `"my_info"`. Then we into this
+    /// Let's suppose we added a section `"my_info"`. Then into this
     /// section we can add a dictionary. Let's add a dictionary named
     /// `"module"`, with with fields `"name"` which is equal to
     /// `"redisgears_2"` and `"ver"` with a value of `999999`. If our
@@ -913,7 +913,7 @@ pub enum InfoContextBuilderFieldTopLevelValue {
     /// to obtain this information:
     ///
     /// ```no_run,ignore,
-    /// > redis-cli: INFO
+    /// > redis-cli: INFO redisgears_2
     /// >
     /// > # redisgears_2_my_info
     /// module:name=redisgears_2,ver=999999
