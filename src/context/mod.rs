@@ -1214,7 +1214,7 @@ impl InfoContext {
     }
 
     /// Returns a build result for the passed [`OneInfoSectionData`].
-    pub fn build_from<T: Into<OneInfoSectionData>>(&self, data: T) -> RedisResult<()> {
+    pub fn build_one_section<T: Into<OneInfoSectionData>>(&self, data: T) -> RedisResult<()> {
         self.builder()
             .add_section_unchecked(data.into())
             .build_info()?;

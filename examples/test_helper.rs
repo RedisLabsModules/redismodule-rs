@@ -48,7 +48,7 @@ fn add_info(ctx: &InfoContext, _for_crash_report: bool) -> RedisResult<()> {
         field: "test_helper_value".to_owned(),
         dictionary,
     };
-    ctx.build_from(data)
+    ctx.build_one_section(data)
 }
 
 //////////////////////////////////////////////////////
