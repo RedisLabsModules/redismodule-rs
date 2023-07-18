@@ -133,7 +133,7 @@ fn test_helper_info() -> Result<()> {
                 .arg(module)
                 .query(&mut con)
                 .with_context(|| format!("failed to run INFO {module}"))?;
-            println!("Now processing {module}. Result: {res}.");
+
             assert!(res.contains(&format!("{module}_field:value")));
             if has_dictionary {
                 assert!(res.contains("dictionary:key=value"));
@@ -141,6 +141,29 @@ fn test_helper_info() -> Result<()> {
 
             Ok(())
         })
+}
+
+#[test]
+fn test_info_handler_multiple_sections() -> Result<()> {
+    const MODULES: [&str; 1] = ["info_handler_multiple_sections"];
+
+    MODULES.into_iter().try_for_each(|module| {
+        let port: u16 = 6500;
+        let _guards = vec![start_redis_server_with_module(module, port)
+            .with_context(|| "failed to start redis server")?];
+        let mut con =
+            get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+        let res: String = redis::cmd("INFO")
+            .arg(format!("{module}_InfoSection2"))
+            .query(&mut con)
+            .with_context(|| format!("failed to run INFO {module}"))?;
+
+        assert!(res.contains(&format!("{module}_field_2:value2")));
+        assert!(!res.contains(&format!("{module}_field_1:value1")));
+
+        Ok(())
+    })
 }
 
 #[allow(unused_must_use)]

@@ -93,6 +93,10 @@ name = "info_handler_struct"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "info_handler_multiple_sections"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "info"
 crate-type = ["cdylib"]
 
