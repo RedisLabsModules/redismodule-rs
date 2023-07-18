@@ -156,12 +156,14 @@ macro_rules! redis_module {
         #[global_allocator]
         static REDIS_MODULE_ALLOCATOR: $allocator_type = $allocator_init;
 
-        // The info handler, if specified.
+        // The old-style info command handler, if specified.
         $(
             #[redis_module_macros::info_command_handler]
             #[inline]
             fn module_info(ctx: &InfoContext, for_crash_report: bool) -> RedisResult<()> {
-                $info_func(ctx, for_crash_report)
+                $info_func(ctx, for_crash_report);
+
+                Ok(())
             }
         )?
 

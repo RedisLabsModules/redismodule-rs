@@ -11,7 +11,7 @@ fn add_info(ctx: &InfoContext, _for_crash_report: bool) -> RedisResult<()> {
         .field("key", "value")?
         .build_dictionary()?
         .build_section()?
-        .build_info();
+        .build_info()?;
 
     Ok(())
 }

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use redis_module::{redis_module, Context, RedisError, RedisResult, RedisString};
 use redis_module::{InfoContext, Status};
 
@@ -32,12 +30,10 @@ fn test_helper_err(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     Ok(().into())
 }
 
-fn add_info(ctx: &InfoContext, _for_crash_report: bool) -> RedisResult<()> {
+fn add_info(ctx: &InfoContext, _for_crash_report: bool) {
     if ctx.add_info_section(Some("test_helper")) == Status::Ok {
         ctx.add_info_field_str("field", "value");
     }
-
-    Ok(())
 }
 
 //////////////////////////////////////////////////////

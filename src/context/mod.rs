@@ -1158,12 +1158,12 @@ impl<'a> InfoContextBuilder<'a> {
         self.sections
             .iter()
             .try_for_each(|(section_name, section_fields)| -> RedisResult<()> {
-                Into::<RedisResult<()>>::into(add_info_section(
-                    self.context.ctx,
-                    Some(section_name),
-                ))?;
-
-                self.add_top_level_fields(section_fields)
+                if add_info_section(self.context.ctx, Some(section_name)) == Status::Ok {
+                    self.add_top_level_fields(section_fields)
+                } else {
+                    // This section wasn't requested.
+                    Ok(())
+                }
             })
     }
 
