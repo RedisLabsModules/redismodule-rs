@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
-use redis_module::InfoContext;
 use redis_module::{redis_module, Context, RedisError, RedisResult, RedisString};
-use redis_module_macros::InfoSection;
+use redis_module::{InfoContext, Status};
 
 fn test_helper_version(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     let ver = ctx.get_redis_version()?;
@@ -33,20 +32,12 @@ fn test_helper_err(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     Ok(().into())
 }
 
-#[derive(Debug, Clone, InfoSection)]
-struct InfoData {
-    field: String,
-    dictionary: HashMap<String, String>,
-}
-
 fn add_info(ctx: &InfoContext, _for_crash_report: bool) -> RedisResult<()> {
-    let mut dictionary = HashMap::new();
-    dictionary.insert("key".to_owned(), "value".into());
-    let data = InfoData {
-        field: "test_helper_value".to_owned(),
-        dictionary,
-    };
-    ctx.build_one_section(data)
+    if ctx.add_info_section(Some("test_helper")) == Status::Ok {
+        ctx.add_info_field_str("field", "value");
+    }
+
+    Ok(())
 }
 
 //////////////////////////////////////////////////////

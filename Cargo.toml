@@ -85,6 +85,14 @@ name = "info_handler_macro"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "info_handler_builder"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "info_handler_struct"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "info"
 crate-type = ["cdylib"]
 

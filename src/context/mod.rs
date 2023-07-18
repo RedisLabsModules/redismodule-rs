@@ -1222,18 +1222,26 @@ impl InfoContext {
     }
 
     #[deprecated = "Please use [`InfoContext::builder`] instead."]
-    pub fn add_info_section(&self, name: Option<&str>) -> RedisResult<()> {
-        add_info_section(self.ctx, name).into()
+    /// The `name` of the sction will be prefixed with the module name
+    /// and an underscore: `<module name>_<name>`.
+    pub fn add_info_section(&self, name: Option<&str>) -> Status {
+        add_info_section(self.ctx, name)
     }
 
     #[deprecated = "Please use [`InfoContext::builder`] instead."]
-    pub fn add_info_field_str(&self, name: &str, content: &str) -> RedisResult<()> {
-        add_info_field_str(self.ctx, name, content).into()
+    /// The `name` will be prefixed with the module name and an
+    /// underscore: `<module name>_<name>`. The `content` pass is left
+    /// "as is".
+    pub fn add_info_field_str(&self, name: &str, content: &str) -> Status {
+        add_info_field_str(self.ctx, name, content)
     }
 
     #[deprecated = "Please use [`InfoContext::builder`] instead."]
-    pub fn add_info_field_long_long(&self, name: &str, value: c_longlong) -> RedisResult<()> {
-        add_info_field_long_long(self.ctx, name, value).into()
+    /// The `name` will be prefixed with the module name and an
+    /// underscore: `<module name>_<name>`. The `value` pass is left
+    /// "as is".
+    pub fn add_info_field_long_long(&self, name: &str, value: c_longlong) -> Status {
+        add_info_field_long_long(self.ctx, name, value)
     }
 }
 

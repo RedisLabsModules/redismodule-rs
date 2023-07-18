@@ -113,24 +113,34 @@ fn test_command_name() -> Result<()> {
 
 #[test]
 fn test_helper_info() -> Result<()> {
-    const MODULES: [&str; 2] = ["test_helper", "info_handler_macro"];
+    const MODULES: [(&str, bool); 4] = [
+        ("test_helper", false),
+        ("info_handler_macro", false),
+        ("info_handler_builder", true),
+        ("info_handler_struct", true),
+    ];
 
-    MODULES.iter().try_for_each(|module| {
-        let port: u16 = 6483;
-        let _guards = vec![start_redis_server_with_module(module, port)
-            .with_context(|| "failed to start redis server")?];
-        let mut con =
-            get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    MODULES
+        .into_iter()
+        .try_for_each(|(module, has_dictionary)| {
+            let port: u16 = 6483;
+            let _guards = vec![start_redis_server_with_module(module, port)
+                .with_context(|| "failed to start redis server")?];
+            let mut con =
+                get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
-        let res: String = redis::cmd("INFO")
-            .arg(module)
-            .query(&mut con)
-            .with_context(|| format!("failed to run INFO {module}"))?;
-        assert!(res.contains(&format!("{module}_field:test_helper_value")));
-        assert!(res.contains("dictionary:key=value"));
+            let res: String = redis::cmd("INFO")
+                .arg(module)
+                .query(&mut con)
+                .with_context(|| format!("failed to run INFO {module}"))?;
+            println!("Now processing {module}. Result: {res}.");
+            assert!(res.contains(&format!("{module}_field:value")));
+            if has_dictionary {
+                assert!(res.contains("dictionary:key=value"));
+            }
 
-        Ok(())
-    })
+            Ok(())
+        })
 }
 
 #[allow(unused_must_use)]
