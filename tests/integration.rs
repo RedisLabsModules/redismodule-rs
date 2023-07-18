@@ -113,20 +113,24 @@ fn test_command_name() -> Result<()> {
 
 #[test]
 fn test_helper_info() -> Result<()> {
-    let port: u16 = 6483;
-    let _guards = vec![start_redis_server_with_module("test_helper", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    const MODULES: [&str; 2] = ["test_helper", "info_handler_macro"];
 
-    let res: String = redis::cmd("INFO")
-        .arg("TEST_HELPER")
-        .query(&mut con)
-        .with_context(|| "failed to run INFO TEST_HELPER")?;
-    assert!(res.contains("test_helper_field:test_helper_value"));
-    assert!(res.contains("dictionary:key=value"));
+    MODULES.iter().try_for_each(|module| {
+        let port: u16 = 6483;
+        let _guards = vec![start_redis_server_with_module(module, port)
+            .with_context(|| "failed to start redis server")?];
+        let mut con =
+            get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
-    Ok(())
+        let res: String = redis::cmd("INFO")
+            .arg("TEST_HELPER")
+            .query(&mut con)
+            .with_context(|| "failed to run INFO TEST_HELPER")?;
+        assert!(res.contains("test_helper_field:test_helper_value"));
+        assert!(res.contains("dictionary:key=value"));
+
+        Ok(())
+    })
 }
 
 #[allow(unused_must_use)]
