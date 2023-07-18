@@ -123,10 +123,10 @@ fn test_helper_info() -> Result<()> {
             get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
         let res: String = redis::cmd("INFO")
-            .arg("TEST_HELPER")
+            .arg(module)
             .query(&mut con)
-            .with_context(|| "failed to run INFO TEST_HELPER")?;
-        assert!(res.contains("test_helper_field:test_helper_value"));
+            .with_context(|| format!("failed to run INFO {module}"))?;
+        assert!(res.contains(&format!("{module}_field:test_helper_value")));
         assert!(res.contains("dictionary:key=value"));
 
         Ok(())
