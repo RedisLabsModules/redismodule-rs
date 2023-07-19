@@ -809,6 +809,28 @@ impl Context {
             .into()
         }
     );
+
+    api!(
+        [RedisModule_AvoidReplicaTraffic],
+        /// Returns true if a client sent the CLIENT PAUSE command to the server or
+        /// if Redis Cluster does a manual failover, pausing the clients.
+        /// This is needed when we have a master with replicas, and want to write,
+        /// without adding further data to the replication channel, that the replicas
+        /// replication offset, match the one of the master. When this happens, it is
+        /// safe to failover the master without data loss.
+        ///
+        /// However modules may generate traffic by calling commands or directly send
+        /// data to the replication stream.
+        ///
+        /// So modules may want to try to avoid very heavy background work that has
+        /// the effect of creating data to the replication channel, when this function
+        /// returns true. This is mostly useful for modules that have background
+        /// garbage collection tasks, or that do writes and replicate such writes
+        /// periodically in timer callbacks or other periodic callbacks.
+        pub fn avoid_replication_traffic(&self) -> bool {
+            unsafe { RedisModule_AvoidReplicaTraffic() == 1 }
+        }
+    );
 }
 
 extern "C" fn post_notification_job_free_callback<F: FnOnce(&Context)>(pd: *mut c_void) {
