@@ -452,7 +452,7 @@ where
     /// Provides an iterator over the multi-get results in the form of (field-name, field-value)
     /// pairs. The type of field-name elements is the same as that passed to the original multi-
     /// get call, while the field-value elements may be of any type for which a `RedisString` `Into`
-    /// conversion is implemented.  
+    /// conversion is implemented.
     ///
     /// # Examples
     ///
@@ -560,15 +560,6 @@ impl<'a> StringDMA<'a> {
         }
         self.buffer[current_len..new_len].copy_from_slice(data);
         Ok(self)
-    }
-}
-
-impl From<raw::Status> for Result<(), RedisError> {
-    fn from(s: raw::Status) -> Self {
-        match s {
-            raw::Status::Ok => Ok(()),
-            raw::Status::Err => Err(RedisError::String("Generic error".to_string())),
-        }
     }
 }
 

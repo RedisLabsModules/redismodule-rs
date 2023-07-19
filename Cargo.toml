@@ -81,6 +81,22 @@ name = "test_helper"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "info_handler_macro"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "info_handler_builder"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "info_handler_struct"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "info_handler_multiple_sections"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "info"
 crate-type = ["cdylib"]
 
@@ -119,7 +135,7 @@ redis-module-macros = { path = "./redismodule-rs-macros"}
 redis-module = { path = "./", default-features = false, features = ["min-redis-compatibility-version-7-2"] }
 
 [build-dependencies]
-bindgen = "0.65"
+bindgen = "0.66"
 cc = "1"
 
 [features]

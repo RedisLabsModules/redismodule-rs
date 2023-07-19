@@ -813,7 +813,7 @@ impl<'ctx> FutureCallReply<'ctx> {
                 (reply.as_ptr(), Some(on_unblock::<C>), Box::into_raw(Box::new(unblock_handler)) as *mut c_void)
         }
         FutureHandler {
-            reply: reply,
+            reply,
             _dummy: PhantomData,
             reply_freed: false,
         }
@@ -822,7 +822,9 @@ impl<'ctx> FutureCallReply<'ctx> {
 
 impl<'ctx> Drop for FutureCallReply<'ctx> {
     fn drop(&mut self) {
-        self.reply.map(|v| free_call_reply(v.as_ptr()));
+        if let Some(v) = self.reply {
+            free_call_reply(v.as_ptr());
+        }
     }
 }
 
@@ -831,10 +833,10 @@ pub enum PromiseCallReply<'root, 'ctx> {
     Future(FutureCallReply<'ctx>),
 }
 
-pub(crate) fn create_promise_call_reply<'ctx>(
-    ctx: &'ctx Context,
+pub(crate) fn create_promise_call_reply(
+    ctx: &Context,
     reply: Option<NonNull<RedisModuleCallReply>>,
-) -> PromiseCallReply<'static, 'ctx> {
+) -> PromiseCallReply<'static, '_> {
     reply.map_or(PromiseCallReply::Resolved(Ok(CallReply::Unknown)), |val| {
         let ty = unsafe { RedisModule_CallReplyType.unwrap()(val.as_ptr()) };
         if ty == REDISMODULE_REPLY_PROMISE as i32 {

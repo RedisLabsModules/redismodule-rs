@@ -3,6 +3,7 @@ use quote::quote;
 use syn::ItemFn;
 
 mod command;
+mod info_section;
 mod redis_value;
 
 /// This proc macro allow to specify that the follow function is a Redis command.
@@ -301,7 +302,7 @@ pub fn cron_event_handler(_attr: TokenStream, item: TokenStream) -> TokenStream 
 /// ```
 ///
 /// The derive proc macro can also be set on an Enum. In this case, the generated
-/// code will check the enum varient (using a match statement) and perform [Into]
+/// code will check the enum variant (using a match statement) and perform [Into]
 /// on the matched varient. This is usefull in case the command returns more than
 /// a single reply type and the reply type need to be decided at runtime.
 ///
@@ -359,4 +360,93 @@ pub fn cron_event_handler(_attr: TokenStream, item: TokenStream) -> TokenStream 
 #[proc_macro_derive(RedisValue, attributes(RedisValueAttr))]
 pub fn redis_value(item: TokenStream) -> TokenStream {
     redis_value::redis_value(item)
+}
+
+/// A procedural macro which registers this function as the custom
+/// `INFO` command handler. There might be more than one handler, each
+/// adding new information to the context.
+///
+/// Example:
+///
+/// ```rust,no_run,ignore
+/// #[info_command_handler]
+/// fn info_command_handler(
+///     ctx: &InfoContext,
+///     for_crash_report: bool) -> RedisResult
+/// {
+///     ctx.builder()
+///         .add_section("test_info")
+///         .field("test_field1", "test_value1")?
+///         .field("test_field2", "test_value2")?
+///         .build_section()?
+///         .build_info()?;
+///
+///     Ok(())
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn info_command_handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let ast: ItemFn = match syn::parse(item) {
+        Ok(res) => res,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    let gen = quote! {
+        #[linkme::distributed_slice(redis_module::server_events::INFO_COMMAND_HANDLER_LIST)]
+        #ast
+    };
+    gen.into()
+}
+
+/// Implements a corresponding [`From`] for this struct, to convert
+/// objects of this struct to an information object to be sent to the
+/// [`redis_module::InfoContext`] as a reply.
+///
+/// Example:
+///
+/// ```rust,no_run,ignore
+/// #[derive(InfoSection)]
+/// struct Info {
+///     field_1: String,
+///     field_2: u64,
+///     dictionary_1: BTreeMap<String, String>,
+/// }
+/// ```
+///
+/// This procedural macro only implements an easy way to convert objects
+/// of this struct, it doesn't automatically do anything. To actually
+/// make use of this, we must return an object of this struct from the
+/// corresponding handler (`info` handler):
+///
+/// ```rust,no_run,ignore
+/// static mut INFO: Info = Info::new();
+///
+/// #[info_command_handler]
+/// fn info_command_handler(
+///     ctx: &InfoContext,
+///     _for_crash_report: bool) -> RedisResult
+/// {
+///     ctx.build_one_section(INFO)
+/// }
+/// ```
+///
+/// # Notes
+///
+/// 1. The name of the struct is taken "as is", so if it starts with
+/// a capital letter (written in the "Upper Camel Case"), like in this
+/// example - `Info`, then it will be compiled into a string prefixed
+/// with the module name, ending up being `"module_name_Info"`-named
+/// section. The fields of the struct are also prefixed with the module
+/// name, so the `field_1` will be prefixed with `module_name_` as well.
+/// 2. In dictionaries, the type of dictionaries supported varies,
+/// for now it is [`std::collections::BTreeMap`] and
+/// [`std::collections::HashMap`].
+/// 3. In dictionaries, the value type can be anything that can be
+/// converted into an object of type
+/// [`redis_module::InfoContextBuilderFieldBottomLevelValue`], for
+/// example, a [`std::string::String`] or [`u64`]. Please, refer to
+/// [`redis_module::InfoContextBuilderFieldBottomLevelValue`] for more
+/// information.
+#[proc_macro_derive(InfoSection)]
+pub fn info_section(item: TokenStream) -> TokenStream {
+    info_section::info_section(item)
 }

@@ -351,7 +351,7 @@ impl CommandInfo {
 }
 
 #[distributed_slice()]
-pub static COMMNADS_LIST: [fn() -> Result<CommandInfo, RedisError>] = [..];
+pub static COMMANDS_LIST: [fn() -> Result<CommandInfo, RedisError>] = [..];
 
 pub fn get_redis_key_spec(key_spec: Vec<KeySpec>) -> Vec<raw::RedisModuleCommandKeySpec> {
     let mut redis_key_spec: Vec<raw::RedisModuleCommandKeySpec> =
@@ -368,14 +368,13 @@ api! {[
     ],
     /// Register all the commands located on `COMMNADS_LIST`.
     fn register_commands_internal(ctx: &Context) -> Result<(), RedisError> {
-        COMMNADS_LIST.iter().try_for_each(|command| {
+        COMMANDS_LIST.iter().try_for_each(|command| {
             let command_info = command()?;
             let name: CString = CString::new(command_info.name.as_str()).unwrap();
             let flags = CString::new(
                 command_info
                     .flags
-                    .as_ref()
-                    .map(|v| v.as_str())
+                    .as_deref()
                     .unwrap_or(""),
             )
             .unwrap();
@@ -468,9 +467,15 @@ api! {[
     }
 }
 
-#[cfg(any(
-    feature = "min-redis-compatibility-version-7-2",
-    feature = "min-redis-compatibility-version-7-0"
+#[cfg(all(
+    any(
+        feature = "min-redis-compatibility-version-7-2",
+        feature = "min-redis-compatibility-version-7-0"
+    ),
+    not(any(
+        feature = "min-redis-compatibility-version-6-2",
+        feature = "min-redis-compatibility-version-6-0"
+    ))
 ))]
 pub fn register_commands(ctx: &Context) -> Status {
     register_commands_internal(ctx).map_or_else(
@@ -482,9 +487,15 @@ pub fn register_commands(ctx: &Context) -> Status {
     )
 }
 
-#[cfg(any(
-    feature = "min-redis-compatibility-version-6-2",
-    feature = "min-redis-compatibility-version-6-0"
+#[cfg(all(
+    any(
+        feature = "min-redis-compatibility-version-6-2",
+        feature = "min-redis-compatibility-version-6-0"
+    ),
+    not(any(
+        feature = "min-redis-compatibility-version-7-2",
+        feature = "min-redis-compatibility-version-7-0"
+    ))
 ))]
 pub fn register_commands(ctx: &Context) -> Status {
     register_commands_internal(ctx).map_or_else(

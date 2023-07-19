@@ -222,7 +222,7 @@ struct Args {
 
 impl Parse for Args {
     fn parse(input: ParseStream) -> parse::Result<Self> {
-        from_stream(config::JSONY, &input)
+        from_stream(config::JSONY, input)
     }
 }
 
@@ -241,12 +241,12 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
     let original_function_name = func.sig.ident.clone();
 
     let c_function_name = Ident::new(
-        &format!("_inner_{}", func.sig.ident.to_string()),
+        &format!("_inner_{}", func.sig.ident),
         func.sig.ident.span(),
     );
 
     let get_command_info_function_name = Ident::new(
-        &format!("_inner_get_command_info_{}", func.sig.ident.to_string()),
+        &format!("_inner_get_command_info_{}", func.sig.ident),
         func.sig.ident.span(),
     );
 
@@ -347,7 +347,7 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
             context.reply(response.map(|v| v.into())) as i32
         }
 
-        #[linkme::distributed_slice(redis_module::commands::COMMNADS_LIST)]
+        #[linkme::distributed_slice(redis_module::commands::COMMANDS_LIST)]
         fn #get_command_info_function_name() -> Result<redis_module::commands::CommandInfo, redis_module::RedisError> {
             let key_spec = vec![
                 #(

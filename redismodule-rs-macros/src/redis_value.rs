@@ -41,7 +41,7 @@ struct FieldAttr {
 
 impl Parse for FieldAttr {
     fn parse(input: ParseStream) -> parse::Result<Self> {
-        from_stream(config::JSONY, &input)
+        from_stream(config::JSONY, input)
     }
 }
 
@@ -142,7 +142,7 @@ pub fn redis_value(item: TokenStream) -> TokenStream {
         Data::Struct(s) => struct_redis_value(struct_name, s),
         Data::Enum(e) => enum_redis_value(struct_name, e),
         _ => {
-            return quote! {compile_error!("RedisValue derive can only be apply on struct.")}.into()
+            quote! {compile_error!("RedisValue derive can only be apply on struct.")}.into()
         }
     }
 }

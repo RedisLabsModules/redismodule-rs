@@ -1,18 +1,23 @@
 use bitflags::bitflags;
 use redis_module_macros_internals::api;
+use std::collections::{BTreeMap, HashMap};
 use std::ffi::CString;
 use std::os::raw::c_void;
 use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr::{self, NonNull};
 use std::sync::atomic::{AtomicPtr, Ordering};
 
-use crate::add_info_section;
 use crate::key::{RedisKey, RedisKeyWritable};
 use crate::logging::RedisLogLevel;
 use crate::raw::{ModuleOptions, Version};
 use crate::redisvalue::RedisValueKey;
-use crate::{add_info_field_long_long, add_info_field_str, raw, utils, Status};
-use crate::{RedisError, RedisResult, RedisString, RedisValue};
+use crate::{
+    add_info_begin_dict_field, add_info_end_dict_field, add_info_field_double,
+    add_info_field_long_long, add_info_field_str, add_info_field_unsigned_long_long, raw, utils,
+    Status,
+};
+use crate::{add_info_section, RedisResult};
+use crate::{RedisError, RedisString, RedisValue};
 use std::ops::Deref;
 
 use std::ffi::CStr;
@@ -735,7 +740,7 @@ impl Context {
     /// now on using this context will be validated againts this new user.
     /// Return [ContextUserScope] which make sure to unset the user when freed and
     /// can not outlive the current [Context].
-    pub fn autenticate_user(
+    pub fn authenticate_user(
         &self,
         user_name: &RedisString,
     ) -> Result<ContextUserScope<'_>, RedisError> {
@@ -871,6 +876,351 @@ bitflags! {
     }
 }
 
+/// The values allowed in the "info" sections and dictionaries.
+#[derive(Debug, Clone)]
+pub enum InfoContextBuilderFieldBottomLevelValue {
+    /// A simple string value.
+    String(String),
+    /// A numeric value ([`i64`]).
+    I64(i64),
+    /// A numeric value ([`u64`]).
+    U64(u64),
+    /// A numeric value ([`f64`]).
+    F64(f64),
+}
+
+impl From<String> for InfoContextBuilderFieldBottomLevelValue {
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+
+impl From<&str> for InfoContextBuilderFieldBottomLevelValue {
+    fn from(value: &str) -> Self {
+        Self::String(value.to_owned())
+    }
+}
+
+impl From<i64> for InfoContextBuilderFieldBottomLevelValue {
+    fn from(value: i64) -> Self {
+        Self::I64(value)
+    }
+}
+
+impl From<u64> for InfoContextBuilderFieldBottomLevelValue {
+    fn from(value: u64) -> Self {
+        Self::U64(value)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum InfoContextBuilderFieldTopLevelValue {
+    /// A simple bottom-level value.
+    Value(InfoContextBuilderFieldBottomLevelValue),
+    /// A dictionary value.
+    ///
+    /// An example of what it looks like:
+    /// ```no_run,ignore,
+    /// > redis-cli: INFO
+    /// >
+    /// > # <section name>
+    /// <dictionary name>:<key 1>=<value 1>,<key 2>=<value 2>
+    /// ```
+    ///
+    /// Let's suppose we added a section `"my_info"`. Then into this
+    /// section we can add a dictionary. Let's add a dictionary named
+    /// `"module"`, with with fields `"name"` which is equal to
+    /// `"redisgears_2"` and `"ver"` with a value of `999999`. If our
+    /// module is named "redisgears_2", we can call `INFO redisgears_2`
+    /// to obtain this information:
+    ///
+    /// ```no_run,ignore,
+    /// > redis-cli: INFO redisgears_2
+    /// >
+    /// > # redisgears_2_my_info
+    /// module:name=redisgears_2,ver=999999
+    /// ```
+    Dictionary {
+        name: String,
+        fields: InfoContextFieldBottomLevelData,
+    },
+}
+
+impl<T: Into<InfoContextBuilderFieldBottomLevelValue>> From<T>
+    for InfoContextBuilderFieldTopLevelValue
+{
+    fn from(value: T) -> Self {
+        Self::Value(value.into())
+    }
+}
+
+/// Builds a dictionary within the [`InfoContext`], similar to
+/// `INFO KEYSPACE`.
+#[derive(Debug)]
+pub struct InfoContextBuilderDictionaryBuilder<'a> {
+    /// The info section builder this dictionary builder is for.
+    info_section_builder: InfoContextBuilderSectionBuilder<'a>,
+    /// The name of the section to build.
+    name: String,
+    /// The fields this section contains.
+    fields: InfoContextFieldBottomLevelData,
+}
+
+impl<'a> InfoContextBuilderDictionaryBuilder<'a> {
+    /// Adds a field within this section.
+    pub fn field<F: Into<InfoContextBuilderFieldBottomLevelValue>>(
+        mut self,
+        name: &str,
+        value: F,
+    ) -> RedisResult<Self> {
+        if self.fields.iter().any(|k| k.0 .0 == name) {
+            return Err(RedisError::String(format!(
+                "Found duplicate key '{name}' in the info dictionary '{}'",
+                self.name
+            )));
+        }
+
+        self.fields.push((name.to_owned(), value.into()).into());
+        Ok(self)
+    }
+
+    /// Builds the dictionary with the fields provided.
+    pub fn build_dictionary(self) -> RedisResult<InfoContextBuilderSectionBuilder<'a>> {
+        let name = self.name;
+        let name_ref = name.clone();
+        self.info_section_builder.field(
+            &name_ref,
+            InfoContextBuilderFieldTopLevelValue::Dictionary {
+                name,
+                fields: self.fields.to_owned(),
+            },
+        )
+    }
+}
+
+/// Builds a section within the [`InfoContext`].
+#[derive(Debug)]
+pub struct InfoContextBuilderSectionBuilder<'a> {
+    /// The info builder this section builder is for.
+    info_builder: InfoContextBuilder<'a>,
+    /// The name of the section to build.
+    name: String,
+    /// The fields this section contains.
+    fields: InfoContextFieldTopLevelData,
+}
+
+impl<'a> InfoContextBuilderSectionBuilder<'a> {
+    /// Adds a field within this section.
+    pub fn field<F: Into<InfoContextBuilderFieldTopLevelValue>>(
+        mut self,
+        name: &str,
+        value: F,
+    ) -> RedisResult<Self> {
+        if self.fields.iter().any(|(k, _)| k == name) {
+            return Err(RedisError::String(format!(
+                "Found duplicate key '{name}' in the info section '{}'",
+                self.name
+            )));
+        }
+        self.fields.push((name.to_owned(), value.into()));
+        Ok(self)
+    }
+
+    /// Adds a new dictionary.
+    pub fn add_dictionary(self, dictionary_name: &str) -> InfoContextBuilderDictionaryBuilder<'a> {
+        InfoContextBuilderDictionaryBuilder {
+            info_section_builder: self,
+            name: dictionary_name.to_owned(),
+            fields: InfoContextFieldBottomLevelData::default(),
+        }
+    }
+
+    /// Builds the section with the fields provided.
+    pub fn build_section(mut self) -> RedisResult<InfoContextBuilder<'a>> {
+        if self
+            .info_builder
+            .sections
+            .iter()
+            .any(|(k, _)| k == &self.name)
+        {
+            return Err(RedisError::String(format!(
+                "Found duplicate section in the Info reply: {}",
+                self.name
+            )));
+        }
+
+        self.info_builder
+            .sections
+            .push((self.name.clone(), self.fields));
+
+        Ok(self.info_builder)
+    }
+}
+
+/// A single info context's bottom level field data.
+#[derive(Debug, Clone)]
+#[repr(transparent)]
+pub struct InfoContextBottomLevelFieldData(pub (String, InfoContextBuilderFieldBottomLevelValue));
+impl Deref for InfoContextBottomLevelFieldData {
+    type Target = (String, InfoContextBuilderFieldBottomLevelValue);
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for InfoContextBottomLevelFieldData {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<T: Into<InfoContextBuilderFieldBottomLevelValue>> From<(String, T)>
+    for InfoContextBottomLevelFieldData
+{
+    fn from(value: (String, T)) -> Self {
+        Self((value.0, value.1.into()))
+    }
+}
+/// A type for the `key => bottom-level-value` storage of an info
+/// section.
+#[derive(Debug, Default, Clone)]
+#[repr(transparent)]
+pub struct InfoContextFieldBottomLevelData(pub Vec<InfoContextBottomLevelFieldData>);
+impl Deref for InfoContextFieldBottomLevelData {
+    type Target = Vec<InfoContextBottomLevelFieldData>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for InfoContextFieldBottomLevelData {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+/// A type alias for the `key => top-level-value` storage of an info
+/// section.
+pub type InfoContextFieldTopLevelData = Vec<(String, InfoContextBuilderFieldTopLevelValue)>;
+/// One section contents: name and children.
+pub type OneInfoSectionData = (String, InfoContextFieldTopLevelData);
+/// A type alias for the section data, associated with the info section.
+pub type InfoContextTreeData = Vec<OneInfoSectionData>;
+
+impl<T: Into<InfoContextBuilderFieldBottomLevelValue>> From<BTreeMap<String, T>>
+    for InfoContextFieldBottomLevelData
+{
+    fn from(value: BTreeMap<String, T>) -> Self {
+        Self(
+            value
+                .into_iter()
+                .map(|e| (e.0, e.1.into()).into())
+                .collect(),
+        )
+    }
+}
+
+impl<T: Into<InfoContextBuilderFieldBottomLevelValue>> From<HashMap<String, T>>
+    for InfoContextFieldBottomLevelData
+{
+    fn from(value: HashMap<String, T>) -> Self {
+        Self(
+            value
+                .into_iter()
+                .map(|e| (e.0, e.1.into()).into())
+                .collect(),
+        )
+    }
+}
+
+#[derive(Debug)]
+pub struct InfoContextBuilder<'a> {
+    context: &'a InfoContext,
+    sections: InfoContextTreeData,
+}
+impl<'a> InfoContextBuilder<'a> {
+    fn add_bottom_level_field(
+        &self,
+        key: &str,
+        value: &InfoContextBuilderFieldBottomLevelValue,
+    ) -> RedisResult<()> {
+        use InfoContextBuilderFieldBottomLevelValue as BottomLevel;
+
+        match value {
+            BottomLevel::String(string) => add_info_field_str(self.context.ctx, key, string),
+            BottomLevel::I64(number) => add_info_field_long_long(self.context.ctx, key, *number),
+            BottomLevel::U64(number) => {
+                add_info_field_unsigned_long_long(self.context.ctx, key, *number)
+            }
+            BottomLevel::F64(number) => add_info_field_double(self.context.ctx, key, *number),
+        }
+        .into()
+    }
+    /// Adds fields. Make sure that the corresponding section/dictionary
+    /// have been added before calling this method.
+    fn add_top_level_fields(&self, fields: &InfoContextFieldTopLevelData) -> RedisResult<()> {
+        use InfoContextBuilderFieldTopLevelValue as TopLevel;
+
+        fields.iter().try_for_each(|(key, value)| match value {
+            TopLevel::Value(bottom_level) => self.add_bottom_level_field(key, bottom_level),
+            TopLevel::Dictionary { name, fields } => {
+                std::convert::Into::<RedisResult<()>>::into(add_info_begin_dict_field(
+                    self.context.ctx,
+                    name,
+                ))?;
+                fields
+                    .iter()
+                    .try_for_each(|f| self.add_bottom_level_field(&f.0 .0, &f.0 .1))?;
+                add_info_end_dict_field(self.context.ctx).into()
+            }
+        })
+    }
+
+    fn finalise_data(&self) -> RedisResult<()> {
+        self.sections
+            .iter()
+            .try_for_each(|(section_name, section_fields)| -> RedisResult<()> {
+                if add_info_section(self.context.ctx, Some(section_name)) == Status::Ok {
+                    self.add_top_level_fields(section_fields)
+                } else {
+                    // This section wasn't requested.
+                    Ok(())
+                }
+            })
+    }
+
+    /// Sends the info accumulated so far to the [`InfoContext`].
+    pub fn build_info(self) -> RedisResult<&'a InfoContext> {
+        self.finalise_data().map(|_| self.context)
+    }
+
+    /// Returns a section builder.
+    pub fn add_section(self, name: &'a str) -> InfoContextBuilderSectionBuilder {
+        InfoContextBuilderSectionBuilder {
+            info_builder: self,
+            name: name.to_owned(),
+            fields: InfoContextFieldTopLevelData::new(),
+        }
+    }
+
+    /// Adds the section data without checks for the values already
+    /// being present. In this case, the values will be overwritten.
+    pub(crate) fn add_section_unchecked(mut self, section: OneInfoSectionData) -> Self {
+        self.sections.push(section);
+        self
+    }
+}
+
+impl<'a> From<&'a InfoContext> for InfoContextBuilder<'a> {
+    fn from(context: &'a InfoContext) -> Self {
+        Self {
+            context,
+            sections: InfoContextTreeData::new(),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct InfoContext {
     pub ctx: *mut raw::RedisModuleInfoCtx,
 }
@@ -880,17 +1230,38 @@ impl InfoContext {
         Self { ctx }
     }
 
-    #[allow(clippy::must_use_candidate)]
+    /// Returns a builder for the [`InfoContext`].
+    pub fn builder(&self) -> InfoContextBuilder<'_> {
+        InfoContextBuilder::from(self)
+    }
+
+    /// Returns a build result for the passed [`OneInfoSectionData`].
+    pub fn build_one_section<T: Into<OneInfoSectionData>>(&self, data: T) -> RedisResult<()> {
+        self.builder()
+            .add_section_unchecked(data.into())
+            .build_info()?;
+        Ok(())
+    }
+
+    #[deprecated = "Please use [`InfoContext::builder`] instead."]
+    /// The `name` of the sction will be prefixed with the module name
+    /// and an underscore: `<module name>_<name>`.
     pub fn add_info_section(&self, name: Option<&str>) -> Status {
         add_info_section(self.ctx, name)
     }
 
-    #[allow(clippy::must_use_candidate)]
+    #[deprecated = "Please use [`InfoContext::builder`] instead."]
+    /// The `name` will be prefixed with the module name and an
+    /// underscore: `<module name>_<name>`. The `content` pass is left
+    /// "as is".
     pub fn add_info_field_str(&self, name: &str, content: &str) -> Status {
         add_info_field_str(self.ctx, name, content)
     }
 
-    #[allow(clippy::must_use_candidate)]
+    #[deprecated = "Please use [`InfoContext::builder`] instead."]
+    /// The `name` will be prefixed with the module name and an
+    /// underscore: `<module name>_<name>`. The `value` pass is left
+    /// "as is".
     pub fn add_info_field_long_long(&self, name: &str, value: c_longlong) -> Status {
         add_info_field_long_long(self.ctx, name, value)
     }

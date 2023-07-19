@@ -113,19 +113,57 @@ fn test_command_name() -> Result<()> {
 
 #[test]
 fn test_helper_info() -> Result<()> {
-    let port: u16 = 6483;
-    let _guards = vec![start_redis_server_with_module("test_helper", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    const MODULES: [(&str, bool); 4] = [
+        ("test_helper", false),
+        ("info_handler_macro", false),
+        ("info_handler_builder", true),
+        ("info_handler_struct", true),
+    ];
 
-    let res: String = redis::cmd("INFO")
-        .arg("TEST_HELPER")
-        .query(&mut con)
-        .with_context(|| "failed to run INFO TEST_HELPER")?;
-    assert!(res.contains("test_helper_field:test_helper_value"));
+    MODULES
+        .into_iter()
+        .try_for_each(|(module, has_dictionary)| {
+            let port: u16 = 6483;
+            let _guards = vec![start_redis_server_with_module(module, port)
+                .with_context(|| "failed to start redis server")?];
+            let mut con =
+                get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
-    Ok(())
+            let res: String = redis::cmd("INFO")
+                .arg(module)
+                .query(&mut con)
+                .with_context(|| format!("failed to run INFO {module}"))?;
+
+            assert!(res.contains(&format!("{module}_field:value")));
+            if has_dictionary {
+                assert!(res.contains("dictionary:key=value"));
+            }
+
+            Ok(())
+        })
+}
+
+#[test]
+fn test_info_handler_multiple_sections() -> Result<()> {
+    const MODULES: [&str; 1] = ["info_handler_multiple_sections"];
+
+    MODULES.into_iter().try_for_each(|module| {
+        let port: u16 = 6500;
+        let _guards = vec![start_redis_server_with_module(module, port)
+            .with_context(|| "failed to start redis server")?];
+        let mut con =
+            get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+        let res: String = redis::cmd("INFO")
+            .arg(format!("{module}_InfoSection2"))
+            .query(&mut con)
+            .with_context(|| format!("failed to run INFO {module}"))?;
+
+        assert!(res.contains(&format!("{module}_field_2:value2")));
+        assert!(!res.contains(&format!("{module}_field_1:value1")));
+
+        Ok(())
+    })
 }
 
 #[allow(unused_must_use)]
