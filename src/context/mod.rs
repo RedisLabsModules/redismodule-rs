@@ -796,7 +796,10 @@ impl Context {
         /// as a logical bug that need to be fixed in the module, an attempt to protect against
         /// infinite loops by halting the execution could result in violation of the feature correctness
         /// and so Redis will make no attempt to protect the module from infinite loops.
-        pub fn add_post_notification_job<F: FnOnce(&Context)>(&self, callback: F) -> Status {
+        pub fn add_post_notification_job<F: FnOnce(&Context) + 'static>(
+            &self,
+            callback: F,
+        ) -> Status {
             let callback = Box::into_raw(Box::new(Some(callback)));
             unsafe {
                 RedisModule_AddPostNotificationJob(
