@@ -864,6 +864,7 @@ unsafe impl RedisLockIndicator for Context {}
 bitflags! {
     /// An object represent ACL permissions.
     /// Used to check ACL permission using `acl_check_key_permission`.
+    #[derive(Debug)]
     pub struct AclPermissions : c_int {
         /// User can look at the content of the value, either return it or copy it.
         const ACCESS = raw::REDISMODULE_CMD_KEY_ACCESS as c_int;
