@@ -242,6 +242,7 @@ unsafe impl Sync for DetachedContext {}
 
 /// `Context` is a structure that's designed to give us a high-level interface to
 /// the Redis module API by abstracting away the raw C FFI calls.
+#[derive(Debug)]
 pub struct Context {
     pub ctx: *mut raw::RedisModuleCtx,
 }
@@ -251,6 +252,7 @@ pub struct Context {
 /// This guerd make sure to unset the user when freed.
 /// It prevent privilege escalation security issues
 /// that can happened by forgeting to unset the user.
+#[derive(Debug)]
 pub struct ContextUserScope<'ctx> {
     ctx: &'ctx Context,
     user: *mut raw::RedisModuleUser,
@@ -864,6 +866,7 @@ unsafe impl RedisLockIndicator for Context {}
 bitflags! {
     /// An object represent ACL permissions.
     /// Used to check ACL permission using `acl_check_key_permission`.
+    #[derive(Debug)]
     pub struct AclPermissions : c_int {
         /// User can look at the content of the value, either return it or copy it.
         const ACCESS = raw::REDISMODULE_CMD_KEY_ACCESS as c_int;

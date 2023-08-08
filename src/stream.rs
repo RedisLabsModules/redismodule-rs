@@ -6,11 +6,13 @@ use crate::Status;
 use std::os::raw::c_long;
 use std::ptr;
 
+#[derive(Debug)]
 pub struct StreamRecord {
     pub id: raw::RedisModuleStreamID,
     pub fields: Vec<(RedisString, RedisString)>,
 }
 
+#[derive(Debug)]
 pub struct StreamIterator<'key> {
     key: &'key RedisKey,
 }
