@@ -135,7 +135,7 @@ redis-module-macros = { path = "./redismodule-rs-macros"}
 redis-module = { path = "./", default-features = false, features = ["min-redis-compatibility-version-7-2"] }
 
 [build-dependencies]
-bindgen = "0.66"
+bindgen = "0.68"
 cc = "1"
 
 [features]
