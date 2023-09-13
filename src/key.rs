@@ -32,20 +32,6 @@ pub enum KeyMode {
     ReadWrite,
 }
 
-/// RedisModule_OpenKey extra flags for the 'mode' argument
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum KeyFlag {
-    /// Avoid touching the LRU/LFU of the key when opened.
-    NOTOUCH,
-    /// Don't trigger keyspace event on key misses.
-    NONOTIFY,
-    /// Don't update keyspace hits/misses counters
-    NOSTATS,
-    /// Avoid deleting lazy expired keys.
-    NOEXPIRE,
-    /// Avoid any effects from fetching the key.
-    NOEFFECTS
-}
 
 #[derive(Debug)]
 pub struct RedisKey {
@@ -65,8 +51,8 @@ impl RedisKey {
         Self { ctx, key_inner }
     }
 
-    pub fn open_with_flags(ctx: *mut raw::RedisModuleCtx, key: &RedisString, flags: &Vec<KeyFlag>) -> Self {
-        let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::Read) |  to_raw_flags(flags));
+    pub fn open_with_flags(ctx: *mut raw::RedisModuleCtx, key: &RedisString, flags: raw::KeyMode) -> Self {
+        let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::Read) | flags);
         Self { ctx, key_inner }
     }
 
@@ -196,8 +182,8 @@ impl RedisKeyWritable {
         Self { ctx, key_inner }
     }
 
-    pub fn open_with_flags(ctx: *mut raw::RedisModuleCtx, key: &RedisString, flags: &Vec<KeyFlag>) -> Self {
-        let key_inner = raw::open_key(ctx, key.inner,  to_raw_mode(KeyMode::ReadWrite) |  to_raw_flags(flags));
+    pub fn open_with_flags(ctx: *mut raw::RedisModuleCtx, key: &RedisString, flags: raw::KeyMode) -> Self {
+        let key_inner = raw::open_key(ctx, key.inner,  to_raw_mode(KeyMode::ReadWrite) |  flags);
         Self { ctx, key_inner }
     }
 
@@ -630,22 +616,6 @@ fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
         KeyMode::Read => raw::KeyMode::READ,
         KeyMode::ReadWrite => raw::KeyMode::READ | raw::KeyMode::WRITE,
     }
-}
-
-fn to_raw_flag(flag: KeyFlag)->raw::KeyMode {
-    match flag {
-        KeyFlag::NOTOUCH => raw::KeyMode::NOTOUCH,
-        KeyFlag::NONOTIFY => raw::KeyMode::NONOTIFY,
-        KeyFlag::NOSTATS => raw::KeyMode::NOSTATS,
-        KeyFlag::NOEXPIRE => raw::KeyMode::NOEXPIRE,
-        KeyFlag::NOEFFECTS => raw::KeyMode::NOEFFECTS,
-    }
-}
-
-fn to_raw_flags(flags: &Vec<KeyFlag>) -> raw::KeyMode {
-    flags.iter().fold(raw::KeyMode::empty(), |acc, flag| {
-        acc | to_raw_flag(*flag)
-    })
 }
 
 /// # Panics
