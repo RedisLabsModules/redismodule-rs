@@ -29,6 +29,17 @@ bitflags! {
     pub struct KeyMode: c_int {
         const READ = REDISMODULE_READ as c_int;
         const WRITE = REDISMODULE_WRITE as c_int;
+
+        /// Avoid touching the LRU/LFU of the key when opened.
+        const NOTOUCH = REDISMODULE_OPEN_KEY_NOTOUCH as c_int;
+        /// Don't trigger keyspace event on key misses.
+        const NONOTIFY = REDISMODULE_OPEN_KEY_NONOTIFY as c_int;
+        /// Don't update keyspace hits/misses counters.
+        const NOSTATS = REDISMODULE_OPEN_KEY_NOSTATS as c_int;
+        /// Avoid deleting lazy expired keys.
+        const NOEXPIRE = REDISMODULE_OPEN_KEY_NOEXPIRE as c_int;
+        /// Avoid any effects from fetching the key.
+        const NOEFFECTS = REDISMODULE_OPEN_KEY_NOEFFECTS as c_int;
     }
 }
 

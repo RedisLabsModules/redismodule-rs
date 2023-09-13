@@ -7,7 +7,7 @@ use std::os::raw::{c_char, c_int, c_long, c_longlong};
 use std::ptr::{self, NonNull};
 use std::sync::atomic::{AtomicPtr, Ordering};
 
-use crate::key::{RedisKey, RedisKeyWritable};
+use crate::key::{RedisKey, RedisKeyWritable, KeyFlag};
 use crate::logging::RedisLogLevel;
 use crate::raw::{ModuleOptions, Version};
 use crate::redisvalue::RedisValueKey;
@@ -613,10 +613,21 @@ impl Context {
     pub fn open_key(&self, key: &RedisString) -> RedisKey {
         RedisKey::open(self.ctx, key)
     }
+    
+    #[must_use]
+    pub fn open_key_with_flags(&self, key: &RedisString, flags: &Vec<KeyFlag>) -> RedisKey {
+        RedisKey::open_with_flags(self.ctx, key, flags)
+    }
+
 
     #[must_use]
     pub fn open_key_writable(&self, key: &RedisString) -> RedisKeyWritable {
         RedisKeyWritable::open(self.ctx, key)
+    }
+
+    #[must_use]
+    pub fn open_key_writable_with_flags(&self, key: &RedisString, flags: &Vec<KeyFlag>) -> RedisKeyWritable {
+        RedisKeyWritable::open_with_flags(self.ctx, key, flags)
     }
 
     pub fn replicate_verbatim(&self) {

@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-cargo test --all-targets --features test,experimental-api
+cargo test --all --all-targets --no-default-features
