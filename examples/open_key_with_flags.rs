@@ -1,6 +1,5 @@
 use std::{thread, time::Duration};
 
-use redis_module::redisvalue::RedisValueKey;
 use redis_module::{redis_module, Context, RedisError, RedisResult, RedisString, NextArg, RedisValue};
 use redis_module::key::KeyFlag;
 
@@ -30,7 +29,7 @@ fn read(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let stats = ctx.call("info", &["stats"]).expect("error");
     key.set_expire(Duration::from_millis(1));
     thread::sleep(Duration::from_millis(1));
-    let key = ctx.open_key_with_flags(&key_name, &[KeyFlag::NOEFFECTS].to_vec());
+    ctx.open_key_with_flags(&key_name, &[KeyFlag::NOEFFECTS].to_vec());
     let stats_after = ctx.call("info", &["stats"]).expect("error");
     let expired_before = extract_expired_keys_from_stats(stats);
     let expired_after = extract_expired_keys_from_stats(stats_after);
@@ -53,7 +52,7 @@ fn write(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let stats = ctx.call("info", &["stats"]).expect("error");
     key.set_expire(Duration::from_millis(1));
     thread::sleep(Duration::from_millis(1));
-    let key = ctx.open_key_writable_with_flags(&key_name, &[KeyFlag::NOEFFECTS].to_vec());
+    ctx.open_key_writable_with_flags(&key_name, &[KeyFlag::NOEFFECTS].to_vec());
     let stats_after = ctx.call("info", &["stats"]).expect("error");
     
     let expired_before = extract_expired_keys_from_stats(stats);

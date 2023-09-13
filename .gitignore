@@ -21,3 +21,5 @@ dump.rdb
 
 # Debugger-related files:
 .gdb_history
+
+venv/

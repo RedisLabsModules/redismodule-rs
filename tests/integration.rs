@@ -649,7 +649,7 @@ fn test_call_blocking() -> Result<()> {
 
 #[test]
 fn test_open_key_with_flags() -> Result<()> {
-    let port: u16 = 6500;
+    let port: u16 = 6501;
     let _guards = vec![start_redis_server_with_module("open_key_with_flags", port)
         .with_context(|| "failed to start redis server")?];
     let mut con =
