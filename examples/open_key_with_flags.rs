@@ -21,7 +21,7 @@ fn validate_open_key_with_no_effects(ctx: &Context, key_name: RedisString, read_
     let key = ctx.open_key_writable(&key_name);
     let stats = ctx.call("info", &["stats"])?;
     key.set_expire(Duration::from_millis(1));
-    thread::sleep(Duration::from_millis(1));
+    thread::sleep(Duration::from_millis(2));
     if read_write {
         ctx.open_key_writable_with_flags(&key_name, raw::KeyMode::NOEFFECTS);
     } else {
