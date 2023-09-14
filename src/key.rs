@@ -7,16 +7,19 @@ use std::ptr::NonNull;
 use std::time::Duration;
 
 use libc::size_t;
+use std::os::raw::c_int;
 
 use raw::KeyType;
 
 use crate::native_types::RedisType;
 use crate::raw;
 use crate::redismodule::REDIS_OK;
+pub use crate::redisraw::bindings::*;
 use crate::stream::StreamIterator;
 use crate::RedisError;
 use crate::RedisResult;
 use crate::RedisString;
+use bitflags::bitflags;
 
 /// `RedisKey` is an abstraction over a Redis key that allows readonly
 /// operations.
@@ -32,6 +35,20 @@ pub enum KeyMode {
     ReadWrite,
 }
 
+bitflags! {
+    pub struct KeyFlags: c_int {
+        /// Avoid touching the LRU/LFU of the key when opened.
+        const NOTOUCH = REDISMODULE_OPEN_KEY_NOTOUCH as c_int;
+        /// Don't trigger keyspace event on key misses.
+        const NONOTIFY = REDISMODULE_OPEN_KEY_NONOTIFY as c_int;
+        /// Don't update keyspace hits/misses counters.
+        const NOSTATS = REDISMODULE_OPEN_KEY_NOSTATS as c_int;
+        /// Avoid deleting lazy expired keys.
+        const NOEXPIRE = REDISMODULE_OPEN_KEY_NOEXPIRE as c_int;
+        /// Avoid any effects from fetching the key.
+        const NOEFFECTS = REDISMODULE_OPEN_KEY_NOEFFECTS as c_int;
+    }
+}
 
 #[derive(Debug)]
 pub struct RedisKey {
@@ -51,8 +68,13 @@ impl RedisKey {
         Self { ctx, key_inner }
     }
 
-    pub fn open_with_flags(ctx: *mut raw::RedisModuleCtx, key: &RedisString, flags: raw::KeyMode) -> Self {
-        let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::Read) | flags);
+    pub fn open_with_flags(
+        ctx: *mut raw::RedisModuleCtx,
+        key: &RedisString,
+        flags: KeyFlags,
+    ) -> Self {
+        let key_inner =
+            raw::open_key_with_flags(ctx, key.inner, to_raw_mode(KeyMode::Read), flags.bits());
         Self { ctx, key_inner }
     }
 
@@ -182,8 +204,17 @@ impl RedisKeyWritable {
         Self { ctx, key_inner }
     }
 
-    pub fn open_with_flags(ctx: *mut raw::RedisModuleCtx, key: &RedisString, flags: raw::KeyMode) -> Self {
-        let key_inner = raw::open_key(ctx, key.inner,  to_raw_mode(KeyMode::ReadWrite) |  flags);
+    pub fn open_with_flags(
+        ctx: *mut raw::RedisModuleCtx,
+        key: &RedisString,
+        flags: KeyFlags,
+    ) -> Self {
+        let key_inner = raw::open_key_with_flags(
+            ctx,
+            key.inner,
+            to_raw_mode(KeyMode::ReadWrite),
+            flags.bits(),
+        );
         Self { ctx, key_inner }
     }
 
