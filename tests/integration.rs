@@ -1,3 +1,6 @@
+use std::thread;
+use std::time::Duration;
+
 use crate::utils::{get_redis_connection, start_redis_server_with_module};
 use anyhow::Context;
 use anyhow::Result;
@@ -653,13 +656,58 @@ fn test_open_key_with_flags() -> Result<()> {
     let _guards = vec![start_redis_server_with_module("open_key_with_flags", port)
         .with_context(|| "failed to start redis server")?];
     let mut con =
-    get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
-    let res = redis::cmd("open_key_with_flags.read").arg(&["x"]).query(&mut con);
-    assert_eq!(res, Ok(()));
+    // Avoid active expriation
+    redis::cmd("DEBUG")
+        .arg(&["SET-ACTIVE-EXPIRE", "0"])
+        .query(&mut con)
+        .with_context(|| "failed to run DEBUG SET-ACTIVE-EXPIRE")?;
 
-    let res = redis::cmd("open_key_with_flags.write").arg(&["x"]).query(&mut con);
-    assert_eq!(res, Ok(()));
+    for read_write in [true, false].iter() {
+        redis::cmd("set")
+            .arg(&["x", "1"])
+            .query(&mut con)
+            .with_context(|| "failed to run string.set")?;
+
+        // Set experition time to 1 second.
+        redis::cmd("expire")
+            .arg(&["x", "1"])
+            .query(&mut con)
+            .with_context(|| "failed to run expire")?;
+
+        // Sleep for 2 seconds, ensure expiration time has passed.
+        thread::sleep(Duration::from_secs(2));
+
+        let cmd = if *read_write {
+            "open_key_with_flags.write"
+        } else {
+            "open_key_with_flags.read"
+        };
+
+        // Open key as read only or ReadWrite with NOEFFECTS flag.
+        let res = redis::cmd(cmd).arg(&["x"]).query(&mut con);
+        assert_eq!(res, Ok(()));
+
+        // Get the number of expired keys.
+        let stats: String = redis::cmd("info").arg(&["stats"]).query(&mut con)?;
+
+        // Find the number of expired keys, x,  according to the substring "expired_keys:{x}"
+        let expired_keys = stats
+            .match_indices("expired_keys:")
+            .next()
+            .map(|(i, _)| &stats[i..i + "expired_keys:".len() + 1])
+            .and_then(|s| s.split(':').nth(1))
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(-1);
+
+        // Ensure that no keys were expired.
+        assert_eq!(expired_keys, 0);
+
+        // Delete key and reset stats
+        redis::cmd("del").arg(&["x"]).query(&mut con)?;
+        redis::cmd("config").arg(&["RESETSTAT"]).query(&mut con)?;
+    }
 
     Ok(())
 }
