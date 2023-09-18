@@ -68,7 +68,7 @@ impl RedisKey {
         Self { ctx, key_inner }
     }
 
-    pub fn open_with_flags(
+    pub(crate) fn open_with_flags(
         ctx: *mut raw::RedisModuleCtx,
         key: &RedisString,
         flags: KeyFlags,
@@ -204,7 +204,7 @@ impl RedisKeyWritable {
         Self { ctx, key_inner }
     }
 
-    pub fn open_with_flags(
+    pub(crate) fn open_with_flags(
         ctx: *mut raw::RedisModuleCtx,
         key: &RedisString,
         flags: KeyFlags,
