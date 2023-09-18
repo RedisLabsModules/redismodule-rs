@@ -679,7 +679,6 @@ fn test_open_key_with_flags() -> Result<()> {
         // Sleep for 2 seconds, ensure expiration time has passed.
         thread::sleep(Duration::from_millis(500));
 
-
         // Open key as read only or ReadWrite with NOEFFECTS flag.
         let res = redis::cmd(cmd).arg(&["x"]).query(&mut con);
         assert_eq!(res, Ok(()));
