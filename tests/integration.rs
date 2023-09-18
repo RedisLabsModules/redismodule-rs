@@ -671,13 +671,13 @@ fn test_open_key_with_flags() -> Result<()> {
             .with_context(|| "failed to run string.set")?;
 
         // Set experition time to 1 second.
-        redis::cmd("expire")
+        redis::cmd("pexpire")
             .arg(&["x", "1"])
             .query(&mut con)
             .with_context(|| "failed to run expire")?;
 
         // Sleep for 2 seconds, ensure expiration time has passed.
-        thread::sleep(Duration::from_secs(2));
+        thread::sleep(Duration::from_millis(500));
 
 
         // Open key as read only or ReadWrite with NOEFFECTS flag.
@@ -688,10 +688,12 @@ fn test_open_key_with_flags() -> Result<()> {
         let stats: String = redis::cmd("info").arg(&["stats"]).query(&mut con)?;
 
         // Find the number of expired keys, x,  according to the substring "expired_keys:{x}"
-        use redis_module::utils::get_regexp_captures;
-        let expired_keys = get_regexp_captures(stats.as_str(), r"\bexpired_keys:([0-9]+)\b")
-            .unwrap()[0]
-            .parse::<i32>()
+        let expired_keys = stats
+            .match_indices("expired_keys:")
+            .next()
+            .map(|(i, _)| &stats[i..i + "expired_keys:".len() + 1])
+            .and_then(|s| s.split(':').nth(1))
+            .and_then(|s| s.parse::<i32>().ok())
             .unwrap_or(-1);
 
         // Ensure that no keys were expired.
