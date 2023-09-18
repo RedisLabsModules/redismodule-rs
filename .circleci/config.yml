@@ -71,7 +71,7 @@ commands:
     parameters:
       redis_version:
         type: string
-        default: "7.2-rc1"
+        default: "7.2"
       getredis_params:
         type: string
         default: ""
@@ -101,7 +101,7 @@ commands:
         default: ""
       redis_version:
         type: string
-        default: "7.2-rc1"
+        default: "7.2"
       getredis_params:
         type: string
         default: ""
@@ -118,6 +118,9 @@ commands:
           name: Check formatting
           shell: /bin/bash -l -eo pipefail
           command: make lint
+      - run:
+          name: patch macos tests # Avoid AVX with Regex with CircleCI since virtualization layer doesn't support it. Use sed to replace the relevant entry in cargo.toml
+          command: if [[ $(uname -s) == Darwin ]]; then sed -i 's/regex = "1"/regex = { version = "1", default-features = ["perf", "unicode"] }/g' Cargo.toml; fi
       - run:
           name: Build debug
           shell: /bin/bash -l -eo pipefail
