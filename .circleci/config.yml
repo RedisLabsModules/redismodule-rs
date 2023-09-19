@@ -121,7 +121,7 @@ commands:
       - run:
           name: patch macos tests # Avoid AVX with Regex with CircleCI since virtualization layer doesn't support it. Use sed to replace the relevant entry in cargo.toml
           command: |
-            if [[ $(uname -s) == Darwin ]]; then sed -i 's/regex = "1"/regex = { version = "1", default-features = ["perf", "unicode"] }/g' Cargo.toml; fi
+            if [[ $(uname -s) == Darwin ]]; then sed -i 's/regex = "1"/regex = { version = "1", features = ["perf", "unicode"] }/g' Cargo.toml; fi
             cat cargo.toml
       - run:
           name: Build debug
