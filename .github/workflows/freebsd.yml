@@ -26,5 +26,5 @@ jobs:
           sh rustup.sh -y
           . $HOME/.cargo/env
           rustup target add i686-unknown-freebsd
-          cargo build --all --all-targets --verbose --target i686-unknown-freebsd
+          cargo build --all --all-targets --verbose --no-default-features --target i686-unknown-freebsd
           

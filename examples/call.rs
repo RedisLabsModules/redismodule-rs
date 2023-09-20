@@ -1,7 +1,10 @@
 use redis_module::{
-    redis_module, CallOptionResp, CallOptionsBuilder, CallReply, CallResult, Context, RedisError,
-    RedisResult, RedisString,
+    redis_module, BlockedClient, CallOptionResp, CallOptionsBuilder, CallReply, CallResult,
+    Context, FutureCallReply, PromiseCallReply, RedisError, RedisResult, RedisString, RedisValue,
+    ThreadSafeContext,
 };
+
+use std::thread;
 
 fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
     let res: String = ctx.call("ECHO", &["TEST"])?.try_into()?;
@@ -110,6 +113,49 @@ fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
     Ok("pass".into())
 }
 
+fn call_blocking_internal(ctx: &Context) -> PromiseCallReply {
+    let call_options = CallOptionsBuilder::new().build_blocking();
+    ctx.call_blocking("blpop", &call_options, &["list", "1"])
+}
+
+fn call_blocking_handle_future(ctx: &Context, f: FutureCallReply, blocked_client: BlockedClient) {
+    let future_handler = f.set_unblock_handler(move |_ctx, reply| {
+        let thread_ctx = ThreadSafeContext::with_blocked_client(blocked_client);
+        thread_ctx.reply(reply.map_or_else(|e| Err(e.into()), |v| Ok((&v).into())));
+    });
+    future_handler.dispose(ctx);
+}
+
+fn call_blocking(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
+    let res = call_blocking_internal(ctx);
+    match res {
+        PromiseCallReply::Resolved(r) => r.map_or_else(|e| Err(e.into()), |v| Ok((&v).into())),
+        PromiseCallReply::Future(f) => {
+            let blocked_client = ctx.block_client();
+            call_blocking_handle_future(ctx, f, blocked_client);
+            Ok(RedisValue::NoReply)
+        }
+    }
+}
+
+fn call_blocking_from_detach_ctx(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
+    let blocked_client = ctx.block_client();
+    thread::spawn(move || {
+        let ctx_guard = redis_module::MODULE_CONTEXT.lock();
+        let res = call_blocking_internal(&ctx_guard);
+        match res {
+            PromiseCallReply::Resolved(r) => {
+                let thread_ctx = ThreadSafeContext::with_blocked_client(blocked_client);
+                thread_ctx.reply(r.map_or_else(|e| Err(e.into()), |v| Ok((&v).into())));
+            }
+            PromiseCallReply::Future(f) => {
+                call_blocking_handle_future(&ctx_guard, f, blocked_client);
+            }
+        }
+    });
+    Ok(RedisValue::NoReply)
+}
+
 //////////////////////////////////////////////////////
 
 redis_module! {
@@ -119,5 +165,7 @@ redis_module! {
     data_types: [],
     commands: [
         ["call.test", call_test, "", 0, 0, 0],
+        ["call.blocking", call_blocking, "", 0, 0, 0],
+        ["call.blocking_from_detached_ctx", call_blocking_from_detach_ctx, "", 0, 0, 0],
     ],
 }

@@ -18,21 +18,25 @@ pub use crate::rediserror::RedisError;
 pub use crate::redisvalue::RedisValue;
 use crate::Context;
 
-pub type RedisResult = Result<RedisValue, RedisError>;
+/// A short-hand type that stores a [std::result::Result] with custom
+/// type and [RedisError].
+pub type RedisResult<T = RedisValue> = Result<T, RedisError>;
+/// A [RedisResult] with [RedisValue].
+pub type RedisValueResult = RedisResult<RedisValue>;
 
-impl From<RedisValue> for RedisResult {
+impl From<RedisValue> for RedisValueResult {
     fn from(v: RedisValue) -> Self {
         Ok(v)
     }
 }
 
-impl From<RedisError> for RedisResult {
+impl From<RedisError> for RedisValueResult {
     fn from(v: RedisError) -> Self {
         Err(v)
     }
 }
 
-pub const REDIS_OK: RedisResult = Ok(RedisValue::SimpleStringStatic("OK"));
+pub const REDIS_OK: RedisValueResult = Ok(RedisValue::SimpleStringStatic("OK"));
 pub const TYPE_METHOD_VERSION: u64 = raw::REDISMODULE_TYPE_METHOD_VERSION as u64;
 
 pub trait NextArg {
@@ -97,9 +101,6 @@ pub fn decode_args(
     argv: *mut *mut raw::RedisModuleString,
     argc: c_int,
 ) -> Vec<RedisString> {
-    if argv.is_null() {
-        return Vec::new();
-    }
     unsafe { slice::from_raw_parts(argv, argc as usize) }
         .iter()
         .map(|&arg| RedisString::new(NonNull::new(ctx), arg))

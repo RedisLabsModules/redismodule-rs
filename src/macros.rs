@@ -20,7 +20,7 @@ macro_rules! redis_command {
 
             let args = $crate::decode_args(ctx, argv, argc);
             let response = $command_handler(&context, args);
-            context.reply(response) as c_int
+            context.reply(response.map(|v| v.into())) as c_int
         }
         /////////////////////
 
@@ -156,14 +156,22 @@ macro_rules! redis_module {
         #[global_allocator]
         static REDIS_MODULE_ALLOCATOR: $allocator_type = $allocator_init;
 
+        // The old-style info command handler, if specified.
+        $(
+            #[redis_module_macros::info_command_handler]
+            #[inline]
+            fn module_info(ctx: &InfoContext, for_crash_report: bool) -> RedisResult<()> {
+                $info_func(ctx, for_crash_report);
+
+                Ok(())
+            }
+        )?
+
         extern "C" fn __info_func(
             ctx: *mut $crate::raw::RedisModuleInfoCtx,
             for_crash_report: i32,
         ) {
-            use $crate::InfoContext;
-            let mut __info_func_cb : Option<fn(&InfoContext, bool)> = None;
-            $( __info_func_cb = Some($info_func); )?
-            $crate::base_info_func(&$crate::InfoContext::new(ctx), for_crash_report == 1, __info_func_cb);
+            $crate::basic_info_command_handler(&$crate::InfoContext::new(ctx), for_crash_report == 1);
         }
 
         #[no_mangle]
@@ -212,6 +220,9 @@ macro_rules! redis_module {
             ) } == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
 
             let context = $crate::Context::new(ctx);
+            unsafe {
+                let _ = $crate::MODULE_CONTEXT.set_context(&context);
+            }
             let args = $crate::decode_args(ctx, argv, argc);
 
             $(
@@ -223,6 +234,10 @@ macro_rules! redis_module {
             $(
                 $crate::redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep);
             )*
+
+            if $crate::commands::register_commands(&context) == raw::Status::Err {
+                return raw::Status::Err as c_int;
+            }
 
             $(
                 $(

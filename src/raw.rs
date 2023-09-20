@@ -7,11 +7,12 @@ extern crate libc;
 extern crate num_traits;
 
 use std::cmp::Ordering;
-use std::ffi::{CStr, CString};
+use std::ffi::{c_ulonglong, CStr, CString};
 use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong, c_void};
 use std::ptr;
 use std::slice;
 
+use crate::RedisResult;
 use bitflags::bitflags;
 use enum_primitive_derive::Primitive;
 use libc::size_t;
@@ -21,6 +22,8 @@ use crate::error::Error;
 pub use crate::redisraw::bindings::*;
 use crate::{context::StrCallArgs, Context, RedisString};
 use crate::{RedisBuffer, RedisError};
+
+const GENERIC_ERROR_MESSAGE: &str = "Generic error.";
 
 bitflags! {
     pub struct KeyMode: c_int {
@@ -94,6 +97,15 @@ pub enum Status {
     Err = REDISMODULE_ERR,
 }
 
+impl From<Status> for RedisResult<()> {
+    fn from(value: Status) -> Self {
+        match value {
+            Status::Ok => Ok(()),
+            Status::Err => Err(RedisError::Str(GENERIC_ERROR_MESSAGE)),
+        }
+    }
+}
+
 impl From<c_int> for Status {
     fn from(v: c_int) -> Self {
         Self::from_i32(v).unwrap()
@@ -104,7 +116,7 @@ impl From<Status> for Result<(), &str> {
     fn from(s: Status) -> Self {
         match s {
             Status::Ok => Ok(()),
-            Status::Err => Err("Generic error"),
+            Status::Err => Err(GENERIC_ERROR_MESSAGE),
         }
     }
 }
@@ -125,6 +137,7 @@ bitflags! {
         const LOADED = REDISMODULE_NOTIFY_LOADED;
         const MISSED = REDISMODULE_NOTIFY_KEY_MISS;
         const ALL = REDISMODULE_NOTIFY_ALL;
+        const TRIMMED = REDISMODULE_NOTIFY_TRIMMED;
     }
 }
 
@@ -337,6 +350,19 @@ pub fn open_key(
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
+pub(crate) fn open_key_with_flags(
+    ctx: *mut RedisModuleCtx,
+    keyname: *mut RedisModuleString,
+    mode: KeyMode,
+    flags: c_int,
+) -> *mut RedisModuleKey {
+    unsafe {
+        RedisModule_OpenKey.unwrap()(ctx, keyname, mode.bits() | flags).cast::<RedisModuleKey>()
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[inline]
 pub fn reply_with_array(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
     unsafe { RedisModule_ReplyWithArray.unwrap()(ctx, len).into() }
 }
@@ -472,6 +498,11 @@ where
 {
     assert_eq!(fields.len(), values.len());
 
+    let fields = fields
+        .iter()
+        .map(|e| CString::new(e.clone()))
+        .collect::<Result<Vec<CString>, _>>()?;
+
     let mut fi = fields.iter();
     let mut vi = values.iter_mut();
 
@@ -490,9 +521,7 @@ where
     }
     macro_rules! f {
         () => {
-            CString::new((*fi.next().unwrap()).clone())
-                .unwrap()
-                .as_ptr()
+            fi.next().unwrap().as_ptr()
         };
     }
     macro_rules! v {
@@ -800,6 +829,33 @@ pub fn add_info_field_long_long(
 ) -> Status {
     let name = CString::new(name).unwrap();
     unsafe { RedisModule_InfoAddFieldLongLong.unwrap()(ctx, name.as_ptr(), value).into() }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_info_field_unsigned_long_long(
+    ctx: *mut RedisModuleInfoCtx,
+    name: &str,
+    value: c_ulonglong,
+) -> Status {
+    let name = CString::new(name).unwrap();
+    unsafe { RedisModule_InfoAddFieldULongLong.unwrap()(ctx, name.as_ptr(), value).into() }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_info_field_double(ctx: *mut RedisModuleInfoCtx, name: &str, value: c_double) -> Status {
+    let name = CString::new(name).unwrap();
+    unsafe { RedisModule_InfoAddFieldDouble.unwrap()(ctx, name.as_ptr(), value).into() }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_info_begin_dict_field(ctx: *mut RedisModuleInfoCtx, name: &str) -> Status {
+    let name = CString::new(name).unwrap();
+    unsafe { RedisModule_InfoBeginDictField.unwrap()(ctx, name.as_ptr()).into() }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub fn add_info_end_dict_field(ctx: *mut RedisModuleInfoCtx) -> Status {
+    unsafe { RedisModule_InfoEndDictField.unwrap()(ctx).into() }
 }
 
 /// # Safety

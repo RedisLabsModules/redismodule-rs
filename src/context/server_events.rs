@@ -1,5 +1,7 @@
-use crate::raw;
+use std::ffi::CStr;
+
 use crate::{context::Context, RedisError};
+use crate::{raw, InfoContext, RedisResult};
 use linkme::distributed_slice;
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug)]
@@ -49,6 +51,29 @@ pub static FLUSH_SERVER_EVENTS_LIST: [fn(&Context, FlushSubevent)] = [..];
 #[distributed_slice()]
 pub static MODULE_CHANGED_SERVER_EVENTS_LIST: [fn(&Context, ModuleChangeSubevent)] = [..];
 
+#[distributed_slice()]
+pub static CONFIG_CHANGED_SERVER_EVENTS_LIST: [fn(&Context, &[&str])] = [..];
+
+#[distributed_slice()]
+pub static CRON_SERVER_EVENTS_LIST: [fn(&Context, u64)] = [..];
+
+#[distributed_slice()]
+pub static INFO_COMMAND_HANDLER_LIST: [fn(&InfoContext, bool) -> RedisResult<()>] = [..];
+
+extern "C" fn cron_callback(
+    ctx: *mut raw::RedisModuleCtx,
+    _eid: raw::RedisModuleEvent,
+    _subevent: u64,
+    data: *mut ::std::os::raw::c_void,
+) {
+    let data: &raw::RedisModuleConfigChangeV1 =
+        unsafe { &*(data as *mut raw::RedisModuleConfigChangeV1) };
+    let ctx = Context::new(ctx);
+    CRON_SERVER_EVENTS_LIST.iter().for_each(|callback| {
+        callback(&ctx, data.version);
+    });
+}
+
 extern "C" fn role_changed_callback(
     ctx: *mut raw::RedisModuleCtx,
     _eid: raw::RedisModuleEvent,
@@ -75,6 +100,7 @@ extern "C" fn loading_event_callback(
     let loading_sub_event = match subevent {
         raw::REDISMODULE_SUBEVENT_LOADING_RDB_START => LoadingSubevent::RdbStarted,
         raw::REDISMODULE_SUBEVENT_LOADING_REPL_START => LoadingSubevent::ReplStarted,
+        raw::REDISMODULE_SUBEVENT_LOADING_AOF_START => LoadingSubevent::AofStarted,
         raw::REDISMODULE_SUBEVENT_LOADING_ENDED => LoadingSubevent::Ended,
         _ => LoadingSubevent::Failed,
     };
@@ -117,6 +143,35 @@ extern "C" fn module_change_event_callback(
         .iter()
         .for_each(|callback| {
             callback(&ctx, module_changed_sub_event);
+        });
+}
+
+extern "C" fn config_change_event_callback(
+    ctx: *mut raw::RedisModuleCtx,
+    _eid: raw::RedisModuleEvent,
+    _subevent: u64,
+    data: *mut ::std::os::raw::c_void,
+) {
+    let data: &raw::RedisModuleConfigChange =
+        unsafe { &*(data as *mut raw::RedisModuleConfigChange) };
+    let config_names: Vec<_> = (0..data.num_changes)
+        .map(|i| unsafe {
+            let name = *data.config_names.offset(i as isize);
+            CStr::from_ptr(name)
+        })
+        .collect();
+    let config_names: Vec<_> = config_names
+        .iter()
+        .map(|v| {
+            v.to_str()
+                .expect("Got a configuration name which is not a valid utf8")
+        })
+        .collect();
+    let ctx = Context::new(ctx);
+    CONFIG_CHANGED_SERVER_EVENTS_LIST
+        .iter()
+        .for_each(|callback| {
+            callback(&ctx, config_names.as_slice());
         });
 }
 
@@ -169,6 +224,18 @@ pub fn register_server_events(ctx: &Context) -> Result<(), RedisError> {
         &MODULE_CHANGED_SERVER_EVENTS_LIST,
         raw::REDISMODULE_EVENT_MODULE_CHANGE,
         Some(module_change_event_callback),
+    )?;
+    register_single_server_event_type(
+        ctx,
+        &CONFIG_CHANGED_SERVER_EVENTS_LIST,
+        raw::REDISMODULE_EVENT_CONFIG,
+        Some(config_change_event_callback),
+    )?;
+    register_single_server_event_type(
+        ctx,
+        &CRON_SERVER_EVENTS_LIST,
+        raw::REDISMODULE_EVENT_CRON_LOOP,
+        Some(cron_callback),
     )?;
     Ok(())
 }

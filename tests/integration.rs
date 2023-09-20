@@ -1,6 +1,10 @@
+use std::thread;
+use std::time::Duration;
+
 use crate::utils::{get_redis_connection, start_redis_server_with_module};
 use anyhow::Context;
 use anyhow::Result;
+use redis::Value;
 use redis::{RedisError, RedisResult};
 
 mod utils;
@@ -112,19 +116,57 @@ fn test_command_name() -> Result<()> {
 
 #[test]
 fn test_helper_info() -> Result<()> {
-    let port: u16 = 6483;
-    let _guards = vec![start_redis_server_with_module("test_helper", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    const MODULES: [(&str, bool); 4] = [
+        ("test_helper", false),
+        ("info_handler_macro", false),
+        ("info_handler_builder", true),
+        ("info_handler_struct", true),
+    ];
 
-    let res: String = redis::cmd("INFO")
-        .arg("TEST_HELPER")
-        .query(&mut con)
-        .with_context(|| "failed to run INFO TEST_HELPER")?;
-    assert!(res.contains("test_helper_field:test_helper_value"));
+    MODULES
+        .into_iter()
+        .try_for_each(|(module, has_dictionary)| {
+            let port: u16 = 6483;
+            let _guards = vec![start_redis_server_with_module(module, port)
+                .with_context(|| "failed to start redis server")?];
+            let mut con =
+                get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
-    Ok(())
+            let res: String = redis::cmd("INFO")
+                .arg(module)
+                .query(&mut con)
+                .with_context(|| format!("failed to run INFO {module}"))?;
+
+            assert!(res.contains(&format!("{module}_field:value")));
+            if has_dictionary {
+                assert!(res.contains("dictionary:key=value"));
+            }
+
+            Ok(())
+        })
+}
+
+#[test]
+fn test_info_handler_multiple_sections() -> Result<()> {
+    const MODULES: [&str; 1] = ["info_handler_multiple_sections"];
+
+    MODULES.into_iter().try_for_each(|module| {
+        let port: u16 = 6500;
+        let _guards = vec![start_redis_server_with_module(module, port)
+            .with_context(|| "failed to start redis server")?];
+        let mut con =
+            get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+        let res: String = redis::cmd("INFO")
+            .arg(format!("{module}_InfoSection2"))
+            .query(&mut con)
+            .with_context(|| format!("failed to run INFO {module}"))?;
+
+        assert!(res.contains(&format!("{module}_field_2:value2")));
+        assert!(!res.contains(&format!("{module}_field_1:value1")));
+
+        Ok(())
+    })
 }
 
 #[allow(unused_must_use)]
@@ -392,6 +434,28 @@ fn test_server_event() -> Result<()> {
 
     assert_eq!(res, 2);
 
+    redis::cmd("config")
+        .arg(&["set", "maxmemory", "1"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    let res: i64 = redis::cmd("num_max_memory_changes").query(&mut con)?;
+
+    assert_eq!(res, 1);
+
+    redis::cmd("config")
+        .arg(&["set", "maxmemory", "0"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    let res: i64 = redis::cmd("num_max_memory_changes").query(&mut con)?;
+
+    assert_eq!(res, 2);
+
+    let res: i64 = redis::cmd("num_crons").query(&mut con)?;
+
+    assert!(res > 0);
+
     Ok(())
 }
 
@@ -496,6 +560,148 @@ fn test_response() -> Result<()> {
 
     res.sort();
     assert_eq!(&res, &["b", "d"]);
+
+    Ok(())
+}
+
+#[test]
+fn test_command_proc_macro() -> Result<()> {
+    let port: u16 = 6497;
+    let _guards = vec![start_redis_server_with_module("proc_macro_commands", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: Vec<String> = redis::cmd("COMMAND")
+        .arg(&["GETKEYS", "classic_keys", "x", "foo", "y", "bar"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(&res, &["x", "y"]);
+
+    let res: Vec<String> = redis::cmd("COMMAND")
+        .arg(&["GETKEYS", "keyword_keys", "foo", "x", "1", "y", "2"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(&res, &["x", "y"]);
+
+    let res: Vec<String> = redis::cmd("COMMAND")
+        .arg(&["GETKEYS", "num_keys", "3", "x", "y", "z", "foo", "bar"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(&res, &["x", "y", "z"]);
+
+    let res: Vec<String> = redis::cmd("COMMAND")
+        .arg(&["GETKEYS", "num_keys", "0", "foo", "bar"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert!(res.is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn test_redis_value_derive() -> Result<()> {
+    let port: u16 = 6498;
+    let _guards = vec![start_redis_server_with_module("proc_macro_commands", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: Value = redis::cmd("redis_value_derive")
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(res.as_sequence().unwrap().len(), 22);
+
+    let res: String = redis::cmd("redis_value_derive")
+        .arg(&["test"])
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(res, "OK");
+
+    Ok(())
+}
+
+#[test]
+fn test_call_blocking() -> Result<()> {
+    let port: u16 = 6499;
+    let _guards = vec![start_redis_server_with_module("call", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    let res: Option<String> = redis::cmd("call.blocking")
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(res, None);
+
+    let res: Option<String> = redis::cmd("call.blocking_from_detached_ctx")
+        .query(&mut con)
+        .with_context(|| "failed to run string.set")?;
+
+    assert_eq!(res, None);
+
+    Ok(())
+}
+
+#[test]
+fn test_open_key_with_flags() -> Result<()> {
+    let port: u16 = 6501;
+    let _guards = vec![start_redis_server_with_module("open_key_with_flags", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    // Avoid active expriation
+    redis::cmd("DEBUG")
+        .arg(&["SET-ACTIVE-EXPIRE", "0"])
+        .query(&mut con)
+        .with_context(|| "failed to run DEBUG SET-ACTIVE-EXPIRE")?;
+
+    for cmd in ["open_key_with_flags.write", "open_key_with_flags.read"].into_iter() {
+        redis::cmd("set")
+            .arg(&["x", "1"])
+            .query(&mut con)
+            .with_context(|| "failed to run string.set")?;
+
+        // Set experition time to 1 second.
+        redis::cmd("pexpire")
+            .arg(&["x", "1"])
+            .query(&mut con)
+            .with_context(|| "failed to run expire")?;
+
+        // Sleep for 2 seconds, ensure expiration time has passed.
+        thread::sleep(Duration::from_millis(500));
+
+        // Open key as read only or ReadWrite with NOEFFECTS flag.
+        let res = redis::cmd(cmd).arg(&["x"]).query(&mut con);
+        assert_eq!(res, Ok(()));
+
+        // Get the number of expired keys.
+        let stats: String = redis::cmd("info").arg(&["stats"]).query(&mut con)?;
+
+        // Find the number of expired keys, x,  according to the substring "expired_keys:{x}"
+        let expired_keys = stats
+            .match_indices("expired_keys:")
+            .next()
+            .map(|(i, _)| &stats[i..i + "expired_keys:".len() + 1])
+            .and_then(|s| s.split(':').nth(1))
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(-1);
+
+        // Ensure that no keys were expired.
+        assert_eq!(expired_keys, 0);
+
+        // Delete key and reset stats
+        redis::cmd("del").arg(&["x"]).query(&mut con)?;
+        redis::cmd("config").arg(&["RESETSTAT"]).query(&mut con)?;
+    }
 
     Ok(())
 }
