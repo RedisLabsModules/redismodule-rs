@@ -350,6 +350,19 @@ pub fn open_key(
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
+pub(crate) fn open_key_with_flags(
+    ctx: *mut RedisModuleCtx,
+    keyname: *mut RedisModuleString,
+    mode: KeyMode,
+    flags: c_int,
+) -> *mut RedisModuleKey {
+    unsafe {
+        RedisModule_OpenKey.unwrap()(ctx, keyname, mode.bits() | flags).cast::<RedisModuleKey>()
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[inline]
 pub fn reply_with_array(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
     unsafe { RedisModule_ReplyWithArray.unwrap()(ctx, len).into() }
 }

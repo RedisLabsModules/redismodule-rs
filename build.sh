@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
-cargo build --features experimental-api,test --all --all-targets
+cargo build --all --all-targets --no-default-features
 
 
