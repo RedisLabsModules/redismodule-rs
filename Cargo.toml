@@ -24,12 +24,17 @@ name = "configuration"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "proc_macro_commands"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "acl"
 crate-type = ["cdylib"]
 
 [[example]]
 name = "call"
 crate-type = ["cdylib"]
+required-features = ["min-redis-compatibility-version-7-2"]
 
 [[example]]
 name = "keys_pos"
@@ -76,6 +81,22 @@ name = "test_helper"
 crate-type = ["cdylib"]
 
 [[example]]
+name = "info_handler_macro"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "info_handler_builder"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "info_handler_struct"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "info_handler_multiple_sections"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "info"
 crate-type = ["cdylib"]
 
@@ -91,8 +112,12 @@ crate-type = ["cdylib"]
 name = "response"
 crate-type = ["cdylib"]
 
+[[example]]
+name = "open_key_with_flags"
+crate-type = ["cdylib"]
+
 [dependencies]
-bitflags = "2.1"
+bitflags = "2"
 libc = "0.2"
 enum-primitive-derive = "^0.1"
 num-traits = "^0.2"
@@ -104,16 +129,17 @@ serde = { version = "1", features = ["derive"] }
 nix = "0.26"
 cfg-if = "1"
 redis-module-macros-internals = { path = "./redismodule-rs-macros-internals" }
+log = "0.4"
 
 [dev-dependencies]
 anyhow = "1"
 redis = "0.23"
 lazy_static = "1"
 redis-module-macros = { path = "./redismodule-rs-macros"}
-redis-module = { path = "./" }
+redis-module = { path = "./", default-features = false, features = ["min-redis-compatibility-version-7-2"] }
 
 [build-dependencies]
-bindgen = "0.65"
+bindgen = "0.66"
 cc = "1"
 
 [features]

@@ -63,7 +63,7 @@ impl Parse for Args {
 ///     );
 /// ```
 #[proc_macro]
-pub fn redismodule_api(item: TokenStream) -> TokenStream {
+pub fn api(item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(item as Args);
     let minimum_require_version =
         args.requested_apis

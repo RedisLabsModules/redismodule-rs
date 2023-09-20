@@ -1,7 +1,4 @@
-//#![allow(dead_code)]
-
 pub use crate::context::InfoContext;
-use strum_macros::AsRefStr;
 extern crate num_traits;
 
 pub mod alloc;
@@ -30,49 +27,88 @@ pub use crate::raw::NotifyEvent;
 
 pub use crate::configuration::ConfigurationValue;
 pub use crate::configuration::EnumConfigurationValue;
-pub use crate::context::call_reply::{CallReply, CallResult, ErrorReply};
+pub use crate::context::call_reply::FutureCallReply;
+pub use crate::context::call_reply::{CallReply, CallResult, ErrorReply, PromiseCallReply};
+pub use crate::context::commands;
 pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::server_events;
 pub use crate::context::AclPermissions;
+#[cfg(feature = "min-redis-compatibility-version-7-2")]
+pub use crate::context::BlockingCallOptions;
 pub use crate::context::CallOptionResp;
 pub use crate::context::CallOptions;
 pub use crate::context::CallOptionsBuilder;
 pub use crate::context::Context;
 pub use crate::context::ContextFlags;
 pub use crate::context::DetachedContext;
+pub use crate::context::DetachedContextGuard;
+pub use crate::context::{
+    InfoContextBuilderFieldBottomLevelValue, InfoContextBuilderFieldTopLevelValue,
+    InfoContextFieldBottomLevelData, InfoContextFieldTopLevelData, OneInfoSectionData,
+};
 pub use crate::raw::*;
 pub use crate::redismodule::*;
 use backtrace::Backtrace;
+use context::server_events::INFO_COMMAND_HANDLER_LIST;
 
-/// `LogLevel` is a level of logging to be specified with a Redis log directive.
-#[derive(Clone, Copy, Debug, AsRefStr)]
-#[strum(serialize_all = "snake_case")]
-pub enum LogLevel {
-    Debug,
-    Notice,
-    Verbose,
-    Warning,
+/// The detached Redis module context (the context of this module). It
+/// is only set to a proper value after the module is initialised via the
+/// provided [redis_module] macro.
+/// See [DetachedContext].
+pub static MODULE_CONTEXT: DetachedContext = DetachedContext::new();
+
+#[deprecated(
+    since = "2.1.0",
+    note = "Please use the redis_module::logging::RedisLogLevel directly instead."
+)]
+pub type LogLevel = logging::RedisLogLevel;
+
+fn add_trace_info(ctx: &InfoContext) -> RedisResult<()> {
+    const SECTION_NAME: &str = "trace";
+    const FIELD_NAME: &str = "backtrace";
+
+    let current_backtrace = Backtrace::new();
+    let trace = format!("{current_backtrace:?}");
+
+    ctx.builder()
+        .add_section(SECTION_NAME)
+        .field(FIELD_NAME, trace)?
+        .build_section()?
+        .build_info()?;
+
+    Ok(())
 }
 
-pub fn base_info_func(
-    ctx: &InfoContext,
-    for_crash_report: bool,
-    extended_info_func: Option<fn(&InfoContext, bool)>,
-) {
-    // If needed, add rust trace into the crash report (before module info)
-    if for_crash_report && ctx.add_info_section(Some("trace")) == Status::Ok {
-        let current_backtrace = Backtrace::new();
-        let trace = format!("{current_backtrace:?}");
-        ctx.add_info_field_str("trace", &trace);
+/// A type alias for the custom info command handler.
+/// The function may optionally return an object of one section to add.
+/// If nothing is returned, it is assumed that the function has already
+/// filled all the information required via [`InfoContext::builder`].
+pub type InfoHandlerFunctionType = fn(&InfoContext, bool) -> RedisResult<()>;
+
+/// Default "INFO" command handler for the module.
+///
+/// This function can be invoked, for example, by sending `INFO modules`
+/// through the RESP protocol.
+pub fn basic_info_command_handler(ctx: &InfoContext, for_crash_report: bool) {
+    if for_crash_report {
+        if let Err(e) = add_trace_info(ctx) {
+            log::error!("Couldn't send info for the module: {e}");
+            return;
+        }
     }
 
-    if let Some(func) = extended_info_func {
-        // Add module info
-        func(ctx, for_crash_report);
-    }
+    INFO_COMMAND_HANDLER_LIST
+        .iter()
+        .filter_map(|callback| callback(ctx, for_crash_report).err())
+        .for_each(|e| log::error!("Couldn't build info for the module's custom handler: {e}"));
 }
 
 /// Initialize RedisModuleAPI without register as a module.
 pub fn init_api(ctx: &Context) {
     unsafe { crate::raw::Export_RedisModule_InitAPI(ctx.ctx) };
+}
+
+pub(crate) unsafe fn deallocate_pointer<P>(p: *mut P) {
+    std::ptr::drop_in_place(p);
+    std::alloc::dealloc(p as *mut u8, std::alloc::Layout::new::<P>());
 }

@@ -56,6 +56,8 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
         &port.to_string(),
         "--loadmodule",
         module_path.as_str(),
+        "--enable-debug-command",
+        "yes",
     ];
 
     let redis_server = Command::new("redis-server")

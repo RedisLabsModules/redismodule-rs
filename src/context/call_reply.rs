@@ -7,7 +7,9 @@ use std::{
     ptr::NonNull,
 };
 
-use crate::{raw::*, RedisError};
+use libc::c_void;
+
+use crate::{deallocate_pointer, raw::*, Context, RedisError, RedisLockIndicator};
 
 pub struct StringCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
@@ -106,6 +108,13 @@ pub enum ErrorReply<'root> {
     Message(String),
     RedisError(ErrorCallReply<'root>),
 }
+
+/// Send implementation to [ErrorCallReply].
+/// We need to implements this trait because [ErrorCallReply] hold
+/// raw pointers to C data which does not auto implement the [Send] trait.
+/// By implementing [Send] on [ErrorCallReply] we basically tells the compiler
+/// that it is safe to send the underline C data between threads.
+unsafe impl<'root> Send for ErrorCallReply<'root> {}
 
 impl<'root> ErrorReply<'root> {
     /// Convert [ErrorCallReply] to [String] or [None] if its not a valid utf8.
@@ -548,20 +557,15 @@ impl TryFrom<&str> for VerbatimStringFormat {
             )));
         }
         let mut res = VerbatimStringFormat::default();
-        value
-            .chars()
-            .into_iter()
-            .take(3)
-            .enumerate()
-            .try_for_each(|(i, c)| {
-                if c as u32 >= 127 {
-                    return Err(RedisError::String(
-                        "Verbatim format must contains only ASCI values.".to_owned(),
-                    ));
-                }
-                res.0[i] = c as c_char;
-                Ok(())
-            })?;
+        value.chars().take(3).enumerate().try_for_each(|(i, c)| {
+            if c as u32 >= 127 {
+                return Err(RedisError::String(
+                    "Verbatim format must contains only ASCI values.".to_owned(),
+                ));
+            }
+            res.0[i] = c as c_char;
+            Ok(())
+        })?;
         Ok(res)
     }
 }
@@ -635,6 +639,13 @@ pub enum CallReply<'root> {
     VerbatimString(VerbatimStringCallReply<'root>),
 }
 
+/// Send implementation to [CallReply].
+/// We need to implements this trait because [CallReply] hold
+/// raw pointers to C data which does not auto implement the [Send] trait.
+/// By implementing [Send] on [CallReply] we basically tells the compiler
+/// that it is safe to send the underline C data between threads.
+unsafe impl<'root> Send for CallReply<'root> {}
+
 impl<'root> Display for CallReply<'root> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
@@ -704,12 +715,6 @@ fn create_call_reply<'root>(reply: NonNull<RedisModuleCallReply>) -> CallResult<
     }
 }
 
-pub(crate) fn create_root_call_reply<'root>(
-    reply: Option<NonNull<RedisModuleCallReply>>,
-) -> CallResult<'root> {
-    reply.map_or(Ok(CallReply::Unknown), create_call_reply)
-}
-
 fn fmt_call_result(res: CallResult<'_>, f: &mut Formatter<'_>) -> fmt::Result {
     match res {
         Ok(r) => fmt::Display::fmt(&r, f),
@@ -718,3 +723,137 @@ fn fmt_call_result(res: CallResult<'_>, f: &mut Formatter<'_>) -> fmt::Result {
 }
 
 pub type CallResult<'root> = Result<CallReply<'root>, ErrorReply<'root>>;
+
+pub struct FutureHandler<C: FnOnce(&Context, CallResult<'static>)> {
+    reply: NonNull<RedisModuleCallReply>,
+    _dummy: PhantomData<C>,
+    reply_freed: bool,
+}
+
+impl<C> FutureHandler<C>
+where
+    C: FnOnce(&Context, CallResult<'static>),
+{
+    /// Dispose the future, handler. This function must be called in order to
+    /// release the [FutureHandler]. The reason we must have a dispose function
+    /// and we can not use the Drop is that [FutureHandler] must be released
+    /// when the Redis GIL is held. This is also why this function also gets a
+    /// lock indicator.
+    pub fn dispose<LockIndicator: RedisLockIndicator>(mut self, _lock_indicator: &LockIndicator) {
+        free_call_reply(self.reply.as_ptr());
+        self.reply_freed = true;
+    }
+
+    /// Aborts the invocation of the blocking commands. Return [Status::Ok] on
+    /// success and [Status::Err] on failure. In case of success it is promised
+    /// that the unblock handler will not be called.
+    /// The function also dispose the [FutureHandler].
+    pub fn abort_and_dispose<LockIndicator: RedisLockIndicator>(
+        self,
+        lock_indicator: &LockIndicator,
+    ) -> Status {
+        let mut callback: *mut C = std::ptr::null_mut();
+        let res = unsafe {
+            RedisModule_CallReplyPromiseAbort
+                .expect("RedisModule_CallReplyPromiseAbort is expected to be available if we got a promise call reply")
+                (self.reply.as_ptr(), &mut callback as *mut *mut C as *mut *mut c_void)
+        }.into();
+
+        if !callback.is_null() {
+            unsafe { deallocate_pointer(callback) };
+        }
+
+        self.dispose(lock_indicator);
+
+        res
+    }
+}
+
+impl<C: FnOnce(&Context, CallResult<'static>)> Drop for FutureHandler<C> {
+    fn drop(&mut self) {
+        if !self.reply_freed {
+            log::warn!("Memory leak detected!!! FutureHandler was freed without disposed.")
+        }
+    }
+}
+
+/// A future call reply struct that will be return in case
+/// the module invoke a blocking command using [call_blocking].
+/// This struct can be used to set unblock handler. Notice that the
+/// struct can not outlive the `ctx lifetime, This is because
+/// the future handler must be set before the Redis GIL will
+/// be released.
+pub struct FutureCallReply<'ctx> {
+    _ctx: &'ctx Context,
+    reply: Option<NonNull<RedisModuleCallReply>>,
+}
+
+extern "C" fn on_unblock<C: FnOnce(&Context, CallResult<'static>)>(
+    ctx: *mut RedisModuleCtx,
+    reply: *mut RedisModuleCallReply,
+    private_data: *mut ::std::os::raw::c_void,
+) {
+    let on_unblock = unsafe { Box::from_raw(private_data as *mut C) };
+    let ctx = Context::new(ctx);
+    let reply = NonNull::new(reply).map_or(Ok(CallReply::Unknown), create_call_reply);
+    on_unblock(&ctx, reply);
+}
+
+impl<'ctx> FutureCallReply<'ctx> {
+    /// Allow to set an handler that will be called when the command gets
+    /// unblock. Return [FutureHandler] that can be used to abort the command.
+    pub fn set_unblock_handler<C: FnOnce(&Context, CallResult<'static>)>(
+        mut self,
+        unblock_handler: C,
+    ) -> FutureHandler<C> {
+        let reply = self.reply.take().expect("Got a NULL future reply");
+        unsafe {
+            RedisModule_CallReplyPromiseSetUnblockHandler
+                .expect("RedisModule_CallReplyPromiseSetUnblockHandler is expected to be available if we got a promise call reply")
+                (reply.as_ptr(), Some(on_unblock::<C>), Box::into_raw(Box::new(unblock_handler)) as *mut c_void)
+        }
+        FutureHandler {
+            reply,
+            _dummy: PhantomData,
+            reply_freed: false,
+        }
+    }
+}
+
+impl<'ctx> Drop for FutureCallReply<'ctx> {
+    fn drop(&mut self) {
+        if let Some(v) = self.reply {
+            free_call_reply(v.as_ptr());
+        }
+    }
+}
+
+pub enum PromiseCallReply<'root, 'ctx> {
+    Resolved(CallResult<'root>),
+    Future(FutureCallReply<'ctx>),
+}
+
+pub(crate) fn create_promise_call_reply(
+    ctx: &Context,
+    reply: Option<NonNull<RedisModuleCallReply>>,
+) -> PromiseCallReply<'static, '_> {
+    reply.map_or(PromiseCallReply::Resolved(Ok(CallReply::Unknown)), |val| {
+        let ty = unsafe { RedisModule_CallReplyType.unwrap()(val.as_ptr()) };
+        if ty == REDISMODULE_REPLY_PROMISE as i32 {
+            return PromiseCallReply::Future(FutureCallReply {
+                _ctx: ctx,
+                reply: Some(val),
+            });
+        }
+        PromiseCallReply::Resolved(create_call_reply(val))
+    })
+}
+
+impl<'ctx> From<PromiseCallReply<'static, 'ctx>> for CallResult<'static> {
+    fn from(value: PromiseCallReply<'static, 'ctx>) -> Self {
+        match value {
+            PromiseCallReply::Resolved(c) => c,
+            PromiseCallReply::Future(_) => panic!("Got unexpected future call reply"),
+        }
+    }
+}
