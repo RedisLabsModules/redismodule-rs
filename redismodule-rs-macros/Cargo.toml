@@ -12,7 +12,7 @@ categories = ["database", "api-bindings"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-syn = { version="1.0", features = ["full"]}
+syn = { version = "1.0", features = ["full"]}
 quote = "1.0"
 proc-macro2 = "1"
 serde = { version = "1", features = ["derive"] }

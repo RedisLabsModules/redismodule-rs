@@ -129,6 +129,7 @@ serde = { version = "1", features = ["derive"] }
 nix = "0.26"
 cfg-if = "1"
 redis-module-macros-internals = { path = "./redismodule-rs-macros-internals" }
+redis-module-macros = { path = "./redismodule-rs-macros" }
 log = "0.4"
 
 [dev-dependencies]

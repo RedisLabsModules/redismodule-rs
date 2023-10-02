@@ -240,10 +240,7 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
 
     let original_function_name = func.sig.ident.clone();
 
-    let c_function_name = Ident::new(
-        &format!("_inner_{}", func.sig.ident),
-        func.sig.ident.span(),
-    );
+    let c_function_name = Ident::new(&format!("_inner_{}", func.sig.ident), func.sig.ident.span());
 
     let get_command_info_function_name = Ident::new(
         &format!("_inner_get_command_info_{}", func.sig.ident),

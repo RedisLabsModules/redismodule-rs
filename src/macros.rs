@@ -158,7 +158,7 @@ macro_rules! redis_module {
 
         // The old-style info command handler, if specified.
         $(
-            #[redis_module_macros::info_command_handler]
+            #[$crate::info_command_handler]
             #[inline]
             fn module_info(ctx: &InfoContext, for_crash_report: bool) -> RedisResult<()> {
                 $info_func(ctx, for_crash_report);

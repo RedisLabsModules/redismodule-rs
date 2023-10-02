@@ -1,6 +1,6 @@
+use redis_module::info_command_handler;
 use redis_module::InfoContext;
 use redis_module::{redis_module, RedisResult};
-use redis_module_macros::info_command_handler;
 
 #[info_command_handler]
 fn add_info(ctx: &InfoContext, _for_crash_report: bool) -> RedisResult<()> {
