@@ -110,6 +110,21 @@ impl From<&RedisCommandFlags> for &'static str {
 }
 
 #[derive(Debug, Deserialize)]
+pub enum RedisEnterpriseCommandFlags {
+    /// A special enterprise only flag, make sure the commands marked with this flag will not be expose to
+    /// user via `command` command or on slow log.
+    ProxyFiltered,
+}
+
+impl From<&RedisEnterpriseCommandFlags> for &'static str {
+    fn from(value: &RedisEnterpriseCommandFlags) -> Self {
+        match value {
+            RedisEnterpriseCommandFlags::ProxyFiltered => "_proxy-filtered",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
 pub enum RedisCommandKeySpecFlags {
     /// Read-Only. Reads the value of the key, but doesn't necessarily return it.
     ReadOnly,
@@ -212,6 +227,7 @@ pub struct KeySpecArg {
 struct Args {
     name: Option<String>,
     flags: Vec<RedisCommandFlags>,
+    enterprise_flags: Option<Vec<RedisEnterpriseCommandFlags>>,
     summary: Option<String>,
     complexity: Option<String>,
     since: Option<String>,
@@ -240,10 +256,7 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
 
     let original_function_name = func.sig.ident.clone();
 
-    let c_function_name = Ident::new(
-        &format!("_inner_{}", func.sig.ident),
-        func.sig.ident.span(),
-    );
+    let c_function_name = Ident::new(&format!("_inner_{}", func.sig.ident), func.sig.ident.span());
 
     let get_command_info_function_name = Ident::new(
         &format!("_inner_get_command_info_{}", func.sig.ident),
@@ -262,6 +275,19 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
         .trim()
         .to_owned();
     let flags_literal = quote!(#flags_str);
+    let enterprise_flags_str = args
+        .enterprise_flags
+        .map(|v| {
+            v.into_iter()
+                .fold(String::new(), |s, v| {
+                    format!("{} {}", s, Into::<&'static str>::into(&v))
+                })
+                .trim()
+                .to_owned()
+        })
+        .unwrap_or_default();
+
+    let enterprise_flags_literal = quote!(#enterprise_flags_str);
     let summary_literal = to_token_stream(args.summary);
     let complexity_literal = to_token_stream(args.complexity);
     let since_literal = to_token_stream(args.since);
@@ -362,6 +388,7 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
             Ok(redis_module::commands::CommandInfo::new(
                 #name_literal.to_owned(),
                 Some(#flags_literal.to_owned()),
+                Some(#enterprise_flags_literal.to_owned()),
                 #summary_literal,
                 #complexity_literal,
                 #since_literal,
