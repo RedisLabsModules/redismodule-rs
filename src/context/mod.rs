@@ -708,7 +708,14 @@ impl Context {
                 let regex = regex.unwrap();
                 let ss = info_str.replace("\r\n", " ");
                 let ver_str: Vec<&str> = ss.split(' ').collect();
-                let s = ver_str.as_slice()[2];
+                let mut s = "";
+                for item in ver_str.iter() {
+                    if item.contains("redis_version:") {
+                        s = item;
+                        break;
+                    }
+                }
+                //let s = ver_str.as_slice()[2];
                 let mut it = regex.captures_iter(s);
                 match it.next() {
                     None => {
