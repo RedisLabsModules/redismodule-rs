@@ -377,9 +377,9 @@ api! {[
             let name: CString = CString::new(command_info.name.as_str()).unwrap();
             let mut flags = command_info.flags.as_deref().unwrap_or("").to_owned();
             if is_enterprise {
-                flags = format!("{flags} {}", command_info.enterprise_flags.as_deref().unwrap_or(""));
+                flags = format!("{flags} {}", command_info.enterprise_flags.as_deref().unwrap_or("")).trim().to_owned();
             }
-            let flags = CString::new(flags).unwrap();
+            let flags = CString::new(flags).map_err(|e| RedisError::String(e.to_string()))?;
 
             if unsafe {
                 RedisModule_CreateCommand(
