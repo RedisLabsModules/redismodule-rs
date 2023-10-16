@@ -863,6 +863,24 @@ impl Context {
             unsafe { RedisModule_AvoidReplicaTraffic() == 1 }
         }
     );
+
+    /// Return [Ok(true)] is the current Redis deployment is enterprise, otherwise [Ok(false)].
+    /// Return error in case it was not possible to determind the deployment.
+    fn is_enterprise_internal(&self) -> Result<bool, RedisError> {
+        let info_res = self.call("info", &["server"])?;
+        match info_res {
+            RedisValue::BulkRedisString(res) => Ok(res.try_as_str()?.contains("rlec_version:")),
+            _ => Err(RedisError::Str("Mismatch call reply type")),
+        }
+    }
+
+    /// Return `true` is the current Redis deployment is enterprise, otherwise `false`.
+    pub fn is_enterprise(&self) -> bool {
+        self.is_enterprise_internal().unwrap_or_else(|e| {
+            log::error!("Failed getting deployment type, assuming oss. Error: {e}.");
+            false
+        })
+    }
 }
 
 extern "C" fn post_notification_job_free_callback<F: FnOnce(&Context)>(pd: *mut c_void) {
