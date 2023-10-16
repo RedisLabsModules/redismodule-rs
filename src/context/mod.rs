@@ -855,10 +855,12 @@ impl Context {
     /// Return error in case it was not possible to determind the deployment.
     fn is_enterprise_internal(&self) -> Result<bool, RedisError> {
         let info_res = self.call("info", &["server"])?;
-        match info_res {
-            RedisValue::BulkRedisString(res) => Ok(res.try_as_str()?.contains("rlec_version:")),
-            _ => Err(RedisError::Str("Mismatch call reply type")),
-        }
+        let info = match &info_res {
+            RedisValue::BulkRedisString(res) => res.try_as_str()?,
+            RedisValue::SimpleString(res) => res.as_str(),
+            _ => return Err(RedisError::Str("Mismatch call reply type")),
+        };
+        Ok(info.contains("rlec_version:"))
     }
 
     /// Return `true` is the current Redis deployment is enterprise, otherwise `false`.
