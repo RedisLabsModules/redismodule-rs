@@ -2,7 +2,6 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use redis_module::RedisError;
 use redis_module::{redis_module, Context, RedisResult, RedisString, RedisValue};
-use redis_module_macros::{command, RedisValue};
 
 #[derive(RedisValue)]
 struct RedisValueDeriveInner {
@@ -31,7 +30,7 @@ enum RedisValueEnum {
     RedisValue(RedisValueDerive),
 }
 
-#[command(
+#[redis_module::command(
     {
         flags: [ReadOnly, NoMandatoryKeys],
         arity: -1,
@@ -71,7 +70,7 @@ fn redis_value_derive(
     }
 }
 
-#[command(
+#[redis_module::command(
     {
         flags: [ReadOnly],
         arity: -2,
@@ -89,7 +88,7 @@ fn classic_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     Ok(RedisValue::SimpleStringStatic("OK"))
 }
 
-#[command(
+#[redis_module::command(
     {
         name: "keyword_keys",
         flags: [ReadOnly],
@@ -108,7 +107,7 @@ fn keyword_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     Ok(RedisValue::SimpleStringStatic("OK"))
 }
 
-#[command(
+#[redis_module::command(
     {
         name: "num_keys",
         flags: [ReadOnly, NoMandatoryKeys],
