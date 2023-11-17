@@ -71,7 +71,7 @@ endif
 
 #----------------------------------------------------------------------------------------------
 
-test: cargo_deny cargo_test
+test: cargo_test cargo_deny
 
 cargo_deny:
 	cargo install cargo-deny

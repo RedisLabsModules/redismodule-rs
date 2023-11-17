@@ -16,7 +16,6 @@ use crate::RedisResult;
 use bitflags::bitflags;
 use enum_primitive_derive::Primitive;
 use libc::size_t;
-use num_traits::FromPrimitive;
 
 use crate::error::Error;
 pub use crate::redisraw::bindings::*;
@@ -40,7 +39,7 @@ bitflags! {
     }
 }
 
-#[derive(Primitive, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum KeyType {
     Empty = REDISMODULE_KEYTYPE_EMPTY,
     String = REDISMODULE_KEYTYPE_STRING,
@@ -54,7 +53,7 @@ pub enum KeyType {
 
 impl From<c_int> for KeyType {
     fn from(v: c_int) -> Self {
-        Self::from_i32(v).unwrap()
+        Self::try_from(v).unwrap()
     }
 }
 
@@ -64,7 +63,7 @@ pub enum Where {
     ListTail = REDISMODULE_LIST_TAIL,
 }
 
-#[derive(Primitive, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ReplyType {
     Unknown = REDISMODULE_REPLY_UNKNOWN,
     String = REDISMODULE_REPLY_STRING,
@@ -82,7 +81,7 @@ pub enum ReplyType {
 
 impl From<c_int> for ReplyType {
     fn from(v: c_int) -> Self {
-        Self::from_i32(v).unwrap()
+        Self::try_from(v).unwrap()
     }
 }
 
@@ -92,7 +91,7 @@ pub enum Aux {
     After = REDISMODULE_AUX_AFTER_RDB,
 }
 
-#[derive(Primitive, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Status {
     Ok = REDISMODULE_OK,
     Err = REDISMODULE_ERR,
@@ -109,7 +108,7 @@ impl From<Status> for RedisResult<()> {
 
 impl From<c_int> for Status {
     fn from(v: c_int) -> Self {
-        Self::from_i32(v).unwrap()
+        Self::try_from(v).unwrap()
     }
 }
 
