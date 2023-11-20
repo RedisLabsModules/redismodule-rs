@@ -45,7 +45,7 @@ impl<'key> StreamIterator<'key> {
                 to.as_mut().map_or(ptr::null_mut(), |v| v),
             )
         };
-        if Status::Ok == res.into() {
+        if Status::Ok == res.try_into().unwrap() {
             Ok(StreamIterator { key })
         } else {
             Err(RedisError::Str("Failed creating stream iterator"))
@@ -69,7 +69,8 @@ impl<'key> Iterator for StreamIterator<'key> {
                     &mut num_fields,
                 )
             }
-            .into()
+            .try_into()
+            .unwrap()
         {
             return None;
         }
@@ -81,7 +82,8 @@ impl<'key> Iterator for StreamIterator<'key> {
                     &mut field_name,
                     &mut field_val,
                 )
-                .into()
+                .try_into()
+                .unwrap()
             }
         {
             fields.push((

@@ -61,7 +61,9 @@ impl Context {
         let mut data: *mut c_void = std::ptr::null_mut();
 
         let status: raw::Status =
-            unsafe { raw::RedisModule_StopTimer.unwrap()(self.ctx, timer_id, &mut data) }.into();
+            unsafe { raw::RedisModule_StopTimer.unwrap()(self.ctx, timer_id, &mut data) }
+                .try_into()
+                .unwrap();
 
         if status != raw::Status::Ok {
             return Err(RedisError::Str(
@@ -89,7 +91,8 @@ impl Context {
         let status: raw::Status = unsafe {
             raw::RedisModule_GetTimerInfo.unwrap()(self.ctx, timer_id, &mut remaining, &mut data)
         }
-        .into();
+        .try_into()
+        .unwrap();
 
         if status != raw::Status::Ok {
             return Err(RedisError::Str(

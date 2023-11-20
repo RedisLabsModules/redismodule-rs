@@ -1,5 +1,3 @@
-use anyhow::{Context, Result};
-
 use redis::Connection;
 use std::fs;
 use std::path::PathBuf;
@@ -23,7 +21,10 @@ impl Drop for ChildGuard {
     }
 }
 
-pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<ChildGuard> {
+pub fn start_redis_server_with_module(
+    module_name: &str,
+    port: u16,
+) -> Result<ChildGuard, std::io::Error> {
     let extension = if cfg!(target_os = "macos") {
         "dylib"
     } else {
@@ -45,9 +46,7 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
     .iter()
     .collect();
 
-    assert!(fs::metadata(&module_path)
-        .with_context(|| format!("Loading redis module: {}", module_path.display()))?
-        .is_file());
+    assert!(fs::metadata(&module_path)?.is_file());
 
     let module_path = format!("{}", module_path.display());
 
@@ -72,7 +71,7 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
 }
 
 // Get connection to Redis
-pub fn get_redis_connection(port: u16) -> Result<Connection> {
+pub fn get_redis_connection(port: u16) -> Result<Connection, redis::RedisError> {
     let client = redis::Client::open(format!("redis://127.0.0.1:{port}/"))?;
     loop {
         let res = client.get_connection();

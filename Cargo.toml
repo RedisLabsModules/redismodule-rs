@@ -119,7 +119,9 @@ crate-type = ["cdylib"]
 [dependencies]
 bitflags = "2"
 libc = "0.2"
-enum-primitive-derive = "0.2"
+# Depending on git instead of the version, since the crate is almost
+# unmaintained.
+enum-primitive-derive = { git = "https://gitlab.com/cardoe/enum-primitive-derive" }
 num-traits = "0.2"
 regex = "1"
 strum_macros = "0.25"
@@ -133,7 +135,6 @@ redis-module-macros = { path = "./redismodule-rs-macros"}
 log = "0.4"
 
 [dev-dependencies]
-anyhow = "1"
 redis = "0.23"
 lazy_static = "1"
 redis-module-macros = { path = "./redismodule-rs-macros"}

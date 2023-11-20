@@ -757,7 +757,7 @@ where
             RedisModule_CallReplyPromiseAbort
                 .expect("RedisModule_CallReplyPromiseAbort is expected to be available if we got a promise call reply")
                 (self.reply.as_ptr(), &mut callback as *mut *mut C as *mut *mut c_void)
-        }.into();
+        }.try_into().unwrap();
 
         if !callback.is_null() {
             unsafe { deallocate_pointer(callback) };

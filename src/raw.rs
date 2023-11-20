@@ -2,9 +2,7 @@
 // point.
 #![allow(dead_code)]
 
-extern crate enum_primitive_derive;
-extern crate libc;
-extern crate num_traits;
+use enum_primitive_derive::Primitive;
 
 use std::cmp::Ordering;
 use std::ffi::{c_ulonglong, CStr, CString};
@@ -14,7 +12,6 @@ use std::slice;
 
 use crate::RedisResult;
 use bitflags::bitflags;
-use enum_primitive_derive::Primitive;
 use libc::size_t;
 
 use crate::error::Error;
@@ -39,7 +36,7 @@ bitflags! {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum KeyType {
     Empty = REDISMODULE_KEYTYPE_EMPTY,
     String = REDISMODULE_KEYTYPE_STRING,
@@ -51,19 +48,13 @@ pub enum KeyType {
     Stream = REDISMODULE_KEYTYPE_STREAM,
 }
 
-impl From<c_int> for KeyType {
-    fn from(v: c_int) -> Self {
-        Self::try_from(v).unwrap()
-    }
-}
-
 #[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Where {
     ListHead = REDISMODULE_LIST_HEAD,
     ListTail = REDISMODULE_LIST_TAIL,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum ReplyType {
     Unknown = REDISMODULE_REPLY_UNKNOWN,
     String = REDISMODULE_REPLY_STRING,
@@ -79,19 +70,13 @@ pub enum ReplyType {
     VerbatimString = REDISMODULE_REPLY_VERBATIM_STRING,
 }
 
-impl From<c_int> for ReplyType {
-    fn from(v: c_int) -> Self {
-        Self::try_from(v).unwrap()
-    }
-}
-
 #[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Aux {
     Before = REDISMODULE_AUX_BEFORE_RDB,
     After = REDISMODULE_AUX_AFTER_RDB,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Status {
     Ok = REDISMODULE_OK,
     Err = REDISMODULE_ERR,
@@ -103,12 +88,6 @@ impl From<Status> for RedisResult<()> {
             Status::Ok => Ok(()),
             Status::Err => Err(RedisError::Str(GENERIC_ERROR_MESSAGE)),
         }
-    }
-}
-
-impl From<c_int> for Status {
-    fn from(v: c_int) -> Self {
-        Self::try_from(v).unwrap()
     }
 }
 
@@ -209,7 +188,9 @@ pub const REDISMODULE_HASH_DELETE: *const RedisModuleString = 1 as *const RedisM
 pub fn call_reply_type(reply: *mut RedisModuleCallReply) -> ReplyType {
     unsafe {
         // TODO: Cache the unwrapped functions and use them instead of unwrapping every time?
-        RedisModule_CallReplyType.unwrap()(reply).into()
+        RedisModule_CallReplyType.unwrap()(reply)
+            .try_into()
+            .unwrap()
     }
 }
 
@@ -364,7 +345,11 @@ pub(crate) fn open_key_with_flags(
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn reply_with_array(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
-    unsafe { RedisModule_ReplyWithArray.unwrap()(ctx, len).into() }
+    unsafe {
+        RedisModule_ReplyWithArray.unwrap()(ctx, len)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -376,7 +361,8 @@ pub fn reply_with_map(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
                 || RedisModule_ReplyWithArray.unwrap()(ctx, len * 2),
                 |f| f(ctx, len),
             )
-            .into()
+            .try_into()
+            .unwrap()
     }
 }
 
@@ -389,14 +375,19 @@ pub fn reply_with_set(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
                 || RedisModule_ReplyWithArray.unwrap()(ctx, len * 2),
                 |f| f(ctx, len),
             )
-            .into()
+            .try_into()
+            .unwrap()
     }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn reply_with_attribute(ctx: *mut RedisModuleCtx, len: c_long) -> Status {
-    unsafe { RedisModule_ReplyWithAttribute.unwrap()(ctx, len).into() }
+    unsafe {
+        RedisModule_ReplyWithAttribute.unwrap()(ctx, len)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -410,49 +401,77 @@ pub fn reply_with_error(ctx: *mut RedisModuleCtx, err: *const c_char) {
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn reply_with_null(ctx: *mut RedisModuleCtx) -> Status {
-    unsafe { RedisModule_ReplyWithNull.unwrap()(ctx).into() }
+    unsafe { RedisModule_ReplyWithNull.unwrap()(ctx).try_into().unwrap() }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn reply_with_bool(ctx: *mut RedisModuleCtx, b: c_int) -> Status {
-    unsafe { RedisModule_ReplyWithBool.unwrap()(ctx, b).into() }
+    unsafe {
+        RedisModule_ReplyWithBool.unwrap()(ctx, b)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn reply_with_long_long(ctx: *mut RedisModuleCtx, ll: c_longlong) -> Status {
-    unsafe { RedisModule_ReplyWithLongLong.unwrap()(ctx, ll).into() }
+    unsafe {
+        RedisModule_ReplyWithLongLong.unwrap()(ctx, ll)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn reply_with_double(ctx: *mut RedisModuleCtx, f: c_double) -> Status {
-    unsafe { RedisModule_ReplyWithDouble.unwrap()(ctx, f).into() }
+    unsafe {
+        RedisModule_ReplyWithDouble.unwrap()(ctx, f)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn reply_with_string(ctx: *mut RedisModuleCtx, s: *mut RedisModuleString) -> Status {
-    unsafe { RedisModule_ReplyWithString.unwrap()(ctx, s).into() }
+    unsafe {
+        RedisModule_ReplyWithString.unwrap()(ctx, s)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn reply_with_simple_string(ctx: *mut RedisModuleCtx, s: *const c_char) -> Status {
-    unsafe { RedisModule_ReplyWithSimpleString.unwrap()(ctx, s).into() }
+    unsafe {
+        RedisModule_ReplyWithSimpleString.unwrap()(ctx, s)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn reply_with_string_buffer(ctx: *mut RedisModuleCtx, s: *const c_char, len: size_t) -> Status {
-    unsafe { RedisModule_ReplyWithStringBuffer.unwrap()(ctx, s, len).into() }
+    unsafe {
+        RedisModule_ReplyWithStringBuffer.unwrap()(ctx, s, len)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn reply_with_big_number(ctx: *mut RedisModuleCtx, s: *const c_char, len: size_t) -> Status {
-    unsafe { RedisModule_ReplyWithBigNumber.unwrap()(ctx, s, len).into() }
+    unsafe {
+        RedisModule_ReplyWithBigNumber.unwrap()(ctx, s, len)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -463,7 +482,11 @@ pub fn reply_with_verbatim_string(
     len: size_t,
     format: *const c_char,
 ) -> Status {
-    unsafe { RedisModule_ReplyWithVerbatimStringType.unwrap()(ctx, s, len, format).into() }
+    unsafe {
+        RedisModule_ReplyWithVerbatimStringType.unwrap()(ctx, s, len, format)
+            .try_into()
+            .unwrap()
+    }
 }
 
 // Sets the expiry on a key.
@@ -472,7 +495,11 @@ pub fn reply_with_verbatim_string(
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn set_expire(key: *mut RedisModuleKey, expire: c_longlong) -> Status {
-    unsafe { RedisModule_SetExpire.unwrap()(key, expire).into() }
+    unsafe {
+        RedisModule_SetExpire.unwrap()(key, expire)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -484,7 +511,11 @@ pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn string_truncate(key: *mut RedisModuleKey, new_len: size_t) -> Status {
-    unsafe { RedisModule_StringTruncate.unwrap()(key, new_len).into() }
+    unsafe {
+        RedisModule_StringTruncate.unwrap()(key, new_len)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -534,7 +565,7 @@ where
     // to modules. Unfortunately there's no straightforward or portable way of calling a
     // a varargs function with a variable number of arguments that is determined at runtime.
     // See also the following Redis ticket: https://github.com/redis/redis/issues/7860
-    let res = Status::from(match fields.len() {
+    let res = Status::try_from(match fields.len() {
         0 => rm! {},
         1 => rm! {f!() v!()},
         2 => rm! {f!() v!() f!() v!()},
@@ -567,7 +598,8 @@ where
             f!() v!() f!() v!() f!() v!() f!() v!() f!() v!() f!() v!()
         },
         _ => panic!("Unsupported length"),
-    });
+    })
+    .unwrap();
 
     match res {
         Status::Ok => Ok(()),
@@ -588,7 +620,8 @@ pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleSt
             value,
             ptr::null::<c_char>(),
         )
-        .into()
+        .try_into()
+        .unwrap()
     }
 }
 
@@ -609,7 +642,8 @@ pub fn hash_del(key: *mut RedisModuleKey, field: &str) -> Status {
             REDISMODULE_HASH_DELETE,
             ptr::null::<c_char>(),
         )
-        .into()
+        .try_into()
+        .unwrap()
     }
 }
 
@@ -620,7 +654,11 @@ pub fn list_push(
     list_where: Where,
     element: *mut RedisModuleString,
 ) -> Status {
-    unsafe { RedisModule_ListPush.unwrap()(key, list_where as i32, element).into() }
+    unsafe {
+        RedisModule_ListPush.unwrap()(key, list_where as i32, element)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -645,25 +683,37 @@ pub fn string_retain_string(ctx: *mut RedisModuleCtx, s: *mut RedisModuleString)
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn string_to_longlong(s: *const RedisModuleString, len: *mut i64) -> Status {
-    unsafe { RedisModule_StringToLongLong.unwrap()(s, len).into() }
+    unsafe {
+        RedisModule_StringToLongLong.unwrap()(s, len)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn string_to_double(s: *const RedisModuleString, len: *mut f64) -> Status {
-    unsafe { RedisModule_StringToDouble.unwrap()(s, len).into() }
+    unsafe {
+        RedisModule_StringToDouble.unwrap()(s, len)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn string_set(key: *mut RedisModuleKey, s: *mut RedisModuleString) -> Status {
-    unsafe { RedisModule_StringSet.unwrap()(key, s).into() }
+    unsafe { RedisModule_StringSet.unwrap()(key, s).try_into().unwrap() }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn replicate_verbatim(ctx: *mut RedisModuleCtx) -> Status {
-    unsafe { RedisModule_ReplicateVerbatim.unwrap()(ctx).into() }
+    unsafe {
+        RedisModule_ReplicateVerbatim.unwrap()(ctx)
+            .try_into()
+            .unwrap()
+    }
 }
 
 fn load<F, T>(rdb: *mut RedisModuleIO, f: F) -> Result<T, Error>
@@ -724,7 +774,8 @@ pub fn replicate<'a, T: Into<StrCallArgs<'a>>>(
             final_args.as_ptr(),
             final_args.len(),
         )
-        .into()
+        .try_into()
+        .unwrap()
     }
 }
 
@@ -788,7 +839,8 @@ pub fn string_append_buffer(
 ) -> Status {
     unsafe {
         RedisModule_StringAppendBuffer.unwrap()(ctx, s, buff.as_ptr().cast::<c_char>(), buff.len())
-            .into()
+            .try_into()
+            .unwrap()
     }
 }
 
@@ -798,19 +850,35 @@ pub fn subscribe_to_server_event(
     event: RedisModuleEvent,
     callback: RedisModuleEventCallback,
 ) -> Status {
-    unsafe { RedisModule_SubscribeToServerEvent.unwrap()(ctx, event, callback).into() }
+    unsafe {
+        RedisModule_SubscribeToServerEvent.unwrap()(ctx, event, callback)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn register_info_function(ctx: *mut RedisModuleCtx, callback: RedisModuleInfoFunc) -> Status {
-    unsafe { RedisModule_RegisterInfoFunc.unwrap()(ctx, callback).into() }
+    unsafe {
+        RedisModule_RegisterInfoFunc.unwrap()(ctx, callback)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn add_info_section(ctx: *mut RedisModuleInfoCtx, name: Option<&str>) -> Status {
     name.map(|n| CString::new(n).unwrap()).map_or_else(
-        || unsafe { RedisModule_InfoAddSection.unwrap()(ctx, ptr::null_mut()).into() },
-        |n| unsafe { RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr()).into() },
+        || unsafe {
+            RedisModule_InfoAddSection.unwrap()(ctx, ptr::null_mut())
+                .try_into()
+                .unwrap()
+        },
+        |n| unsafe {
+            RedisModule_InfoAddSection.unwrap()(ctx, n.as_ptr())
+                .try_into()
+                .unwrap()
+        },
     )
 }
 
@@ -818,7 +886,11 @@ pub fn add_info_section(ctx: *mut RedisModuleInfoCtx, name: Option<&str>) -> Sta
 pub fn add_info_field_str(ctx: *mut RedisModuleInfoCtx, name: &str, content: &str) -> Status {
     let name = CString::new(name).unwrap();
     let content = RedisString::create(None, content);
-    unsafe { RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr(), content.inner).into() }
+    unsafe {
+        RedisModule_InfoAddFieldString.unwrap()(ctx, name.as_ptr(), content.inner)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -828,7 +900,11 @@ pub fn add_info_field_long_long(
     value: c_longlong,
 ) -> Status {
     let name = CString::new(name).unwrap();
-    unsafe { RedisModule_InfoAddFieldLongLong.unwrap()(ctx, name.as_ptr(), value).into() }
+    unsafe {
+        RedisModule_InfoAddFieldLongLong.unwrap()(ctx, name.as_ptr(), value)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -838,24 +914,40 @@ pub fn add_info_field_unsigned_long_long(
     value: c_ulonglong,
 ) -> Status {
     let name = CString::new(name).unwrap();
-    unsafe { RedisModule_InfoAddFieldULongLong.unwrap()(ctx, name.as_ptr(), value).into() }
+    unsafe {
+        RedisModule_InfoAddFieldULongLong.unwrap()(ctx, name.as_ptr(), value)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn add_info_field_double(ctx: *mut RedisModuleInfoCtx, name: &str, value: c_double) -> Status {
     let name = CString::new(name).unwrap();
-    unsafe { RedisModule_InfoAddFieldDouble.unwrap()(ctx, name.as_ptr(), value).into() }
+    unsafe {
+        RedisModule_InfoAddFieldDouble.unwrap()(ctx, name.as_ptr(), value)
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn add_info_begin_dict_field(ctx: *mut RedisModuleInfoCtx, name: &str) -> Status {
     let name = CString::new(name).unwrap();
-    unsafe { RedisModule_InfoBeginDictField.unwrap()(ctx, name.as_ptr()).into() }
+    unsafe {
+        RedisModule_InfoBeginDictField.unwrap()(ctx, name.as_ptr())
+            .try_into()
+            .unwrap()
+    }
 }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn add_info_end_dict_field(ctx: *mut RedisModuleInfoCtx) -> Status {
-    unsafe { RedisModule_InfoEndDictField.unwrap()(ctx).into() }
+    unsafe {
+        RedisModule_InfoEndDictField.unwrap()(ctx)
+            .try_into()
+            .unwrap()
+    }
 }
 
 /// # Safety
@@ -890,7 +982,8 @@ pub unsafe fn notify_keyspace_event(
 ) -> Status {
     let event = CString::new(event).unwrap();
     RedisModule_NotifyKeyspaceEvent.unwrap()(ctx, event_type.bits(), event.as_ptr(), keyname.inner)
-        .into()
+        .try_into()
+        .unwrap()
 }
 
 /// # Panics

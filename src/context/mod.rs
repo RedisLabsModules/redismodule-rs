@@ -477,7 +477,11 @@ impl Context {
     #[allow(clippy::must_use_candidate)]
     pub fn reply_error_string(&self, s: &str) -> raw::Status {
         let msg = Self::str_as_legal_resp_string(s);
-        unsafe { raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into() }
+        unsafe {
+            raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr())
+                .try_into()
+                .unwrap()
+        }
     }
 
     pub fn reply_with_key(&self, result: RedisValueKey) -> raw::Status {
@@ -595,7 +599,9 @@ impl Context {
                     // We can't return a result since we don't have a client
                     raw::Status::Err
                 } else {
-                    raw::RedisModule_WrongArity.unwrap()(self.ctx).into()
+                    raw::RedisModule_WrongArity.unwrap()(self.ctx)
+                        .try_into()
+                        .unwrap()
                 }
             },
 
@@ -792,7 +798,8 @@ impl Context {
                 permissions.bits(),
             )
         }
-        .into();
+        .try_into()
+        .unwrap();
         unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
         let acl_permission_result: Result<(), &str> = acl_permission_result.into();
         acl_permission_result.map_err(|_e| RedisError::Str("User does not have permissions on key"))
@@ -825,7 +832,8 @@ impl Context {
                     Some(post_notification_job_free_callback::<F>),
                 )
             }
-            .into()
+            .try_into()
+            .unwrap()
         }
     );
 
