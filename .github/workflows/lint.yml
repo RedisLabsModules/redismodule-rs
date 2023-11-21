@@ -1,0 +1,30 @@
+name: Spellcheck
+
+on:
+
+  pull_request:
+
+jobs:
+  linters:
+    name: Lint check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          components: rustfmt, clippy,
+      - run: cargo fmt -- --check
+
+  pants:
+    name: Check dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          components: rustfmt, clippy,
+      - run: cargo pants --dev --verbose
