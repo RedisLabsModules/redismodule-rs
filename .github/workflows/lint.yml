@@ -15,7 +15,10 @@ jobs:
           toolchain: nightly
           override: true
           components: rustfmt, clippy,
-      - run: cargo fmt -- --check
+      - name: cargo fmt
+        run: cargo fmt -- --check
+      - name: cargo clipp
+        run: cargo clippy -- -Dwarnings
 
   pants:
     name: Check dependencies
@@ -26,5 +29,6 @@ jobs:
         with:
           toolchain: nightly
           override: true
-          components: rustfmt, clippy,
-      - run: cargo pants --dev --verbose
+      - run: |
+        cargo install pants
+        cargo pants --dev --verbose
