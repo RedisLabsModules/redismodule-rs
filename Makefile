@@ -74,7 +74,7 @@ endif
 test: cargo_test cargo_deny
 
 cargo_deny:
-	cargo install cargo-deny
+	cargo install --locked cargo-deny
 	cargo deny check licenses
 	cargo deny check bans
 
