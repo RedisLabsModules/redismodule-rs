@@ -316,16 +316,6 @@ pub fn call_reply_promise_abort(
     redis_call!(RedisModule_CallReplyPromiseAbort(reply, private_data))
 }
 
-macro_rules! generate_transparent_binding {
-    ($(#[$outer:meta])* $vis:vis $rust_name:ident => $raw_function:ident, $ret_type:ty, $(($arg:ident, $typ:ty)),*) => {
-        $(#[$outer])*
-        #[allow(clippy::not_unsafe_ptr_arg_deref)]
-        $vis fn $rust_name($($arg: $typ),*) -> $ret_type {
-            raw_call!($raw_function, $($arg),*)
-        }
-    };
-}
-
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn call_reply_array_element(
     reply: *mut RedisModuleCallReply,
@@ -333,16 +323,6 @@ pub fn call_reply_array_element(
 ) -> *mut RedisModuleCallReply {
     redis_call!(RedisModule_CallReplyArrayElement(reply, idx))
 }
-
-// generate_transparent_binding!(
-//     /// # Panics
-//     ///
-//     /// Panics if the Redis server doesn't support replying with bool (since RESP3).
-//     pub call_reply_set_element => RedisModule_CallReplySetElement,
-//     *mut RedisModuleCallReply,
-//     (reply, *mut RedisModuleCallReply),
-//     (idx, usize)
-// );
 
 /// # Panics
 ///
