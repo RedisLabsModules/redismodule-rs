@@ -108,7 +108,7 @@ impl RedisKey {
     /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
     #[must_use]
     pub fn key_type(&self) -> raw::KeyType {
-        unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
+        raw::key_type(self.key_inner)
     }
 
     /// Detects whether the key pointer given to us by Redis is null.
@@ -358,7 +358,7 @@ impl RedisKeyWritable {
     /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
     #[must_use]
     pub fn key_type(&self) -> raw::KeyType {
-        unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
+        raw::key_type(self.key_inner)
     }
 
     #[must_use]
@@ -402,16 +402,7 @@ impl RedisKeyWritable {
     pub fn set_value<T>(&self, redis_type: &RedisType, value: T) -> Result<(), RedisError> {
         verify_type(self.key_inner, redis_type)?;
         let value = Box::into_raw(Box::new(value)).cast::<c_void>();
-        let status: raw::Status = unsafe {
-            raw::RedisModule_ModuleTypeSetValue.unwrap()(
-                self.key_inner,
-                *redis_type.raw_type.borrow(),
-                value,
-            )
-        }
-        .into();
-
-        status.into()
+        raw::module_type_set_value(self.key_inner, *redis_type.raw_type.borrow(), value).into()
     }
 
     pub fn trim_stream_by_id(
@@ -654,7 +645,7 @@ fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
 /// Will panic if `RedisModule_KeyType` or `RedisModule_ModuleTypeGetType` are missing in redismodule.h
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> RedisResult {
-    let key_type: KeyType = unsafe { raw::RedisModule_KeyType.unwrap()(key_inner) }.into();
+    let key_type = raw::key_type(key_inner);
 
     if key_type != KeyType::Empty {
         // The key exists; check its type

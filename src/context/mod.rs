@@ -476,8 +476,7 @@ impl Context {
 
     #[allow(clippy::must_use_candidate)]
     pub fn reply_error_string(&self, s: &str) -> raw::Status {
-        let msg = Self::str_as_legal_resp_string(s);
-        unsafe { raw::RedisModule_ReplyWithError.unwrap()(self.ctx, msg.as_ptr()).into() }
+        raw::reply_with_error(self.ctx, s)
     }
 
     pub fn reply_with_key(&self, result: RedisValueKey) -> raw::Status {
@@ -590,14 +589,14 @@ impl Context {
 
             Ok(RedisValue::StaticError(s)) => self.reply_error_string(s),
 
-            Err(RedisError::WrongArity) => unsafe {
+            Err(RedisError::WrongArity) => {
                 if self.is_keys_position_request() {
                     // We can't return a result since we don't have a client
                     raw::Status::Err
                 } else {
-                    raw::RedisModule_WrongArity.unwrap()(self.ctx).into()
+                    raw::wrong_arity(self.ctx)
                 }
-            },
+            }
 
             Err(RedisError::WrongType) => {
                 self.reply_error_string(RedisError::WrongType.to_string().as_str())
@@ -781,53 +780,38 @@ impl Context {
         key_name: &RedisString,
         permissions: &AclPermissions,
     ) -> Result<(), RedisError> {
-        let user = unsafe { raw::RedisModule_GetModuleUserFromUserName.unwrap()(user_name.inner) };
+        let user = raw::get_module_user_from_user_name(user_name.inner);
         if user.is_null() {
             return Err(RedisError::Str("User does not exists or disabled"));
         }
-        let acl_permission_result: raw::Status = unsafe {
-            raw::RedisModule_ACLCheckKeyPermissions.unwrap()(
-                user,
-                key_name.inner,
-                permissions.bits(),
-            )
-        }
-        .into();
+        let acl_permission_result =
+            raw::acl_check_key_permissions(user, key_name.inner, permissions.bits());
         unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
         let acl_permission_result: Result<(), &str> = acl_permission_result.into();
         acl_permission_result.map_err(|_e| RedisError::Str("User does not have permissions on key"))
     }
 
-    api!(
-        [RedisModule_AddPostNotificationJob],
-        /// When running inside a key space notification callback, it is dangerous and highly discouraged to perform any write
-        /// operation. In order to still perform write actions in this scenario, Redis provides this API ([add_post_notification_job])
-        /// that allows to register a job callback which Redis will call when the following condition holds:
-        ///
-        /// 1. It is safe to perform any write operation.
-        /// 2. The job will be called atomically along side the key space notification.
-        ///
-        /// Notice, one job might trigger key space notifications that will trigger more jobs.
-        /// This raises a concerns of entering an infinite loops, we consider infinite loops
-        /// as a logical bug that need to be fixed in the module, an attempt to protect against
-        /// infinite loops by halting the execution could result in violation of the feature correctness
-        /// and so Redis will make no attempt to protect the module from infinite loops.
-        pub fn add_post_notification_job<F: FnOnce(&Context) + 'static>(
-            &self,
-            callback: F,
-        ) -> Status {
-            let callback = Box::into_raw(Box::new(Some(callback)));
-            unsafe {
-                RedisModule_AddPostNotificationJob(
-                    self.ctx,
-                    Some(post_notification_job::<F>),
-                    callback as *mut c_void,
-                    Some(post_notification_job_free_callback::<F>),
-                )
-            }
-            .into()
-        }
-    );
+    /// When running inside a key space notification callback, it is dangerous and highly discouraged to perform any write
+    /// operation. In order to still perform write actions in this scenario, Redis provides this API ([add_post_notification_job])
+    /// that allows to register a job callback which Redis will call when the following condition holds:
+    ///
+    /// 1. It is safe to perform any write operation.
+    /// 2. The job will be called atomically along side the key space notification.
+    ///
+    /// Notice, one job might trigger key space notifications that will trigger more jobs.
+    /// This raises a concerns of entering an infinite loops, we consider infinite loops
+    /// as a logical bug that need to be fixed in the module, an attempt to protect against
+    /// infinite loops by halting the execution could result in violation of the feature correctness
+    /// and so Redis will make no attempt to protect the module from infinite loops.
+    pub fn add_post_notification_job<F: FnOnce(&Context) + 'static>(&self, callback: F) -> Status {
+        let callback = Box::into_raw(Box::new(Some(callback)));
+        raw::add_post_notification_job(
+            self.ctx,
+            Some(post_notification_job::<F>),
+            callback as *mut c_void,
+            Some(post_notification_job_free_callback::<F>),
+        )
+    }
 
     api!(
         [RedisModule_AvoidReplicaTraffic],
@@ -873,7 +857,7 @@ impl Context {
 }
 
 extern "C" fn post_notification_job_free_callback<F: FnOnce(&Context)>(pd: *mut c_void) {
-    unsafe { Box::from_raw(pd as *mut Option<F>) };
+    unsafe { drop(Box::from_raw(pd as *mut Option<F>)) };
 }
 
 extern "C" fn post_notification_job<F: FnOnce(&Context)>(

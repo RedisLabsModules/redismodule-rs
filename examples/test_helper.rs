@@ -30,6 +30,9 @@ fn test_helper_err(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     Ok(().into())
 }
 
+// This is a function to test that the deprecated API still works fine,
+// there is no need to check for the deprecated calls.
+#[allow(deprecated)]
 fn add_info(ctx: &InfoContext, _for_crash_report: bool) {
     if ctx.add_info_section(Some("test_helper")) == Status::Ok {
         ctx.add_info_field_str("field", "value");
