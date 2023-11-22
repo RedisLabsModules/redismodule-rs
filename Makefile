@@ -71,13 +71,18 @@ endif
 
 #----------------------------------------------------------------------------------------------
 
-test: cargo_test
+test: cargo_test cargo_deny
+
+cargo_deny:
+	cargo install --locked cargo-deny
+	cargo deny check licenses
+	cargo deny check bans
 
 cargo_test:
 	cargo test --workspace --no-default-features $(CARGO_FLAGS)
 	cargo test --doc --workspace --no-default-features $(CARGO_FLAGS)
 
-.PHONY: test cargo_test
+.PHONY: test cargo_test cargo_deny
 
 #----------------------------------------------------------------------------------------------
 
