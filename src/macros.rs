@@ -34,9 +34,9 @@ macro_rules! redis_command {
                 $lastkey,
                 $keystep,
             )
-        } == $crate::raw::Status::Err as c_int
+        } == $crate::Status::Err as c_int
         {
-            return $crate::raw::Status::Err as c_int;
+            return $crate::Status::Err as c_int;
         }
     }};
 }
@@ -65,7 +65,7 @@ macro_rules! redis_event_handler {
                 redis_key,
             );
 
-            $crate::raw::Status::Ok as c_int
+            $crate::Status::Ok as c_int
         }
 
         if unsafe {
@@ -74,9 +74,9 @@ macro_rules! redis_event_handler {
                 $event_type.bits(),
                 Some(__handle_event),
             )
-        } == $crate::raw::Status::Err as c_int
+        } == $crate::Status::Err as c_int
         {
-            return $crate::raw::Status::Err as c_int;
+            return $crate::Status::Err as c_int;
         }
     }};
 }
@@ -217,7 +217,7 @@ macro_rules! redis_module {
                 name_buffer.as_ptr().cast::<c_char>(),
                 module_version,
                 raw::REDISMODULE_APIVER_1 as c_int,
-            ) } == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
+            ) } == $crate::Status::Err as c_int { return $crate::Status::Err as c_int; }
 
             let context = $crate::Context::new(ctx);
             unsafe {
@@ -227,7 +227,7 @@ macro_rules! redis_module {
 
             $(
                 if (&$data_type).create_data_type(ctx).is_err() {
-                    return raw::Status::Err as c_int;
+                    return $crate::Status::Err as c_int;
                 }
             )*
 
@@ -235,8 +235,8 @@ macro_rules! redis_module {
                 $crate::redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep);
             )*
 
-            if $crate::commands::register_commands(&context) == raw::Status::Err {
-                return raw::Status::Err as c_int;
+            if $crate::commands::register_commands(&context) == $crate::Status::Err {
+                return $crate::Status::Err as c_int;
             }
 
             $(
@@ -253,7 +253,7 @@ macro_rules! redis_module {
                                 Ok(v) => v,
                                 Err(e) => {
                                     context.log_warning(&format!("{e}"));
-                                    return raw::Status::Err as c_int;
+                                    return $crate::Status::Err as c_int;
                                 }
                             }
                         } else {
@@ -269,7 +269,7 @@ macro_rules! redis_module {
                                 Ok(v) => v,
                                 Err(e) => {
                                     context.log_warning(&format!("{e}"));
-                                    return raw::Status::Err as c_int;
+                                    return $crate::Status::Err as c_int;
                                 }
                             }
                         } else {
@@ -285,7 +285,7 @@ macro_rules! redis_module {
                                 Ok(v) => v,
                                 Err(e) => {
                                     context.log_warning(&format!("{e}"));
-                                    return raw::Status::Err as c_int;
+                                    return $crate::Status::Err as c_int;
                                 }
                             }
                         } else {
@@ -301,7 +301,7 @@ macro_rules! redis_module {
                                 Ok(v) => v,
                                 Err(e) => {
                                     context.log_warning(&format!("{e}"));
-                                    return raw::Status::Err as c_int;
+                                    return $crate::Status::Err as c_int;
                                 }
                             }
                         } else {
@@ -329,7 +329,7 @@ macro_rules! redis_module {
 
             if let Err(e) = register_server_events(&context) {
                 context.log_warning(&format!("{e}"));
-                return raw::Status::Err as c_int;
+                return $crate::Status::Err as c_int;
             }
 
             $(
@@ -338,7 +338,7 @@ macro_rules! redis_module {
                 }
             )*
 
-            raw::Status::Ok as c_int
+            $crate::Status::Ok as c_int
         }
 
         #[no_mangle]
@@ -355,7 +355,7 @@ macro_rules! redis_module {
                 }
             )*
 
-            $crate::raw::Status::Ok as c_int
+            $crate::Status::Ok as c_int
         }
     }
 }

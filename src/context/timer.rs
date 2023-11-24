@@ -2,8 +2,8 @@ use std::convert::TryInto;
 use std::ffi::c_void;
 use std::time::Duration;
 
-use crate::raw;
 use crate::raw::RedisModuleTimerID;
+use crate::{raw, Status};
 use crate::{Context, RedisError};
 
 // We use `repr(C)` since we access the underlying data field directly.
@@ -62,7 +62,7 @@ impl Context {
 
         let status = raw::stop_timer(self.ctx, timer_id, &mut data);
 
-        if status != raw::Status::Ok {
+        if status != Status::Ok {
             return Err(RedisError::Str(
                 "RedisModule_StopTimer failed, timer may not exist",
             ));
@@ -87,7 +87,7 @@ impl Context {
 
         let status = raw::get_timer_info(self.ctx, timer_id, &mut remaining, &mut data);
 
-        if status != raw::Status::Ok {
+        if status != Status::Ok {
             return Err(RedisError::Str(
                 "RedisModule_GetTimerInfo failed, timer may not exist",
             ));

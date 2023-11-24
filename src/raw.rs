@@ -1,28 +1,16 @@
-// Allow dead code in here in case I want to publish it as a crate at some
-// point.
-#![allow(dead_code)]
-
-extern crate enum_primitive_derive;
-extern crate libc;
-extern crate num_traits;
-
 use std::cmp::Ordering;
 use std::ffi::{c_ulonglong, CString};
 use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong, c_void};
 use std::ptr;
 use std::slice;
 
-use crate::RedisResult;
 use bitflags::bitflags;
 use enum_primitive_derive::Primitive;
 use libc::size_t;
 
 use crate::error::Error;
 pub use crate::redisraw::bindings::*;
-use crate::{context::StrCallArgs, RedisString};
-use crate::{RedisBuffer, RedisError};
-
-const GENERIC_ERROR_MESSAGE: &str = "Generic error.";
+use crate::{context::StrCallArgs, RedisBuffer, RedisError, RedisString, Status};
 
 bitflags! {
     pub struct KeyMode: c_int {
@@ -130,30 +118,6 @@ pub enum Aux {
     After = REDISMODULE_AUX_AFTER_RDB,
 }
 
-#[derive(Primitive, Debug, PartialEq, Eq)]
-pub enum Status {
-    Ok = REDISMODULE_OK,
-    Err = REDISMODULE_ERR,
-}
-
-impl From<Status> for RedisResult<()> {
-    fn from(value: Status) -> Self {
-        match value {
-            Status::Ok => Ok(()),
-            Status::Err => Err(RedisError::Str(GENERIC_ERROR_MESSAGE)),
-        }
-    }
-}
-
-impl From<Status> for Result<(), &str> {
-    fn from(s: Status) -> Self {
-        match s {
-            Status::Ok => Ok(()),
-            Status::Err => Err(GENERIC_ERROR_MESSAGE),
-        }
-    }
-}
-
 bitflags! {
     #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
     pub struct NotifyEvent : c_int {
@@ -190,26 +154,6 @@ pub enum CommandFlag {
     Asking,
     Fast,
     Movablekeys,
-}
-
-const fn command_flag_repr(flag: &CommandFlag) -> &'static str {
-    use crate::raw::CommandFlag::*;
-    match flag {
-        Write => "write",
-        Readonly => "readonly",
-        Denyoom => "denyoom",
-        Admin => "admin",
-        Pubsub => "pubsub",
-        Noscript => "noscript",
-        Random => "random",
-        SortForScript => "sort_for_script",
-        Loading => "loading",
-        Stale => "stale",
-        SkipMonitor => "skip_monitor",
-        Asking => "asking",
-        Fast => "fast",
-        Movablekeys => "movablekeys",
-    }
 }
 
 // This is the one static function we need to initialize a module.

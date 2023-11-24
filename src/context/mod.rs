@@ -469,17 +469,17 @@ impl Context {
     }
 
     #[allow(clippy::must_use_candidate)]
-    pub fn reply_simple_string(&self, s: &str) -> raw::Status {
+    pub fn reply_simple_string(&self, s: &str) -> Status {
         let msg = Self::str_as_legal_resp_string(s);
         raw::reply_with_simple_string(self.ctx, msg.as_ptr())
     }
 
     #[allow(clippy::must_use_candidate)]
-    pub fn reply_error_string(&self, s: &str) -> raw::Status {
+    pub fn reply_error_string(&self, s: &str) -> Status {
         raw::reply_with_error(self.ctx, s)
     }
 
-    pub fn reply_with_key(&self, result: RedisValueKey) -> raw::Status {
+    pub fn reply_with_key(&self, result: RedisValueKey) -> Status {
         match result {
             RedisValueKey::Integer(i) => raw::reply_with_long_long(self.ctx, i),
             RedisValueKey::String(s) => {
@@ -497,7 +497,7 @@ impl Context {
     ///
     /// Will panic if methods used are missing in redismodule.h
     #[allow(clippy::must_use_candidate)]
-    pub fn reply(&self, result: RedisResult) -> raw::Status {
+    pub fn reply(&self, result: RedisResult) -> Status {
         match result {
             Ok(RedisValue::Bool(v)) => raw::reply_with_bool(self.ctx, v.into()),
             Ok(RedisValue::Integer(v)) => raw::reply_with_long_long(self.ctx, v),
@@ -540,7 +540,7 @@ impl Context {
                     self.reply(Ok(elem));
                 }
 
-                raw::Status::Ok
+                Status::Ok
             }
 
             Ok(RedisValue::Map(map)) => {
@@ -551,7 +551,7 @@ impl Context {
                     self.reply(Ok(value));
                 }
 
-                raw::Status::Ok
+                Status::Ok
             }
 
             Ok(RedisValue::OrderedMap(map)) => {
@@ -562,7 +562,7 @@ impl Context {
                     self.reply(Ok(value));
                 }
 
-                raw::Status::Ok
+                Status::Ok
             }
 
             Ok(RedisValue::Set(set)) => {
@@ -571,7 +571,7 @@ impl Context {
                     self.reply_with_key(e);
                 });
 
-                raw::Status::Ok
+                Status::Ok
             }
 
             Ok(RedisValue::OrderedSet(set)) => {
@@ -580,19 +580,19 @@ impl Context {
                     self.reply_with_key(e);
                 });
 
-                raw::Status::Ok
+                Status::Ok
             }
 
             Ok(RedisValue::Null) => raw::reply_with_null(self.ctx),
 
-            Ok(RedisValue::NoReply) => raw::Status::Ok,
+            Ok(RedisValue::NoReply) => Status::Ok,
 
             Ok(RedisValue::StaticError(s)) => self.reply_error_string(s),
 
             Err(RedisError::WrongArity) => {
                 if self.is_keys_position_request() {
                     // We can't return a result since we don't have a client
-                    raw::Status::Err
+                    Status::Err
                 } else {
                     raw::wrong_arity(self.ctx)
                 }
@@ -671,7 +671,7 @@ impl Context {
         event_type: raw::NotifyEvent,
         event: &str,
         keyname: &RedisString,
-    ) -> raw::Status {
+    ) -> Status {
         unsafe { raw::notify_keyspace_event(self.ctx, event_type, event, keyname) }
     }
 
@@ -791,27 +791,37 @@ impl Context {
         acl_permission_result.map_err(|_e| RedisError::Str("User does not have permissions on key"))
     }
 
-    /// When running inside a key space notification callback, it is dangerous and highly discouraged to perform any write
-    /// operation. In order to still perform write actions in this scenario, Redis provides this API ([add_post_notification_job])
-    /// that allows to register a job callback which Redis will call when the following condition holds:
-    ///
-    /// 1. It is safe to perform any write operation.
-    /// 2. The job will be called atomically along side the key space notification.
-    ///
-    /// Notice, one job might trigger key space notifications that will trigger more jobs.
-    /// This raises a concerns of entering an infinite loops, we consider infinite loops
-    /// as a logical bug that need to be fixed in the module, an attempt to protect against
-    /// infinite loops by halting the execution could result in violation of the feature correctness
-    /// and so Redis will make no attempt to protect the module from infinite loops.
-    pub fn add_post_notification_job<F: FnOnce(&Context) + 'static>(&self, callback: F) -> Status {
-        let callback = Box::into_raw(Box::new(Some(callback)));
-        raw::add_post_notification_job(
-            self.ctx,
-            Some(post_notification_job::<F>),
-            callback as *mut c_void,
-            Some(post_notification_job_free_callback::<F>),
-        )
-    }
+    api!(
+        [RedisModule_AddPostNotificationJob],
+        /// When running inside a key space notification callback, it is dangerous and highly discouraged to perform any write
+        /// operation. In order to still perform write actions in this scenario, Redis provides this API ([add_post_notification_job])
+        /// that allows to register a job callback which Redis will call when the following condition holds:
+        ///
+        /// 1. It is safe to perform any write operation.
+        /// 2. The job will be called atomically along side the key space notification.
+        ///
+        /// Notice, one job might trigger key space notifications that will trigger more jobs.
+        /// This raises a concerns of entering an infinite loops, we consider infinite loops
+        /// as a logical bug that need to be fixed in the module, an attempt to protect against
+        /// infinite loops by halting the execution could result in violation of the feature correctness
+        /// and so Redis will make no attempt to protect the module from infinite loops.
+        pub fn add_post_notification_job<F: FnOnce(&Context) + 'static>(
+            &self,
+            callback: F,
+        ) -> Status {
+            let callback = Box::into_raw(Box::new(Some(callback)));
+            unsafe {
+                RedisModule_AddPostNotificationJob(
+                    self.ctx,
+                    Some(post_notification_job::<F>),
+                    callback as *mut c_void,
+                    Some(post_notification_job_free_callback::<F>),
+                )
+            }
+            .try_into()
+            .unwrap()
+        }
+    );
 
     api!(
         [RedisModule_AvoidReplicaTraffic],

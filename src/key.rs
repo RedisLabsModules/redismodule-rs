@@ -19,6 +19,7 @@ use crate::stream::StreamIterator;
 use crate::RedisError;
 use crate::RedisResult;
 use crate::RedisString;
+use crate::Status;
 use bitflags::bitflags;
 
 /// `RedisKey` is an abstraction over a Redis key that allows readonly
@@ -240,12 +241,12 @@ impl RedisKeyWritable {
     }
 
     #[allow(clippy::must_use_candidate)]
-    pub fn hash_set(&self, field: &str, value: RedisString) -> raw::Status {
+    pub fn hash_set(&self, field: &str, value: RedisString) -> Status {
         raw::hash_set(self.key_inner, field, value.inner)
     }
 
     #[allow(clippy::must_use_candidate)]
-    pub fn hash_del(&self, field: &str) -> raw::Status {
+    pub fn hash_del(&self, field: &str) -> Status {
         raw::hash_del(self.key_inner, field)
     }
 
@@ -273,13 +274,13 @@ impl RedisKeyWritable {
 
     // `list_push_head` inserts the specified element at the head of the list stored at this key.
     #[allow(clippy::must_use_candidate)]
-    pub fn list_push_head(&self, element: RedisString) -> raw::Status {
+    pub fn list_push_head(&self, element: RedisString) -> Status {
         raw::list_push(self.key_inner, raw::Where::ListHead, element.inner)
     }
 
     // `list_push_tail` inserts the specified element at the tail of the list stored at this key.
     #[allow(clippy::must_use_candidate)]
-    pub fn list_push_tail(&self, element: RedisString) -> raw::Status {
+    pub fn list_push_tail(&self, element: RedisString) -> Status {
         raw::list_push(self.key_inner, raw::Where::ListTail, element.inner)
     }
 
@@ -321,19 +322,19 @@ impl RedisKeyWritable {
         })?;
 
         match raw::set_expire(self.key_inner, exp_time) {
-            raw::Status::Ok => REDIS_OK,
+            Status::Ok => REDIS_OK,
 
             // Error may occur if the key wasn't open for writing or is an
             // empty key.
-            raw::Status::Err => Err(RedisError::Str("Error while setting key expire")),
+            Status::Err => Err(RedisError::Str("Error while setting key expire")),
         }
     }
 
     pub fn write(&self, val: &str) -> RedisResult {
         let val_str = RedisString::create(NonNull::new(self.ctx), val);
         match raw::string_set(self.key_inner, val_str.inner) {
-            raw::Status::Ok => REDIS_OK,
-            raw::Status::Err => Err(RedisError::Str("Error while setting key")),
+            Status::Ok => REDIS_OK,
+            Status::Err => Err(RedisError::Str("Error while setting key")),
         }
     }
 
@@ -569,7 +570,7 @@ impl<'a> StringDMA<'a> {
 
     pub fn write(&mut self, data: &[u8]) -> Result<&mut Self, RedisError> {
         if self.buffer.len() != data.len() {
-            if raw::Status::Ok == raw::string_truncate(self.key.key_inner, data.len()) {
+            if Status::Ok == raw::string_truncate(self.key.key_inner, data.len()) {
                 let mut length: size_t = 0;
                 let dma = raw::string_dma(self.key.key_inner, &mut length, raw::KeyMode::WRITE);
                 self.buffer = unsafe { std::slice::from_raw_parts_mut(dma.cast::<u8>(), length) };
@@ -584,7 +585,7 @@ impl<'a> StringDMA<'a> {
     pub fn append(&mut self, data: &[u8]) -> Result<&mut Self, RedisError> {
         let current_len = self.buffer.len();
         let new_len = current_len + data.len();
-        if raw::Status::Ok == raw::string_truncate(self.key.key_inner, new_len) {
+        if Status::Ok == raw::string_truncate(self.key.key_inner, new_len) {
             let mut length: size_t = 0;
             let dma = raw::string_dma(self.key.key_inner, &mut length, raw::KeyMode::WRITE);
             self.buffer = unsafe { std::slice::from_raw_parts_mut(dma.cast::<u8>(), length) };

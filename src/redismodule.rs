@@ -16,7 +16,7 @@ use serde::de::{Error, SeqAccess};
 pub use crate::raw;
 pub use crate::rediserror::RedisError;
 pub use crate::redisvalue::RedisValue;
-use crate::Context;
+use crate::{Context, Status};
 
 /// A short-hand type that stores a [std::result::Result] with custom
 /// type and [RedisError].
@@ -183,7 +183,7 @@ impl RedisString {
         str::from_utf8(Self::string_as_slice(ptr))
     }
 
-    pub fn append(&mut self, s: &str) -> raw::Status {
+    pub fn append(&mut self, s: &str) -> Status {
         raw::string_append_buffer(self.ctx, self.inner, s)
     }
 
@@ -239,16 +239,16 @@ impl RedisString {
     pub fn parse_integer(&self) -> Result<i64, RedisError> {
         let mut val: i64 = 0;
         match raw::string_to_longlong(self.inner, &mut val) {
-            raw::Status::Ok => Ok(val),
-            raw::Status::Err => Err(RedisError::Str("Couldn't parse as integer")),
+            Status::Ok => Ok(val),
+            Status::Err => Err(RedisError::Str("Couldn't parse as integer")),
         }
     }
 
     pub fn parse_float(&self) -> Result<f64, RedisError> {
         let mut val: f64 = 0.0;
         match raw::string_to_double(self.inner, &mut val) {
-            raw::Status::Ok => Ok(val),
-            raw::Status::Err => Err(RedisError::Str("Couldn't parse as float")),
+            Status::Ok => Ok(val),
+            Status::Err => Err(RedisError::Str("Couldn't parse as float")),
         }
     }
 

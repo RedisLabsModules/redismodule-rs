@@ -46,11 +46,13 @@ pub use crate::context::{
     InfoContextBuilderFieldBottomLevelValue, InfoContextBuilderFieldTopLevelValue,
     InfoContextFieldBottomLevelData, InfoContextFieldTopLevelData, OneInfoSectionData,
 };
-pub use crate::raw::*;
+mod status;
+pub(crate) use crate::raw::*;
 pub use crate::redismodule::*;
 use backtrace::Backtrace;
 use context::server_events::INFO_COMMAND_HANDLER_LIST;
 pub use redis_module_macros::*;
+pub use status::Status;
 
 /// The detached Redis module context (the context of this module). It
 /// is only set to a proper value after the module is initialised via the
