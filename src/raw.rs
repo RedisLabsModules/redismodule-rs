@@ -134,15 +134,16 @@ bitflags! {
         const EXPIRED = REDISMODULE_NOTIFY_EXPIRED;
         const EVICTED = REDISMODULE_NOTIFY_EVICTED;
         const STREAM = REDISMODULE_NOTIFY_STREAM;
-        #[cfg(any(
-            feature = "min-redis-compatibility-version-7-0",
-            feature = "min-redis-compatibility-version-7-2"
-        ))]
+        /// Available only starting from Redis `7.0.1`.
         const NEW = REDISMODULE_NOTIFY_NEW;
         const MODULE = REDISMODULE_NOTIFY_MODULE;
         const LOADED = REDISMODULE_NOTIFY_LOADED;
         const MISSED = REDISMODULE_NOTIFY_KEY_MISS;
-        /// Does not include the [`Self::MISSED`].
+        /// Does not include the [`Self::MISSED`] and [`Self::NEW`].
+        ///
+        /// Includes [`Self::GENERIC`], [`Self::STRING`], [`Self::LIST`],
+        /// [`Self::SET`], [`Self::HASH`], [`Self::ZSET`], [`Self::EXPIRED`],
+        /// [`Self::EVICTED`], [`Self::STREAM`], [`Self::MODULE`].
         const ALL = REDISMODULE_NOTIFY_ALL;
         const TRIMMED = REDISMODULE_NOTIFY_TRIMMED;
     }
