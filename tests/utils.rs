@@ -51,14 +51,28 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
 
     let module_path = format!("{}", module_path.display());
 
-    let args = &[
-        "--port",
-        &port.to_string(),
-        "--loadmodule",
-        module_path.as_str(),
-        "--enable-debug-command",
-        "yes",
-    ];
+    let version_response = String::from_utf8(
+        Command::new("redis-server")
+            .args(["--version"])
+            .output()?
+            .stdout,
+    )?;
+
+    let is_redis_six = version_response
+        .split("Redis server v=")
+        .nth(1)
+        .unwrap()
+        .split(' ')
+        .next()
+        .unwrap()
+        .starts_with('6');
+
+    let port_string = port.to_string();
+    let mut args = vec!["--port", &port_string, "--loadmodule", module_path.as_str()];
+
+    if !is_redis_six {
+        args.extend(vec!["--enable-debug-command", "yes"])
+    }
 
     let redis_server = Command::new("redis-server")
         .args(args)
