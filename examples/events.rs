@@ -5,6 +5,7 @@ use std::ptr::NonNull;
 use std::sync::atomic::{AtomicI64, Ordering};
 
 static NUM_KEY_MISSES: AtomicI64 = AtomicI64::new(0);
+static NUM_KEYS: AtomicI64 = AtomicI64::new(0);
 
 fn on_event(ctx: &Context, event_type: NotifyEvent, event: &str, key: &[u8]) {
     if key == b"num_sets" {
@@ -52,6 +53,13 @@ fn num_key_miss(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     Ok(RedisValue::Integer(NUM_KEY_MISSES.load(Ordering::SeqCst)))
 }
 
+fn on_new_key(_ctx: &Context, _event_type: NotifyEvent, _event: &str, _key: &[u8]) {
+    NUM_KEYS.fetch_add(1, Ordering::SeqCst);
+}
+
+fn num_keys(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+    Ok(RedisValue::Integer(NUM_KEYS.load(Ordering::SeqCst)))
+}
 //////////////////////////////////////////////////////
 
 redis_module! {
@@ -62,10 +70,12 @@ redis_module! {
     commands: [
         ["events.send", event_send, "", 0, 0, 0],
         ["events.num_key_miss", num_key_miss, "", 0, 0, 0],
+        ["events.num_keys", num_keys, "", 0, 0, 0],
     ],
     event_handlers: [
         [@STRING: on_event],
         [@STREAM: on_stream],
         [@MISSED: on_key_miss],
+        [@NEW: on_new_key],
     ],
 }

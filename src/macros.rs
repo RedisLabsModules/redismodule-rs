@@ -68,10 +68,19 @@ macro_rules! redis_event_handler {
             $crate::raw::Status::Ok as c_int
         }
 
-        if unsafe {
+        let all_available_notification_flags = $crate::raw::get_keyspace_notification_flags_all();
+        let available_wanted_notification_flags = $event_type.intersection(all_available_notification_flags);
+        if !all_available_notification_flags.contains($event_type) {
+            let not_supported = $event_type.difference(all_available_notification_flags);
+            $crate::Context::new($ctx).log_notice(&format!(
+                "These event notification flags set aren't supported: {not_supported:?}. These flags will be used: {available_wanted_notification_flags:?}"
+            ));
+        }
+
+        if !available_wanted_notification_flags.is_empty() && unsafe {
             $crate::raw::RedisModule_SubscribeToKeyspaceEvents.unwrap()(
                 $ctx,
-                $event_type.bits(),
+                available_wanted_notification_flags.bits(),
                 Some(__handle_event),
             )
         } == $crate::raw::Status::Err as c_int

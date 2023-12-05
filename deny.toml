@@ -282,6 +282,10 @@ name = "redis-module-macros"
 allow-globs = ["*"]
 
 [[bans.build.bypass]]
+name = "redis-module-macros-internals"
+allow-globs = ["*"]
+
+[[bans.build.bypass]]
 name = "libloading"
 allow-globs = ["*"]
 
