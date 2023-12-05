@@ -912,6 +912,24 @@ pub fn get_keyspace_events() -> NotifyEvent {
     }
 }
 
+/// Returns all the available notification flags for key-space
+/// notifications.
+///
+/// # Safety
+///
+/// This function is safe to use as it doesn't perform any work with
+/// the [RedisModuleCtx] pointer except for passing it to the redis server.
+///
+/// # Panics
+///
+/// Panics when the [RedisModule_GetKeyspaceNotificationFlagsAll] is
+/// unavailable.
+pub fn get_keyspace_notification_flags_all() -> NotifyEvent {
+    unsafe {
+        NotifyEvent::from_bits_truncate(RedisModule_GetKeyspaceNotificationFlagsAll.unwrap()())
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Version {
     pub major: i32,
