@@ -21,7 +21,12 @@ lazy_static::lazy_static! {
         ("RedisModule_ACLAddLogEntryByUserName".to_string(), 70200),
         ("RedisModule_GetCommand".to_string(), 70000),
         ("RedisModule_SetCommandInfo".to_string(), 70000),
-
+        ("RedisModule_GetModuleUserFromUserName".to_string(), 70000),
+        ("RedisModule_ACLCheckKeyPermissions".to_string(), 70000),
+        ("RedisModule_StreamIteratorStart".to_string(), 60200),
+        ("RedisModule_StreamIteratorNextID".to_string(), 60200),
+        ("RedisModule_StreamIteratorDelete".to_string(), 60200),
+        ("RedisModule_StreamIteratorNextField".to_string(), 60200),
     ]);
 
     pub(crate) static ref API_OLDEST_VERSION: usize = 60000;

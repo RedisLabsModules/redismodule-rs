@@ -772,31 +772,34 @@ impl Context {
         unsafe { raw::RedisModule_SetContextUser.unwrap()(self.ctx, ptr::null_mut()) };
     }
 
-    /// Verify the the given user has the give ACL permission on the given key.
-    /// Return Ok(()) if the user has the permissions or error (with relevant error message)
-    /// if the validation failed.
-    pub fn acl_check_key_permission(
-        &self,
-        user_name: &RedisString,
-        key_name: &RedisString,
-        permissions: &AclPermissions,
-    ) -> Result<(), RedisError> {
-        let user = unsafe { raw::RedisModule_GetModuleUserFromUserName.unwrap()(user_name.inner) };
-        if user.is_null() {
-            return Err(RedisError::Str("User does not exists or disabled"));
+    api!(
+        [
+            RedisModule_GetModuleUserFromUserName,
+            RedisModule_ACLCheckKeyPermissions
+        ],
+        /// Verify the the given user has the give ACL permission on the given key.
+        /// Return Ok(()) if the user has the permissions or error (with relevant error message)
+        /// if the validation failed.
+        pub fn acl_check_key_permission(
+            &self,
+            user_name: &RedisString,
+            key_name: &RedisString,
+            permissions: &AclPermissions,
+        ) -> Result<(), RedisError> {
+            let user = unsafe { RedisModule_GetModuleUserFromUserName(user_name.inner) };
+            if user.is_null() {
+                return Err(RedisError::Str("User does not exists or disabled"));
+            }
+            let acl_permission_result: raw::Status = unsafe {
+                RedisModule_ACLCheckKeyPermissions(user, key_name.inner, permissions.bits())
+            }
+            .into();
+            unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
+            let acl_permission_result: Result<(), &str> = acl_permission_result.into();
+            acl_permission_result
+                .map_err(|_e| RedisError::Str("User does not have permissions on key"))
         }
-        let acl_permission_result: raw::Status = unsafe {
-            raw::RedisModule_ACLCheckKeyPermissions.unwrap()(
-                user,
-                key_name.inner,
-                permissions.bits(),
-            )
-        }
-        .into();
-        unsafe { raw::RedisModule_FreeModuleUser.unwrap()(user) };
-        let acl_permission_result: Result<(), &str> = acl_permission_result.into();
-        acl_permission_result.map_err(|_e| RedisError::Str("User does not have permissions on key"))
-    }
+    );
 
     api!(
         [RedisModule_AddPostNotificationJob],

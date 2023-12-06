@@ -136,14 +136,13 @@ anyhow = "1"
 redis = "0.23"
 lazy_static = "1"
 redis-module-macros = { path = "./redismodule-rs-macros"}
-redis-module = { path = "./", default-features = false, features = ["min-redis-compatibility-version-7-2"] }
 
 [build-dependencies]
 bindgen = "0.66"
 cc = "1"
 
 [features]
-default = ["min-redis-compatibility-version-6-0"]
+default = ["min-redis-compatibility-version-7-2"]
 min-redis-compatibility-version-7-2 = []
 min-redis-compatibility-version-7-0 = []
 min-redis-compatibility-version-6-2 = []

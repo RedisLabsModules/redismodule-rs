@@ -235,6 +235,16 @@ macro_rules! redis_module {
                 $crate::redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep);
             )*
 
+            #[cfg(all(
+                any(
+                    feature = "min-redis-compatibility-version-7-2",
+                    feature = "min-redis-compatibility-version-7-0"
+                ),
+                not(any(
+                    feature = "min-redis-compatibility-version-6-2",
+                    feature = "min-redis-compatibility-version-6-0"
+                ))
+            ))]
             if $crate::commands::register_commands(&context) == raw::Status::Err {
                 return raw::Status::Err as c_int;
             }
