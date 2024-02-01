@@ -337,6 +337,17 @@ impl RedisKeyWritable {
         }
     }
 
+    /// Remove expiration from a key if it exists.
+    pub fn remove_expire(&self) -> RedisResult {
+        match raw::set_expire(self.key_inner, REDISMODULE_NO_EXPIRE.into()) {
+            raw::Status::Ok => REDIS_OK,
+
+            // Error may occur if the key wasn't open for writing or is an
+            // empty key.
+            raw::Status::Err => Err(RedisError::Str("Error while removing key expire")),
+        }
+    }
+
     pub fn write(&self, val: &str) -> RedisResult {
         let val_str = RedisString::create(NonNull::new(self.ctx), val);
         match raw::string_set(self.key_inner, val_str.inner) {

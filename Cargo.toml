@@ -116,6 +116,10 @@ crate-type = ["cdylib"]
 name = "open_key_with_flags"
 crate-type = ["cdylib"]
 
+[[example]]
+name = "expire"
+crate-type = ["cdylib"]
+
 [dependencies]
 bitflags = "2"
 libc = "0.2"
