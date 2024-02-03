@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 use std::ptr;
 
 use crate::context::blocked::BlockedClient;
-use crate::{raw, Context, RedisResult};
+use crate::{raw, Context, RedisResult, Status};
 
 pub struct RedisGILGuardScope<'ctx, 'mutex, T, G: RedisLockIndicator> {
     _context: &'ctx G,
@@ -158,7 +158,7 @@ impl ThreadSafeContext<BlockedClient> {
     /// The Redis modules API does not require locking for `Reply` functions,
     /// so we pass through its functionality directly.
     #[allow(clippy::must_use_candidate)]
-    pub fn reply(&self, r: RedisResult) -> raw::Status {
+    pub fn reply(&self, r: RedisResult) -> Status {
         let ctx = Context::new(self.ctx);
         ctx.reply(r)
     }

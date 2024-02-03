@@ -1,8 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use redis_module::RedisError;
-use redis_module::{redis_module, Context, RedisResult, RedisString, RedisValue};
-use redis_module_macros::{command, RedisValue};
+use redis_module::{command, redis_module, Context, RedisResult, RedisString, RedisValue};
 
 #[derive(RedisValue)]
 struct RedisValueDeriveInner {
