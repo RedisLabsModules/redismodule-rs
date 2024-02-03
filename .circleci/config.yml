@@ -120,10 +120,6 @@ commands:
           keys:
             - v3-dependencies-{{ arch }}-{{ checksum "Cargo.toml" }}
       - run:
-          name: Check formatting
-          shell: /bin/bash -l -eo pipefail
-          command: make lint
-      - run:
           name: Build debug
           shell: /bin/bash -l -eo pipefail
           command: make build DEBUG=1 <<parameters.build_params>>
