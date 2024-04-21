@@ -1286,7 +1286,7 @@ impl InfoContext {
     }
 
     #[deprecated = "Please use [`InfoContext::builder`] instead."]
-    /// The `name` of the sction will be prefixed with the module name
+    /// The `name` of the section will be prefixed with the module name
     /// and an underscore: `<module name>_<name>`.
     pub fn add_info_section(&self, name: Option<&str>) -> Status {
         add_info_section(self.ctx, name)
