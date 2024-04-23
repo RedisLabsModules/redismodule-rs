@@ -874,7 +874,7 @@ impl Context {
 
 extern "C" fn post_notification_job_free_callback<F: FnOnce(&Context)>(pd: *mut c_void) {
     unsafe {
-        let _ = Box::from_raw(pd as *mut Option<F>);
+        drop(Box::from_raw(pd as *mut Option<F>));
     };
 }
 
