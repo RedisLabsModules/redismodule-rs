@@ -873,7 +873,9 @@ impl Context {
 }
 
 extern "C" fn post_notification_job_free_callback<F: FnOnce(&Context)>(pd: *mut c_void) {
-    unsafe { Box::from_raw(pd as *mut Option<F>) };
+    unsafe {
+        drop(Box::from_raw(pd as *mut Option<F>));
+    };
 }
 
 extern "C" fn post_notification_job<F: FnOnce(&Context)>(
@@ -1284,7 +1286,7 @@ impl InfoContext {
     }
 
     #[deprecated = "Please use [`InfoContext::builder`] instead."]
-    /// The `name` of the sction will be prefixed with the module name
+    /// The `name` of the section will be prefixed with the module name
     /// and an underscore: `<module name>_<name>`.
     pub fn add_info_section(&self, name: Option<&str>) -> Status {
         add_info_section(self.ctx, name)

@@ -454,12 +454,12 @@ api! {[
             // the only CString pointers which are not freed are those of the key_specs, lets free them here.
             key_specs.into_iter().for_each(|v|{
                 if !v.notes.is_null() {
-                    unsafe{CString::from_raw(v.notes as *mut c_char)};
+                    unsafe{drop(CString::from_raw(v.notes as *mut c_char))};
                 }
                 if v.begin_search_type == raw::RedisModuleKeySpecBeginSearchType_REDISMODULE_KSPEC_BS_KEYWORD {
                     let keyword = unsafe{v.bs.keyword.keyword};
                     if !keyword.is_null() {
-                        unsafe{CString::from_raw(v.bs.keyword.keyword as *mut c_char)};
+                        unsafe{drop(CString::from_raw(v.bs.keyword.keyword as *mut c_char))};
                     }
                 }
             });

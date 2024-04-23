@@ -46,7 +46,7 @@ fn num_maxmemory_changes(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult
 //////////////////////////////////////////////////////
 
 redis_module! {
-    name: "server_events",
+    name: "srv_events",
     version: 1,
     allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
