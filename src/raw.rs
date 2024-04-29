@@ -134,9 +134,16 @@ bitflags! {
         const EXPIRED = REDISMODULE_NOTIFY_EXPIRED;
         const EVICTED = REDISMODULE_NOTIFY_EVICTED;
         const STREAM = REDISMODULE_NOTIFY_STREAM;
+        /// Available only starting from Redis `7.0.1`.
+        const NEW = REDISMODULE_NOTIFY_NEW;
         const MODULE = REDISMODULE_NOTIFY_MODULE;
         const LOADED = REDISMODULE_NOTIFY_LOADED;
         const MISSED = REDISMODULE_NOTIFY_KEY_MISS;
+        /// Does not include the [`Self::MISSED`] and [`Self::NEW`].
+        ///
+        /// Includes [`Self::GENERIC`], [`Self::STRING`], [`Self::LIST`],
+        /// [`Self::SET`], [`Self::HASH`], [`Self::ZSET`], [`Self::EXPIRED`],
+        /// [`Self::EVICTED`], [`Self::STREAM`], [`Self::MODULE`].
         const ALL = REDISMODULE_NOTIFY_ALL;
         const TRIMMED = REDISMODULE_NOTIFY_TRIMMED;
     }
@@ -902,6 +909,24 @@ pub fn get_keyspace_events() -> NotifyEvent {
     unsafe {
         let events = RedisModule_GetNotifyKeyspaceEvents.unwrap()();
         NotifyEvent::from_bits_truncate(events)
+    }
+}
+
+/// Returns all the available notification flags for key-space
+/// notifications.
+///
+/// # Safety
+///
+/// This function is safe to use as it doesn't perform any work with
+/// the [RedisModuleCtx] pointer except for passing it to the redis server.
+///
+/// # Panics
+///
+/// Panics when the [RedisModule_GetKeyspaceNotificationFlagsAll] is
+/// unavailable.
+pub fn get_keyspace_notification_flags_all() -> NotifyEvent {
+    unsafe {
+        NotifyEvent::from_bits_truncate(RedisModule_GetKeyspaceNotificationFlagsAll.unwrap()())
     }
 }
 

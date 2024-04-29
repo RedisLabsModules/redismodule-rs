@@ -218,12 +218,15 @@ impl RedisKeyWritable {
         Self { ctx, key_inner }
     }
 
-    /// Detects whether the value stored in a Redis key is empty.
+    /// Returns `true` if the key is of type [KeyType::Empty].
     ///
-    /// Note that an empty key can be reliably detected by looking for a null
-    /// as you open the key in read mode, but when asking for write Redis
-    /// returns a non-null pointer to allow us to write to even an empty key,
-    /// so we have to check the key's value instead.
+    /// # Note
+    ///
+    /// An empty key can be reliably detected by looking for a null
+    /// as the key is opened [RedisKeyWritable::open] in read mode,
+    /// but when asking for a write, Redis returns a non-null pointer
+    /// to allow to write to even an empty key. In that case, the key's
+    /// value should be checked manually instead:
     ///
     /// ```
     /// use redis_module::key::RedisKeyWritable;
@@ -235,6 +238,11 @@ impl RedisKeyWritable {
     ///     Ok(is_empty)
     /// }
     /// ```
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.key_type() == KeyType::Empty
+    }
+
     pub fn as_string_dma(&self) -> Result<StringDMA, RedisError> {
         StringDMA::new(self)
     }
@@ -329,6 +337,17 @@ impl RedisKeyWritable {
         }
     }
 
+    /// Remove expiration from a key if it exists.
+    pub fn remove_expire(&self) -> RedisResult {
+        match raw::set_expire(self.key_inner, REDISMODULE_NO_EXPIRE.into()) {
+            raw::Status::Ok => REDIS_OK,
+
+            // Error may occur if the key wasn't open for writing or is an
+            // empty key.
+            raw::Status::Err => Err(RedisError::Str("Error while removing key expire")),
+        }
+    }
+
     pub fn write(&self, val: &str) -> RedisResult {
         let val_str = RedisString::create(NonNull::new(self.ctx), val);
         match raw::string_set(self.key_inner, val_str.inner) {
@@ -359,11 +378,6 @@ impl RedisKeyWritable {
     #[must_use]
     pub fn key_type(&self) -> raw::KeyType {
         unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.key_type() == KeyType::Empty
     }
 
     pub fn open_with_redis_string(

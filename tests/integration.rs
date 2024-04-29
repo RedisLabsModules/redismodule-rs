@@ -654,3 +654,41 @@ fn test_open_key_with_flags() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_expire() -> Result<()> {
+    let port: u16 = 6502;
+    let _guards = vec![start_redis_server_with_module("expire", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    // Create a key without TTL
+    redis::cmd("set")
+        .arg(&["key", "value"])
+        .query(&mut con)
+        .with_context(|| "failed to run set")?;
+
+    let ttl: i64 = redis::cmd("ttl").arg(&["key"]).query(&mut con)?;
+    assert_eq!(ttl, -1);
+
+    // Set TTL on the key
+    redis::cmd("expire.cmd")
+        .arg(&["key", "100"])
+        .query(&mut con)
+        .with_context(|| "failed to run expire.cmd")?;
+
+    let ttl: i64 = redis::cmd("ttl").arg(&["key"]).query(&mut con)?;
+    assert!(ttl > 0);
+
+    // Remove TTL on the key
+    redis::cmd("expire.cmd")
+        .arg(&["key", "-1"])
+        .query(&mut con)
+        .with_context(|| "failed to run expire.cmd")?;
+
+    let ttl: i64 = redis::cmd("ttl").arg(&["key"]).query(&mut con)?;
+    assert_eq!(ttl, -1);
+
+    Ok(())
+}
