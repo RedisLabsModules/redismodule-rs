@@ -9,7 +9,7 @@ use std::{
 
 use libc::c_void;
 
-use crate::{deallocate_pointer, raw::*, Context, RedisError, RedisLockIndicator};
+use crate::{deallocate_pointer, raw::*, Context, RedisError, RedisLockIndicator, Status};
 
 pub struct StringCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
@@ -753,11 +753,10 @@ where
         lock_indicator: &LockIndicator,
     ) -> Status {
         let mut callback: *mut C = std::ptr::null_mut();
-        let res = unsafe {
-            RedisModule_CallReplyPromiseAbort
-                .expect("RedisModule_CallReplyPromiseAbort is expected to be available if we got a promise call reply")
-                (self.reply.as_ptr(), &mut callback as *mut *mut C as *mut *mut c_void)
-        }.into();
+        let res = crate::raw::call_reply_promise_abort(
+            self.reply.as_ptr(),
+            &mut callback as *mut *mut C as *mut *mut c_void,
+        );
 
         if !callback.is_null() {
             unsafe { deallocate_pointer(callback) };

@@ -19,6 +19,7 @@ use crate::stream::StreamIterator;
 use crate::RedisError;
 use crate::RedisResult;
 use crate::RedisString;
+use crate::Status;
 use bitflags::bitflags;
 
 /// `RedisKey` is an abstraction over a Redis key that allows readonly
@@ -108,7 +109,7 @@ impl RedisKey {
     /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
     #[must_use]
     pub fn key_type(&self) -> raw::KeyType {
-        unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
+        raw::key_type(self.key_inner)
     }
 
     /// Detects whether the key pointer given to us by Redis is null.
@@ -248,12 +249,12 @@ impl RedisKeyWritable {
     }
 
     #[allow(clippy::must_use_candidate)]
-    pub fn hash_set(&self, field: &str, value: RedisString) -> raw::Status {
+    pub fn hash_set(&self, field: &str, value: RedisString) -> Status {
         raw::hash_set(self.key_inner, field, value.inner)
     }
 
     #[allow(clippy::must_use_candidate)]
-    pub fn hash_del(&self, field: &str) -> raw::Status {
+    pub fn hash_del(&self, field: &str) -> Status {
         raw::hash_del(self.key_inner, field)
     }
 
@@ -281,13 +282,13 @@ impl RedisKeyWritable {
 
     // `list_push_head` inserts the specified element at the head of the list stored at this key.
     #[allow(clippy::must_use_candidate)]
-    pub fn list_push_head(&self, element: RedisString) -> raw::Status {
+    pub fn list_push_head(&self, element: RedisString) -> Status {
         raw::list_push(self.key_inner, raw::Where::ListHead, element.inner)
     }
 
     // `list_push_tail` inserts the specified element at the tail of the list stored at this key.
     #[allow(clippy::must_use_candidate)]
-    pub fn list_push_tail(&self, element: RedisString) -> raw::Status {
+    pub fn list_push_tail(&self, element: RedisString) -> Status {
         raw::list_push(self.key_inner, raw::Where::ListTail, element.inner)
     }
 
@@ -329,11 +330,11 @@ impl RedisKeyWritable {
         })?;
 
         match raw::set_expire(self.key_inner, exp_time) {
-            raw::Status::Ok => REDIS_OK,
+            Status::Ok => REDIS_OK,
 
             // Error may occur if the key wasn't open for writing or is an
             // empty key.
-            raw::Status::Err => Err(RedisError::Str("Error while setting key expire")),
+            Status::Err => Err(RedisError::Str("Error while setting key expire")),
         }
     }
 
@@ -351,8 +352,8 @@ impl RedisKeyWritable {
     pub fn write(&self, val: &str) -> RedisResult {
         let val_str = RedisString::create(NonNull::new(self.ctx), val);
         match raw::string_set(self.key_inner, val_str.inner) {
-            raw::Status::Ok => REDIS_OK,
-            raw::Status::Err => Err(RedisError::Str("Error while setting key")),
+            Status::Ok => REDIS_OK,
+            Status::Err => Err(RedisError::Str("Error while setting key")),
         }
     }
 
@@ -377,7 +378,7 @@ impl RedisKeyWritable {
     /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
     #[must_use]
     pub fn key_type(&self) -> raw::KeyType {
-        unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
+        raw::key_type(self.key_inner)
     }
 
     pub fn open_with_redis_string(
@@ -416,16 +417,7 @@ impl RedisKeyWritable {
     pub fn set_value<T>(&self, redis_type: &RedisType, value: T) -> Result<(), RedisError> {
         verify_type(self.key_inner, redis_type)?;
         let value = Box::into_raw(Box::new(value)).cast::<c_void>();
-        let status: raw::Status = unsafe {
-            raw::RedisModule_ModuleTypeSetValue.unwrap()(
-                self.key_inner,
-                *redis_type.raw_type.borrow(),
-                value,
-            )
-        }
-        .into();
-
-        status.into()
+        raw::module_type_set_value(self.key_inner, *redis_type.raw_type.borrow(), value).into()
     }
 
     pub fn trim_stream_by_id(
@@ -592,7 +584,7 @@ impl<'a> StringDMA<'a> {
 
     pub fn write(&mut self, data: &[u8]) -> Result<&mut Self, RedisError> {
         if self.buffer.len() != data.len() {
-            if raw::Status::Ok == raw::string_truncate(self.key.key_inner, data.len()) {
+            if Status::Ok == raw::string_truncate(self.key.key_inner, data.len()) {
                 let mut length: size_t = 0;
                 let dma = raw::string_dma(self.key.key_inner, &mut length, raw::KeyMode::WRITE);
                 self.buffer = unsafe { std::slice::from_raw_parts_mut(dma.cast::<u8>(), length) };
@@ -607,7 +599,7 @@ impl<'a> StringDMA<'a> {
     pub fn append(&mut self, data: &[u8]) -> Result<&mut Self, RedisError> {
         let current_len = self.buffer.len();
         let new_len = current_len + data.len();
-        if raw::Status::Ok == raw::string_truncate(self.key.key_inner, new_len) {
+        if Status::Ok == raw::string_truncate(self.key.key_inner, new_len) {
             let mut length: size_t = 0;
             let dma = raw::string_dma(self.key.key_inner, &mut length, raw::KeyMode::WRITE);
             self.buffer = unsafe { std::slice::from_raw_parts_mut(dma.cast::<u8>(), length) };
@@ -668,7 +660,7 @@ fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
 /// Will panic if `RedisModule_KeyType` or `RedisModule_ModuleTypeGetType` are missing in redismodule.h
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> RedisResult {
-    let key_type: KeyType = unsafe { raw::RedisModule_KeyType.unwrap()(key_inner) }.into();
+    let key_type = raw::key_type(key_inner);
 
     if key_type != KeyType::Empty {
         // The key exists; check its type
