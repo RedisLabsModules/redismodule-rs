@@ -1,52 +1,13 @@
-use std::sync::atomic::AtomicU16;
 use std::thread;
 use std::time::Duration;
 
-use crate::utils::{get_redis_connection, start_redis_server_with_module};
+use crate::utils::{get_redis_connection, start_redis_server_with_module, TestConnection};
 use anyhow::Context;
 use anyhow::Result;
-use redis::{Connection, RedisError, RedisResult, Value};
+use redis::{RedisError, RedisResult, Value};
 use redis_module::RedisValue;
-use utils::ChildGuard;
 
 mod utils;
-
-fn start_redis(module_name: &str, port: u16) -> Result<Vec<ChildGuard>, &'static str> {
-    Ok(vec![start_redis_server_with_module(module_name, port)
-        .map_err(|_| "failed to start redis server")?])
-}
-
-struct TestConnection {
-    _guards: Vec<ChildGuard>,
-    connection: Connection,
-}
-
-static TEST_PORT: AtomicU16 = AtomicU16::new(6479);
-
-impl TestConnection {
-    fn new(module_name: &str) -> Self {
-        let port = TEST_PORT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-
-        Self {
-            _guards: start_redis(module_name, port).expect("Redis instance started."),
-            connection: get_redis_connection(port).expect("Established connection to server."),
-        }
-    }
-}
-
-impl std::ops::Deref for TestConnection {
-    type Target = Connection;
-
-    fn deref(&self) -> &Self::Target {
-        &self.connection
-    }
-}
-
-impl std::ops::DerefMut for TestConnection {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.connection
-    }
-}
 
 #[test]
 fn test_hello() -> Result<()> {
