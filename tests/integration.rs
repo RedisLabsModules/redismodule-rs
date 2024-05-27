@@ -21,17 +21,15 @@ struct TestConnection {
     connection: Connection,
 }
 
-static mut TEST_PORT: AtomicU16 = AtomicU16::new(6479);
+static TEST_PORT: AtomicU16 = AtomicU16::new(6479);
 
 impl TestConnection {
     fn new(module_name: &str) -> Self {
-        unsafe {
-            let port = TEST_PORT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let port = TEST_PORT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
-            Self {
-                _guards: start_redis(module_name, port).expect("Redis instance started."),
-                connection: get_redis_connection(port).expect("Established connection to server."),
-            }
+        Self {
+            _guards: start_redis(module_name, port).expect("Redis instance started."),
+            connection: get_redis_connection(port).expect("Established connection to server."),
         }
     }
 }
