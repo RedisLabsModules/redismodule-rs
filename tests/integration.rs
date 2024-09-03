@@ -776,9 +776,10 @@ fn test_defrag() -> Result<()> {
         .with_context(|| "failed to run 'config set active-defrag-cycle-min 99'")?;
 
     // enable active defrag
-    if let Err(_) = redis::cmd("config")
+    if redis::cmd("config")
         .arg(&["set", "activedefrag", "yes"])
         .query::<String>(&mut con)
+        .is_err()
     {
         // Server the does not support active defrag, avoid failing the test.
         return Ok(());

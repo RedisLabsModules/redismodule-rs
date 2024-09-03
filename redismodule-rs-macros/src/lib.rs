@@ -464,10 +464,7 @@ pub fn info_section(item: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_attribute]
 pub fn defrag_function(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let ast: ItemFn = match syn::parse(item) {
-        Ok(res) => res,
-        Err(e) => return e.to_compile_error().into(),
-    };
+    let ast: ItemFn = syn::parse(item).unwrap_or_else(|e| e.to_compile_error().into());
     let gen = quote! {
         #[linkme::distributed_slice(redis_module::defrag::DEFRAG_FUNCTIONS_LIST)]
         #ast
@@ -487,10 +484,7 @@ pub fn defrag_function(_attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_attribute]
 pub fn defrag_start_function(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let ast: ItemFn = match syn::parse(item) {
-        Ok(res) => res,
-        Err(e) => return e.to_compile_error().into(),
-    };
+    let ast: ItemFn = syn::parse(item).unwrap_or_else(|e| e.to_compile_error().into());
     let gen = quote! {
         #[linkme::distributed_slice(redis_module::defrag::DEFRAG_START_FUNCTIONS_LIST)]
         #ast
@@ -510,10 +504,7 @@ pub fn defrag_start_function(_attr: TokenStream, item: TokenStream) -> TokenStre
 /// ```
 #[proc_macro_attribute]
 pub fn defrag_end_function(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let ast: ItemFn = match syn::parse(item) {
-        Ok(res) => res,
-        Err(e) => return e.to_compile_error().into(),
-    };
+    let ast: ItemFn = syn::parse(item).unwrap_or_else(|e| e.to_compile_error().into());
     let gen = quote! {
         #[linkme::distributed_slice(redis_module::defrag::DEFRAG_END_FUNCTIONS_LIST)]
         #ast

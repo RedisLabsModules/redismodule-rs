@@ -127,7 +127,7 @@ fn alloc_defragstats(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     let num_defrag_start = NUM_DEFRAG_START.lock(ctx);
     let num_defrag_end = NUM_DEFRAG_END.lock(ctx);
     Ok(RedisValue::OrderedMap(
-        vec![
+        [
             (
                 RedisValueKey::String("num_keys_defrag".to_owned()),
                 RedisValue::Integer(*num_keys_defrag as i64),

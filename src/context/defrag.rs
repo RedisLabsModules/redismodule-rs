@@ -45,7 +45,7 @@ impl DefragContext {
     /// so it generally makes sense to do small batches of work in between calls.
     pub fn should_stop(&self) -> bool {
         let should_stop = unsafe {
-            RedisModule_DefragShouldStop.expect("RedisModule_DefragShouldStop is NULL")(
+            RedisModule_DefragShouldStop.expect("RedisModule_DefragShouldStop should be available.")(
                 self.defrag_ctx,
             )
         };
@@ -75,7 +75,7 @@ impl DefragContext {
     /// not be performed.
     pub fn set_cursor(&self, cursor: u64) -> Status {
         unsafe {
-            RedisModule_DefragCursorSet.expect("RedisModule_DefragCursorSet is NULL")(
+            RedisModule_DefragCursorSet.expect("RedisModule_DefragCursorSet should be available.")(
                 self.defrag_ctx,
                 cursor,
             )
@@ -88,7 +88,7 @@ impl DefragContext {
     pub fn get_cursor(&self) -> Result<u64, RedisError> {
         let mut cursor: u64 = 0;
         let res: Status = unsafe {
-            RedisModule_DefragCursorGet.expect("RedisModule_DefragCursorGet is NULL")(
+            RedisModule_DefragCursorGet.expect("RedisModule_DefragCursorGet should be available.")(
                 self.defrag_ctx,
                 (&mut cursor) as *mut u64,
             )
@@ -115,9 +115,9 @@ impl DefragContext {
     /// The function is unsafe because it is assumed that the pointer is valid and previusly
     /// allocated. It is considered undefined if this is not the case.
     pub unsafe fn defrag_realloc<T>(&self, mut ptr: *mut T) -> *mut T {
-        let new_ptr: *mut T = RedisModule_DefragAlloc.expect("RedisModule_DefragAlloc is NULL")(
-            self.defrag_ctx,
-            ptr.cast(),
+        let new_ptr: *mut T = RedisModule_DefragAlloc
+            .expect("RedisModule_DefragAlloc should be available.")(
+            self.defrag_ctx, ptr.cast()
         )
         .cast();
         if !new_ptr.is_null() {
@@ -146,8 +146,9 @@ impl DefragContext {
     pub fn defrag_redis_string(&self, mut s: RedisString) -> RedisString {
         let new_inner = unsafe {
             RedisModule_DefragRedisModuleString
-                .expect("RedisModule_DefragRedisModuleString is NULL")(
-                self.defrag_ctx, s.inner
+                .expect("RedisModule_DefragRedisModuleString should be available.")(
+                self.defrag_ctx,
+                s.inner,
             )
         };
         if !new_inner.is_null() {
