@@ -451,3 +451,72 @@ pub fn info_command_handler(_attr: TokenStream, item: TokenStream) -> TokenStrea
 pub fn info_section(item: TokenStream) -> TokenStream {
     info_section::info_section(item)
 }
+
+/// Proc macro which is set on a function that need to be called whenever server performs defrag.
+/// The function must accept a [&DefragContext]. If defrag is not supported by the Redis version
+/// the function will never be called.
+///
+/// Example:
+///
+/// ```rust,no_run,ignore
+/// #[defrag_function]
+/// fn defrag(ctx: &DefragContext) { ... }
+/// ```
+#[proc_macro_attribute]
+pub fn defrag_function(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let ast: ItemFn = match syn::parse(item) {
+        Ok(res) => res,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    let gen = quote! {
+        #[linkme::distributed_slice(redis_module::defrag::DEFRAG_FUNCTIONS_LIST)]
+        #ast
+    };
+    gen.into()
+}
+
+/// Proc macro which is set on a function that need to be called whenever server start performs defrag.
+/// The function must accept a [&DefragContext]. If defrag start event is not supported by the Redis version
+/// the function will never be called.
+///
+/// Example:
+///
+/// ```rust,no_run,ignore
+/// #[defrag_start_function]
+/// fn defrag_start(ctx: &DefragContext) { ... }
+/// ```
+#[proc_macro_attribute]
+pub fn defrag_start_function(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let ast: ItemFn = match syn::parse(item) {
+        Ok(res) => res,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    let gen = quote! {
+        #[linkme::distributed_slice(redis_module::defrag::DEFRAG_START_FUNCTIONS_LIST)]
+        #ast
+    };
+    gen.into()
+}
+
+/// Proc macro which is set on a function that need to be called whenever server end performs defrag.
+/// The function must accept a [&DefragContext]. If defrag end event is not supported by the Redis version
+/// the function will never be called.
+///
+/// Example:
+///
+/// ```rust,no_run,ignore
+/// #[defrag_end_function]
+/// fn defrag_end(ctx: &DefragContext) { ... }
+/// ```
+#[proc_macro_attribute]
+pub fn defrag_end_function(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let ast: ItemFn = match syn::parse(item) {
+        Ok(res) => res,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    let gen = quote! {
+        #[linkme::distributed_slice(redis_module::defrag::DEFRAG_END_FUNCTIONS_LIST)]
+        #ast
+    };
+    gen.into()
+}

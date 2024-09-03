@@ -30,6 +30,7 @@ pub use crate::configuration::EnumConfigurationValue;
 pub use crate::context::call_reply::FutureCallReply;
 pub use crate::context::call_reply::{CallReply, CallResult, ErrorReply, PromiseCallReply};
 pub use crate::context::commands;
+pub use crate::context::defrag;
 pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::server_events;
 pub use crate::context::AclPermissions;
