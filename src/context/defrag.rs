@@ -1,4 +1,6 @@
 use std::alloc::Layout;
+use std::fmt::{Debug, Formatter};
+use std::ptr::NonNull;
 
 use crate::{
     raw, Context, RedisModule_DefragAlloc, RedisModule_DefragCursorGet,
@@ -9,7 +11,15 @@ use crate::{RedisError, RedisLockIndicator};
 use linkme::distributed_slice;
 
 pub struct DefragContext {
-    defrag_ctx: *mut raw::RedisModuleDefragCtx,
+    defrag_ctx: NonNull<raw::RedisModuleDefragCtx>,
+}
+
+impl Debug for DefragContext {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut debug_struct = f.debug_struct("DefragContext");
+        let debug_struct = debug_struct.field("defrag_ctx", &self.defrag_ctx);
+        debug_struct.finish()
+    }
 }
 
 /// Having a [DefragContext] is indication that we are
@@ -27,7 +37,9 @@ impl DefragContext {
     /// Notice that the returned [`DefragContext`] borrows the pointer to [`raw::RedisModuleDefragCtx`]
     /// so it can not outlive it (this means that it should not be used once the defrag callback ends).
     pub unsafe fn new(defrag_ctx: *mut raw::RedisModuleDefragCtx) -> DefragContext {
-        DefragContext { defrag_ctx }
+        DefragContext {
+            defrag_ctx: NonNull::new(defrag_ctx).expect("defrag_ctx is expected to be no NULL"),
+        }
     }
 
     /// When the data type defrag callback iterates complex structures, this
@@ -46,7 +58,7 @@ impl DefragContext {
     pub fn should_stop(&self) -> bool {
         let should_stop = unsafe {
             RedisModule_DefragShouldStop.expect("RedisModule_DefragShouldStop should be available.")(
-                self.defrag_ctx,
+                self.defrag_ctx.as_ptr(),
             )
         };
         should_stop != 0
@@ -76,7 +88,7 @@ impl DefragContext {
     pub fn set_cursor(&self, cursor: u64) -> Status {
         unsafe {
             RedisModule_DefragCursorSet.expect("RedisModule_DefragCursorSet should be available.")(
-                self.defrag_ctx,
+                self.defrag_ctx.as_ptr(),
                 cursor,
             )
         }
@@ -89,7 +101,7 @@ impl DefragContext {
         let mut cursor: u64 = 0;
         let res: Status = unsafe {
             RedisModule_DefragCursorGet.expect("RedisModule_DefragCursorGet should be available.")(
-                self.defrag_ctx,
+                self.defrag_ctx.as_ptr(),
                 (&mut cursor) as *mut u64,
             )
         }
@@ -117,7 +129,8 @@ impl DefragContext {
     pub unsafe fn defrag_realloc<T>(&self, mut ptr: *mut T) -> *mut T {
         let new_ptr: *mut T = RedisModule_DefragAlloc
             .expect("RedisModule_DefragAlloc should be available.")(
-            self.defrag_ctx, ptr.cast()
+            self.defrag_ctx.as_ptr(),
+            ptr.cast(),
         )
         .cast();
         if !new_ptr.is_null() {
@@ -147,7 +160,7 @@ impl DefragContext {
         let new_inner = unsafe {
             RedisModule_DefragRedisModuleString
                 .expect("RedisModule_DefragRedisModuleString should be available.")(
-                self.defrag_ctx,
+                self.defrag_ctx.as_ptr(),
                 s.inner,
             )
         };
@@ -168,26 +181,33 @@ pub static DEFRAG_START_FUNCTIONS_LIST: [fn(&DefragContext)] = [..];
 pub static DEFRAG_END_FUNCTIONS_LIST: [fn(&DefragContext)] = [..];
 
 extern "C" fn defrag_function(defrag_ctx: *mut raw::RedisModuleDefragCtx) {
-    let mut ctx = DefragContext { defrag_ctx };
+    let mut ctx = DefragContext {
+        defrag_ctx: NonNull::new(defrag_ctx).expect("defrag_ctx is expected to be no NULL"),
+    };
     DEFRAG_FUNCTIONS_LIST.iter().for_each(|callback| {
         callback(&mut ctx);
     });
 }
 
 extern "C" fn defrag_start_function(defrag_ctx: *mut raw::RedisModuleDefragCtx) {
-    let mut ctx = DefragContext { defrag_ctx };
+    let mut ctx = DefragContext {
+        defrag_ctx: NonNull::new(defrag_ctx).expect("defrag_ctx is expected to be no NULL"),
+    };
     DEFRAG_START_FUNCTIONS_LIST.iter().for_each(|callback| {
         callback(&mut ctx);
     });
 }
 
 extern "C" fn defrag_end_function(defrag_ctx: *mut raw::RedisModuleDefragCtx) {
-    let mut ctx = DefragContext { defrag_ctx };
+    let mut ctx = DefragContext {
+        defrag_ctx: NonNull::new(defrag_ctx).expect("defrag_ctx is expected to be no NULL"),
+    };
     DEFRAG_END_FUNCTIONS_LIST.iter().for_each(|callback| {
         callback(&mut ctx);
     });
 }
 
+/// Register defrag functions if exists.
 pub fn register_defrag_functions(ctx: &Context) -> Result<(), RedisError> {
     let register_defrag_function = match unsafe { raw::RedisModule_RegisterDefragFunc } {
         Some(f) => f,
