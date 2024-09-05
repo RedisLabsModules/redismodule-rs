@@ -248,6 +248,11 @@ macro_rules! redis_module {
                 return raw::Status::Err as c_int;
             }
 
+            if let Err(e) = $crate::defrag::register_defrag_functions(&context) {
+                context.log_warning(&format!("{e}"));
+                return raw::Status::Err as c_int;
+            }
+
             $(
                 $(
                     $crate::redis_event_handler!(ctx, $(raw::NotifyEvent::$event_type |)+ raw::NotifyEvent::empty(), $event_handler);

@@ -1,5 +1,7 @@
+use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
+use std::time::SystemTime;
 
 use crate::utils::{get_redis_connection, start_redis_server_with_module};
 use anyhow::Context;
@@ -740,6 +742,68 @@ fn test_expire() -> Result<()> {
 
     let ttl: i64 = redis::cmd("ttl").arg(&["key"]).query(&mut con)?;
     assert_eq!(ttl, -1);
+
+    Ok(())
+}
+
+#[test]
+fn test_defrag() -> Result<()> {
+    let port: u16 = 6503;
+    let _guards = vec![start_redis_server_with_module("data_type", port)
+        .with_context(|| "failed to start redis server")?];
+    let mut con =
+        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+
+    // Configure active defrag
+    redis::cmd("config")
+        .arg(&["set", "hz", "100"])
+        .query(&mut con)
+        .with_context(|| "failed to run 'config set hz 100'")?;
+
+    redis::cmd("config")
+        .arg(&["set", "active-defrag-ignore-bytes", "1"])
+        .query(&mut con)
+        .with_context(|| "failed to run 'config set active-defrag-ignore-bytes 1'")?;
+
+    redis::cmd("config")
+        .arg(&["set", "active-defrag-threshold-lower", "0"])
+        .query(&mut con)
+        .with_context(|| "failed to run 'config set active-defrag-threshold-lower 0'")?;
+
+    redis::cmd("config")
+        .arg(&["set", "active-defrag-cycle-min", "99"])
+        .query(&mut con)
+        .with_context(|| "failed to run 'config set active-defrag-cycle-min 99'")?;
+
+    // enable active defrag
+    if redis::cmd("config")
+        .arg(&["set", "activedefrag", "yes"])
+        .query::<String>(&mut con)
+        .is_err()
+    {
+        // Server the does not support active defrag, avoid failing the test.
+        return Ok(());
+    }
+
+    let start = SystemTime::now();
+    loop {
+        let res: HashMap<String, usize> = redis::cmd("alloc.defragstats")
+            .query(&mut con)
+            .with_context(|| "failed to run 'config set active-defrag-cycle-min 99'")?;
+        let num_defrag_globals = res.get("num_defrag_globals").ok_or_else(|| {
+            anyhow::Error::msg("Failed getting 'num_defrag_globals' value from result")
+        })?;
+        // Wait till we will get at least 2 defrag cycles.
+        // We are looking at num_defrag_globals because this is supported by all Redis versions
+        // that supports defrag.
+        if *num_defrag_globals > 2 {
+            break;
+        }
+        let duration = SystemTime::now().duration_since(start)?;
+        if duration > Duration::from_secs(30) {
+            return Err(anyhow::Error::msg("Failed waiting for defrag cycle"));
+        }
+    }
 
     Ok(())
 }

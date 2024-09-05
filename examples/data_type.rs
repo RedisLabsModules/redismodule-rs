@@ -1,10 +1,24 @@
+use lazy_static::lazy_static;
+use libc::c_int;
+use redis_module::defrag::DefragContext;
 use redis_module::native_types::RedisType;
-use redis_module::{raw, redis_module, Context, NextArg, RedisResult, RedisString};
+use redis_module::redisvalue::RedisValueKey;
+use redis_module::{
+    raw, redis_module, Context, NextArg, RedisGILGuard, RedisResult, RedisString, RedisValue,
+};
+use redis_module_macros::{defrag_end_function, defrag_function, defrag_start_function};
 use std::os::raw::c_void;
 
 #[derive(Debug)]
 struct MyType {
     data: String,
+}
+
+lazy_static! {
+    static ref NUM_KEYS_DEFRAG: RedisGILGuard<usize> = RedisGILGuard::default();
+    static ref NUM_DEFRAG_START: RedisGILGuard<usize> = RedisGILGuard::default();
+    static ref NUM_DEFRAG_END: RedisGILGuard<usize> = RedisGILGuard::default();
+    static ref NUM_DEFRAG_GLOBALS: RedisGILGuard<usize> = RedisGILGuard::default();
 }
 
 static MY_REDIS_TYPE: RedisType = RedisType::new(
@@ -30,7 +44,7 @@ static MY_REDIS_TYPE: RedisType = RedisType::new(
         free_effort: None,
         unlink: None,
         copy: None,
-        defrag: None,
+        defrag: Some(defrag),
 
         copy2: None,
         free_effort2: None,
@@ -41,6 +55,35 @@ static MY_REDIS_TYPE: RedisType = RedisType::new(
 
 unsafe extern "C" fn free(value: *mut c_void) {
     drop(Box::from_raw(value.cast::<MyType>()));
+}
+
+unsafe extern "C" fn defrag(
+    ctx: *mut raw::RedisModuleDefragCtx,
+    _key: *mut raw::RedisModuleString,
+    _value: *mut *mut c_void,
+) -> c_int {
+    let defrag_ctx = DefragContext::new(ctx);
+    let mut num_keys_defrag = NUM_KEYS_DEFRAG.lock(&defrag_ctx);
+    *num_keys_defrag += 1;
+    0
+}
+
+#[defrag_start_function]
+fn defrag_end(defrag_ctx: &DefragContext) {
+    let mut num_defrag_end = NUM_DEFRAG_END.lock(defrag_ctx);
+    *num_defrag_end += 1;
+}
+
+#[defrag_end_function]
+fn defrag_start(defrag_ctx: &DefragContext) {
+    let mut num_defrag_start = NUM_DEFRAG_START.lock(defrag_ctx);
+    *num_defrag_start += 1;
+}
+
+#[defrag_function]
+fn defrag_globals(defrag_ctx: &DefragContext) {
+    let mut num_defrag_globals = NUM_DEFRAG_GLOBALS.lock(defrag_ctx);
+    *num_defrag_globals += 1;
 }
 
 fn alloc_set(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
@@ -78,6 +121,35 @@ fn alloc_get(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     Ok(value)
 }
 
+fn alloc_defragstats(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+    let num_keys_defrag = NUM_KEYS_DEFRAG.lock(ctx);
+    let num_defrag_globals = NUM_DEFRAG_GLOBALS.lock(ctx);
+    let num_defrag_start = NUM_DEFRAG_START.lock(ctx);
+    let num_defrag_end = NUM_DEFRAG_END.lock(ctx);
+    Ok(RedisValue::OrderedMap(
+        [
+            (
+                RedisValueKey::String("num_keys_defrag".to_owned()),
+                RedisValue::Integer(*num_keys_defrag as i64),
+            ),
+            (
+                RedisValueKey::String("num_defrag_globals".to_owned()),
+                RedisValue::Integer(*num_defrag_globals as i64),
+            ),
+            (
+                RedisValueKey::String("num_defrag_start".to_owned()),
+                RedisValue::Integer(*num_defrag_start as i64),
+            ),
+            (
+                RedisValueKey::String("num_defrag_end".to_owned()),
+                RedisValue::Integer(*num_defrag_end as i64),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    ))
+}
+
 //////////////////////////////////////////////////////
 
 redis_module! {
@@ -90,5 +162,6 @@ redis_module! {
     commands: [
         ["alloc.set", alloc_set, "write", 1, 1, 1],
         ["alloc.get", alloc_get, "readonly", 1, 1, 1],
+        ["alloc.defragstats", alloc_defragstats, "readonly", 0, 0, 0]
     ],
 }
