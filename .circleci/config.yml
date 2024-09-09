@@ -209,7 +209,7 @@ jobs:
   build-macos-x64:
     macos:
       xcode: 15.4.0
-    resource_class: macos.x86.medium.gen2
+    resource_class: macos.m1.large.gen1
     steps:
       - run: brew install openssl
       - build-steps
