@@ -11,6 +11,9 @@
 
 # Root options
 
+# The graph table configures how the dependency graph is constructed and thus
+# which crates the checks are performed against
+[graph]
 # If 1 or more target triples (and optionally, target_features) are specified,
 # only the specified targets will be checked when running `cargo deny check`.
 # This means, if a particular package is only ever used as a target specific
@@ -22,7 +25,7 @@
 targets = [
     # The triple can be any string, but only the target triples built in to
     # rustc (as of 1.40) can be checked against actual config expressions
-    #{ triple = "x86_64-unknown-linux-musl" },
+    #"x86_64-unknown-linux-musl",
     # You can also specify which target_features you promise are enabled for a
     # particular target. target_features are currently not validated against
     # the actual valid features supported by the target architecture.
@@ -46,6 +49,9 @@ no-default-features = false
 # If set, these feature will be enabled when collecting metadata. If `--features`
 # is specified on the cmd line they will take precedence over this option.
 #features = []
+
+# The output table provides options for how/if diagnostics are outputted
+[output]
 # When outputting inclusion graphs in diagnostics that include features, this
 # option can be used to specify the depth at which feature edges will be added.
 # This option is included since the graphs can be quite large and the addition
@@ -57,34 +63,16 @@ feature-depth = 1
 # More documentation for the advisories section can be found here:
 # https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
 [advisories]
+version = 2
 # The path where the advisory database is cloned/fetched into
 db-path = "~/.cargo/advisory-db"
 # The url(s) of the advisory databases to use
 db-urls = ["https://github.com/rustsec/advisory-db"]
-# The lint level for security vulnerabilities
-vulnerability = "deny"
-# The lint level for unmaintained crates
-unmaintained = "warn"
-# The lint level for crates that have been yanked from their source registry
-yanked = "deny"
-# The lint level for crates with security notices. Note that as of
-# 2019-12-17 there are no security notice advisories in
-# https://github.com/rustsec/advisory-db
-notice = "deny"
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
 ignore = [
     #"RUSTSEC-0000-0000",
 ]
-# Threshold for security vulnerabilities, any vulnerability with a CVSS score
-# lower than the range specified will be ignored. Note that ignored advisories
-# will still output a note when they are encountered.
-# * None - CVSS Score 0.0
-# * Low - CVSS Score 0.1 - 3.9
-# * Medium - CVSS Score 4.0 - 6.9
-# * High - CVSS Score 7.0 - 8.9
-# * Critical - CVSS Score 9.0 - 10.0
-#severity-threshold =
 
 # If this is true, then cargo deny will use the git executable to fetch advisory database.
 # If this is false, then it uses a built-in git library.
@@ -96,8 +84,6 @@ ignore = [
 # More documentation for the licenses section can be found here:
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
-# The lint level for crates which do not have a detectable license
-unlicensed = "deny"
 # List of explicitly allowed licenses
 # See https://spdx.org/licenses/ for list of possible licenses
 # [possible values: any SPDX 3.11 short identifier (+ optional exception)].
@@ -110,28 +96,6 @@ allow = [
     # "LicenseRef-RSALv2"
     #"Apache-2.0 WITH LLVM-exception",
 ]
-# List of explicitly disallowed licenses
-# See https://spdx.org/licenses/ for list of possible licenses
-# [possible values: any SPDX 3.11 short identifier (+ optional exception)].
-deny = [
-    #"Nokia",
-]
-# Lint level for licenses considered copyleft
-copyleft = "deny"
-# Blanket approval or denial for OSI-approved or FSF Free/Libre licenses
-# * both - The license will be approved if it is both OSI-approved *AND* FSF
-# * either - The license will be approved if it is either OSI-approved *OR* FSF
-# * osi - The license will be approved if it is OSI approved
-# * fsf - The license will be approved if it is FSF Free
-# * osi-only - The license will be approved if it is OSI-approved *AND NOT* FSF
-# * fsf-only - The license will be approved if it is FSF *AND NOT* OSI-approved
-# * neither - This predicate is ignored and the default lint level is used
-allow-osi-fsf-free = "neither"
-# Lint level used when no other predicates are matched
-# 1. License isn't in the allow or deny lists
-# 2. License isn't copyleft
-# 3. License isn't OSI/FSF, or allow-osi-fsf-free = "neither"
-default = "deny"
 # The confidence threshold for detecting a license from license text.
 # The higher the value, the more closely the license text must be to the
 # canonical license text of a valid SPDX license file.
@@ -182,45 +146,45 @@ workspace-default-features = "allow"
 external-default-features = "allow"
 # List of crates that are allowed. Use with care!
 allow = [
-#    { name = "libloading", version = "*" },
-#    { name = "bindgen", version = "*" },
-#    { name = "addroid-tzdata", version = "*" },
-#    { name = "android_system_properties", version = "*" },
-#    { name = "anyhow", version = "*" },
-#    { name = "autocfg", version = "*" },
-#    { name = "bitflags", version = "*" },
-#    { name = "block-buffer", version = "*" },
-#    { name = "bumpalo", version = "*" },
-#    { name = "byteorder", version = "*" },
-#    { name = "bytes", version = "*" },
-#    { name = "cc", version = "*" },
-#    { name = "cexpr", version = "*" },
-#    { name = "cfg-if", version = "*" },
-#    { name = "chrono", version = "*" },
-#    { name = "clang-sys", version = "*" },
-#    { name = "core-foundation-sys", version = "*" },
-#    { name = "cpufeatures", version = "*" },
-#    { name = "crypto-common", version = "*" },
-#    { name = "data-encoding", version = "*" },
-#    { name = "deranged", version = "*" },
-#    { name = "digest", version = "*" },
-#    { name = "either", version = "*" },
-#    { name = "fnv", version = "*" },
-#    { name = "form_urlencoded", version = "*" },
-#    { name = "generic-array", version = "*" },
-#    { name = "getrandom", version = "*" },
-#    { name = "glob", version = "*" },
-#    { name = "home", version = "*" },
-#    { name = "http", version = "*" },
-#    { name = "httparse", version = "*" },
-#    { name = "iana-time-zone", version = "*" },
-#    { name = "iana-time-zone-haiku", version = "*" },
-#    { name = "idna", version = "*" },
-#    { name = "itoa", version = "*" },
-#    { name = "js-sys", version = "*" },
-#    { name = "lazy_static", version = "*" },
-#    { name = "lazycell", version = "*" },
-#    { name = "libc", version = "*" }
+    #    { name = "libloading", version = "*" },
+    #    { name = "bindgen", version = "*" },
+    #    { name = "addroid-tzdata", version = "*" },
+    #    { name = "android_system_properties", version = "*" },
+    #    { name = "anyhow", version = "*" },
+    #    { name = "autocfg", version = "*" },
+    #    { name = "bitflags", version = "*" },
+    #    { name = "block-buffer", version = "*" },
+    #    { name = "bumpalo", version = "*" },
+    #    { name = "byteorder", version = "*" },
+    #    { name = "bytes", version = "*" },
+    #    { name = "cc", version = "*" },
+    #    { name = "cexpr", version = "*" },
+    #    { name = "cfg-if", version = "*" },
+    #    { name = "chrono", version = "*" },
+    #    { name = "clang-sys", version = "*" },
+    #    { name = "core-foundation-sys", version = "*" },
+    #    { name = "cpufeatures", version = "*" },
+    #    { name = "crypto-common", version = "*" },
+    #    { name = "data-encoding", version = "*" },
+    #    { name = "deranged", version = "*" },
+    #    { name = "digest", version = "*" },
+    #    { name = "either", version = "*" },
+    #    { name = "fnv", version = "*" },
+    #    { name = "form_urlencoded", version = "*" },
+    #    { name = "generic-array", version = "*" },
+    #    { name = "getrandom", version = "*" },
+    #    { name = "glob", version = "*" },
+    #    { name = "home", version = "*" },
+    #    { name = "http", version = "*" },
+    #    { name = "httparse", version = "*" },
+    #    { name = "iana-time-zone", version = "*" },
+    #    { name = "iana-time-zone-haiku", version = "*" },
+    #    { name = "idna", version = "*" },
+    #    { name = "itoa", version = "*" },
+    #    { name = "js-sys", version = "*" },
+    #    { name = "lazy_static", version = "*" },
+    #    { name = "lazycell", version = "*" },
+    #    { name = "libc", version = "*" }
     #{ name = "ansi_term", version = "=0.11.0" },
 ]
 # List of crates to deny

@@ -157,7 +157,8 @@ pub mod standard_log_implementation {
     pub fn setup_for_context(context: *mut raw::RedisModuleCtx) -> Result<(), SetLoggerError> {
         unsafe {
             LOGGER.0 = context;
-            log::set_logger(&LOGGER).map(|()| log::set_max_level(log::LevelFilter::Trace))
+            log::set_logger(&*std::ptr::addr_of!(LOGGER))
+                .map(|()| log::set_max_level(log::LevelFilter::Trace))
         }
     }
 
