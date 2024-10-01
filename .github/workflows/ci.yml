@@ -15,10 +15,10 @@ jobs:
           - ubuntu-latest
           - macos-latest
         redis-version:
-          - 6-0
-          - 6-2
-          - 7-0
-          - 7-2
+          - [6-0, 6.0]
+          - [6-2, 6.2]
+          - [7-0, 7.0]
+          - [7-2, 7.2]
         toolchain:
           - 1.78.0
           - stable
@@ -55,22 +55,22 @@ jobs:
       - name: Format and clippy
         run: |
             cargo fmt --all -- --check
-            cargo clippy --all-targets --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version }}
+            cargo clippy --all-targets --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
 
       - name: Install redis
         run: |
             export HOMEBREW_NO_AUTO_UPDATE=1
-            ./deps/readies/bin/getredis -v '${{ matrix.redis-version }}' --force
+            ./deps/readies/bin/getredis -v '${{ matrix.redis-version[1] }}' --force
             redis-server --version
 
       - name: Build debug
-        run: cargo build --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version }}
+        run: cargo build --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
 
       - name: Build release
-        run: cargo build --release --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version }}
+        run: cargo build --release --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
 
       - name: Test
-        run: cargo test --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version }}
+        run: cargo test --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
 
       - name: Doc
         run: cargo doc --all-features
