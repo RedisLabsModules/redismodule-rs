@@ -60,7 +60,7 @@ jobs:
       - name: Install redis
         run: |
             export HOMEBREW_NO_AUTO_UPDATE=1
-            ./deps/readies/bin/getredis -v '${{ matrix.redis-version }}' --force ''
+            ./deps/readies/bin/getredis -v '${{ matrix.redis-version }}' --force
             redis-server --version
 
       - name: Build debug
