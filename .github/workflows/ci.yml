@@ -9,8 +9,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        name:
-          - stable
         os:
           - ubuntu-latest
           - macos-latest
