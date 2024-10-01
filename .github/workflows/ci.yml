@@ -53,7 +53,7 @@ jobs:
       - name: Format and clippy
         run: |
             cargo fmt --all -- --check
-            cargo clippy --all-targets --all-features
+            cargo clippy --all-targets --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version }}
 
       - name: Install redis
         run: |
