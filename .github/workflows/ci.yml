@@ -26,6 +26,10 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+            python-version: '3.10'
 
       - name: Install toolchain
         id: tc
@@ -51,8 +55,20 @@ jobs:
             cargo fmt --all -- --check
             cargo clippy --all-targets --all-features
 
-      - name: Build, test and doc for the available redis versions
+      - name: Install redis
         run: |
-            cargo build --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version }}
-            cargo test --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version }}
-            cargo doc --all-features
+            export HOMEBREW_NO_AUTO_UPDATE=1
+            ./deps/readies/bin/getredis -v '${{ matrix.redis-version }}' --force ''
+            redis-server --version
+
+      - name: Build debug
+        run: cargo build --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version }}
+
+      - name: Build release
+        run: cargo build --release --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version }}
+
+      - name: Test
+        run: cargo test --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version }}
+
+      - name: Doc
+        run: cargo doc --all-features
