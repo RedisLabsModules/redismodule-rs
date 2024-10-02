@@ -14,7 +14,7 @@ mod utils;
 #[test]
 fn test_hello() -> Result<()> {
     let port: u16 = 6479;
-    let _guards = vec![start_redis_server_with_module("hello", port)
+    let _guards = vec![start_redis_server_with_module("hello", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -37,7 +37,7 @@ fn test_hello() -> Result<()> {
 #[test]
 fn test_keys_pos() -> Result<()> {
     let port: u16 = 6480;
-    let _guards = vec![start_redis_server_with_module("keys_pos", port)
+    let _guards = vec![start_redis_server_with_module("keys_pos", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -60,7 +60,7 @@ fn test_keys_pos() -> Result<()> {
 #[test]
 fn test_helper_version() -> Result<()> {
     let port: u16 = 6481;
-    let _guards = vec![start_redis_server_with_module("test_helper", port)
+    let _guards = vec![start_redis_server_with_module("test_helper", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -84,7 +84,7 @@ fn test_command_name() -> Result<()> {
     use redis_module::RedisValue;
 
     let port: u16 = 6482;
-    let _guards = vec![start_redis_server_with_module("test_helper", port)
+    let _guards = vec![start_redis_server_with_module("test_helper", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -129,7 +129,7 @@ fn test_helper_info() -> Result<()> {
         .into_iter()
         .try_for_each(|(module, has_dictionary)| {
             let port: u16 = 6483;
-            let _guards = vec![start_redis_server_with_module(module, port)
+            let _guards = vec![start_redis_server_with_module(module, port, vec![])
                 .with_context(|| "failed to start redis server")?];
             let mut con =
                 get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -154,7 +154,7 @@ fn test_info_handler_multiple_sections() -> Result<()> {
 
     MODULES.into_iter().try_for_each(|module| {
         let port: u16 = 6500;
-        let _guards = vec![start_redis_server_with_module(module, port)
+        let _guards = vec![start_redis_server_with_module(module, port, vec![])
             .with_context(|| "failed to start redis server")?];
         let mut con =
             get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -175,7 +175,7 @@ fn test_info_handler_multiple_sections() -> Result<()> {
 #[test]
 fn test_test_helper_err() -> Result<()> {
     let port: u16 = 6484;
-    let _guards = vec![start_redis_server_with_module("hello", port)
+    let _guards = vec![start_redis_server_with_module("hello", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -195,7 +195,7 @@ fn test_test_helper_err() -> Result<()> {
 #[test]
 fn test_string() -> Result<()> {
     let port: u16 = 6485;
-    let _guards = vec![start_redis_server_with_module("string", port)
+    let _guards = vec![start_redis_server_with_module("string", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -215,7 +215,7 @@ fn test_string() -> Result<()> {
 #[test]
 fn test_scan() -> Result<()> {
     let port: u16 = 6486;
-    let _guards = vec![start_redis_server_with_module("scan_keys", port)
+    let _guards = vec![start_redis_server_with_module("scan_keys", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -241,7 +241,7 @@ fn test_scan() -> Result<()> {
 #[test]
 fn test_stream_reader() -> Result<()> {
     let port: u16 = 6487;
-    let _guards = vec![start_redis_server_with_module("stream", port)
+    let _guards = vec![start_redis_server_with_module("stream", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -281,7 +281,7 @@ fn test_stream_reader() -> Result<()> {
 #[test]
 fn test_call() -> Result<()> {
     let port: u16 = 6488;
-    let _guards = vec![start_redis_server_with_module("call", port)
+    let _guards = vec![start_redis_server_with_module("call", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -298,7 +298,7 @@ fn test_call() -> Result<()> {
 #[test]
 fn test_ctx_flags() -> Result<()> {
     let port: u16 = 6489;
-    let _guards = vec![start_redis_server_with_module("ctx_flags", port)
+    let _guards = vec![start_redis_server_with_module("ctx_flags", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -313,7 +313,7 @@ fn test_ctx_flags() -> Result<()> {
 #[test]
 fn test_get_current_user() -> Result<()> {
     let port: u16 = 6490;
-    let _guards = vec![start_redis_server_with_module("acl", port)
+    let _guards = vec![start_redis_server_with_module("acl", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -328,7 +328,7 @@ fn test_get_current_user() -> Result<()> {
 #[test]
 fn test_verify_acl_on_user() -> Result<()> {
     let port: u16 = 6491;
-    let _guards = vec![start_redis_server_with_module("acl", port)
+    let _guards = vec![start_redis_server_with_module("acl", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -369,7 +369,7 @@ fn test_verify_acl_on_user() -> Result<()> {
 #[test]
 fn test_key_space_notifications() -> Result<()> {
     let port: u16 = 6492;
-    let _guards = vec![start_redis_server_with_module("events", port)
+    let _guards = vec![start_redis_server_with_module("events", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -393,7 +393,7 @@ fn test_key_space_notifications() -> Result<()> {
 #[test]
 fn test_context_mutex() -> Result<()> {
     let port: u16 = 6493;
-    let _guards = vec![start_redis_server_with_module("threads", port)
+    let _guards = vec![start_redis_server_with_module("threads", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -415,8 +415,10 @@ fn test_context_mutex() -> Result<()> {
 #[test]
 fn test_server_event() -> Result<()> {
     let port: u16 = 6494;
-    let _guards = vec![start_redis_server_with_module("server_events", port)
-        .with_context(|| "failed to start redis server")?];
+    let _guards = vec![
+        start_redis_server_with_module("server_events", port, vec![])
+            .with_context(|| "failed to start redis server")?,
+    ];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
@@ -464,8 +466,10 @@ fn test_server_event() -> Result<()> {
 #[test]
 fn test_configuration() -> Result<()> {
     let port: u16 = 6495;
-    let _guards = vec![start_redis_server_with_module("configuration", port)
-        .with_context(|| "failed to start redis server")?];
+    let _guards = vec![
+        start_redis_server_with_module("configuration", port, vec![])
+            .with_context(|| "failed to start redis server")?,
+    ];
 
     let config_get = |config: &str| -> Result<String> {
         let mut con =
@@ -537,7 +541,7 @@ fn test_configuration() -> Result<()> {
 #[test]
 fn test_response() -> Result<()> {
     let port: u16 = 6496;
-    let _guards = vec![start_redis_server_with_module("response", port)
+    let _guards = vec![start_redis_server_with_module("response", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -569,8 +573,10 @@ fn test_response() -> Result<()> {
 #[test]
 fn test_command_proc_macro() -> Result<()> {
     let port: u16 = 6497;
-    let _guards = vec![start_redis_server_with_module("proc_macro_commands", port)
-        .with_context(|| "failed to start redis server")?];
+    let _guards = vec![
+        start_redis_server_with_module("proc_macro_commands", port, vec![])
+            .with_context(|| "failed to start redis server")?,
+    ];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
@@ -608,8 +614,10 @@ fn test_command_proc_macro() -> Result<()> {
 #[test]
 fn test_redis_value_derive() -> Result<()> {
     let port: u16 = 6498;
-    let _guards = vec![start_redis_server_with_module("proc_macro_commands", port)
-        .with_context(|| "failed to start redis server")?];
+    let _guards = vec![
+        start_redis_server_with_module("proc_macro_commands", port, vec![])
+            .with_context(|| "failed to start redis server")?,
+    ];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
@@ -632,7 +640,7 @@ fn test_redis_value_derive() -> Result<()> {
 #[test]
 fn test_call_blocking() -> Result<()> {
     let port: u16 = 6499;
-    let _guards = vec![start_redis_server_with_module("call", port)
+    let _guards = vec![start_redis_server_with_module("call", port, vec![])
         .with_context(|| "failed to start redis server")?];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
@@ -655,8 +663,10 @@ fn test_call_blocking() -> Result<()> {
 #[test]
 fn test_open_key_with_flags() -> Result<()> {
     let port: u16 = 6501;
-    let _guards = vec![start_redis_server_with_module("open_key_with_flags", port)
-        .with_context(|| "failed to start redis server")?];
+    let _guards = vec![
+        start_redis_server_with_module("open_key_with_flags", port, vec![])
+            .with_context(|| "failed to start redis server")?,
+    ];
     let mut con =
         get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
 
