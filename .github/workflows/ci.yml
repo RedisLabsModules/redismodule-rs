@@ -68,10 +68,11 @@ jobs:
             target
           key: ${{ runner.os }}-test-${{ steps.tc.outputs.rustc_hash }}-${{ hashFiles('**/Cargo.toml') }}
 
-      - name: Format and clippy
-        run: |
-            cargo fmt --all -- --check
-            cargo clippy --all-targets --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
 
       - name: Build debug
         run: cargo build --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
