@@ -26,6 +26,24 @@ jobs:
         uses: actions/checkout@v4
         with:
             submodules: recursive
+
+      - name: Checkout redis sources
+        uses: actions/checkout@v4
+        with:
+            submodules: recursive
+            repository: redis/redis
+            ref: ${{ matrix.redis-version[1] }}
+            path: redis
+
+      - name: Install redis
+        run: |
+            export HOMEBREW_NO_AUTO_UPDATE=1
+            cd redis
+            make -j
+            ./src/redis-server --version
+            make install PREFIX=/usr/local
+            redis-server --version
+
       - name: Setup python
         uses: actions/setup-python@v5
         with:
@@ -54,12 +72,6 @@ jobs:
         run: |
             cargo fmt --all -- --check
             cargo clippy --all-targets --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
-
-      - name: Install redis
-        run: |
-            export HOMEBREW_NO_AUTO_UPDATE=1
-            ./deps/readies/bin/getredis -v '${{ matrix.redis-version[1] }}' --force
-            redis-server --version
 
       - name: Build debug
         run: cargo build --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
