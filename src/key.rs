@@ -524,7 +524,7 @@ where
     ///     let hm: HMGetResult<'_, &str, RedisString> = ctx
     ///         .open_key(&key_name)
     ///         .hash_get_multi(fields)?
-    ///         .ok_or(RedisError::Str("ERR key not found"))?;
+    ///         .ok_or(RedisError::Str("key not found"))?;
     ///     let response: Vec<RedisValue> = hm.into_iter().map(|(_, v)| v.into()).collect();
     ///     Ok(RedisValue::Array(response))
     /// }
@@ -542,7 +542,7 @@ where
     ///     let hm: HMGetResult<'_, &str, RedisString> = ctx
     ///          .open_key(&key_name)
     ///          .hash_get_multi(fields)?
-    ///          .ok_or(RedisError::Str("ERR key not found"))?;
+    ///          .ok_or(RedisError::Str("key not found"))?;
     ///     let response: Vec<RedisValue> = hm.into_iter().map(|(_, v)| RedisValue::BulkRedisString(v)).collect();
     ///     Ok(RedisValue::Array(response))
     /// }
