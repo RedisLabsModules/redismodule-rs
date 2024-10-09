@@ -141,8 +141,6 @@ pub fn redis_value(item: TokenStream) -> TokenStream {
     match struct_input.data {
         Data::Struct(s) => struct_redis_value(struct_name, s),
         Data::Enum(e) => enum_redis_value(struct_name, e),
-        _ => {
-            quote! {compile_error!("RedisValue derive can only be apply on struct.")}.into()
-        }
+        _ => quote! {compile_error!("RedisValue derive can only be apply on struct.")}.into(),
     }
 }

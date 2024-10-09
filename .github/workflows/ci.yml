@@ -1,0 +1,87 @@
+name: CI
+
+on: [pull_request]
+
+jobs:
+  test:
+    name: Build and run the unit tests using the latest rust.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        redis-version:
+          - [6-0, "7.2"]
+          - [6-2, "7.2"]
+          - [7-0, "7.2"]
+          - [7-2, "7.2"]
+        toolchain:
+          - 1.78.0
+          - stable
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+            submodules: recursive
+
+      - name: Checkout redis sources
+        uses: actions/checkout@v4
+        with:
+            submodules: recursive
+            repository: redis/redis
+            ref: ${{ matrix.redis-version[1] }}
+            path: redis
+
+      - name: Install redis
+        run: |
+            export HOMEBREW_NO_AUTO_UPDATE=1
+            cd redis
+            make -j
+            ./src/redis-server --version
+            make install PREFIX=/usr/local
+            redis-server --version
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+            python-version: '3.10'
+
+      - name: Install toolchain
+        id: tc
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          profile: minimal
+          override: true
+          components: rustfmt, clippy
+
+      - name: Setup cache
+        if: runner.os != 'macOS'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-test-${{ steps.tc.outputs.rustc_hash }}-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
+
+      - name: Build debug
+        run: cargo build --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
+
+      - name: Build release
+        run: cargo build --release --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
+
+      - name: Test
+        run: cargo test --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
+
+      - name: Doc
+        run: cargo doc --all-features
