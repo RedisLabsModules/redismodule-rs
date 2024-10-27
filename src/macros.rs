@@ -10,7 +10,7 @@ macro_rules! redis_command {
      $acl_categories:expr) => {{
         let name = CString::new($command_name).unwrap();
         let flags = CString::new($command_flags).unwrap();
-        
+
         /////////////////////
         extern "C" fn __do_command(
             ctx: *mut $crate::raw::RedisModuleCtx,
@@ -18,7 +18,7 @@ macro_rules! redis_command {
             argc: c_int,
         ) -> c_int {
             let context = $crate::Context::new(ctx);
-            
+
             let args = $crate::decode_args(ctx, argv, argc);
             let response = $command_handler(&context, args);
             context.reply(response.map(|v| v.into())) as c_int
