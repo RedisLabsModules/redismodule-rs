@@ -6,10 +6,11 @@ macro_rules! redis_command {
      $command_flags:expr,
      $firstkey:expr,
      $lastkey:expr,
-     $keystep:expr) => {{
+     $keystep:expr,
+     $acl_categories:expr) => {{
         let name = CString::new($command_name).unwrap();
         let flags = CString::new($command_flags).unwrap();
-
+        
         /////////////////////
         extern "C" fn __do_command(
             ctx: *mut $crate::raw::RedisModuleCtx,
@@ -17,7 +18,7 @@ macro_rules! redis_command {
             argc: c_int,
         ) -> c_int {
             let context = $crate::Context::new(ctx);
-
+            
             let args = $crate::decode_args(ctx, argv, argc);
             let response = $command_handler(&context, args);
             context.reply(response.map(|v| v.into())) as c_int
@@ -37,6 +38,27 @@ macro_rules! redis_command {
         } == $crate::raw::Status::Err as c_int
         {
             return $crate::raw::Status::Err as c_int;
+        }
+        
+        if $acl_categories != "" {
+            let acl_categories = CString::new($acl_categories).unwrap();
+
+            let command = unsafe {
+                $crate::raw::RedisModule_GetCommand.unwrap()($ctx, name.as_ptr())
+            };
+            if command.is_null() {
+                return $crate::raw::Status::Err as c_int;
+            }
+
+            if unsafe {
+                $crate::raw::RedisModule_SetCommandACLCategories.unwrap()(
+                    command,
+                    acl_categories.as_ptr(),
+                )
+            } == $crate::raw::Status::Err as c_int
+            {
+                return $crate::raw::Status::Err as c_int;
+            }
         }
     }};
 }
@@ -116,7 +138,8 @@ macro_rules! redis_module {
                 $flags:expr,
                 $firstkey:expr,
                 $lastkey:expr,
-                $keystep:expr
+                $keystep:expr,
+                $acl_categories:expr
               ]),* $(,)*
         ] $(,)*
         $(event_handlers: [
@@ -241,7 +264,7 @@ macro_rules! redis_module {
             )*
 
             $(
-                $crate::redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep);
+                $crate::redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep, $acl_categories);
             )*
 
             if $crate::commands::register_commands(&context) == raw::Status::Err {
@@ -329,13 +352,13 @@ macro_rules! redis_module {
                 $(
                     $crate::redis_command!(ctx, $module_config_get_command, |ctx, args: Vec<RedisString>| {
                         module_config_get(ctx, args, $module_name)
-                    }, "", 0, 0, 0);
+                    }, "", 0, 0, 0, "");
                 )?
 
                 $(
                     $crate::redis_command!(ctx, $module_config_set_command, |ctx, args: Vec<RedisString>| {
                         module_config_set(ctx, args, $module_name)
-                    }, "", 0, 0, 0);
+                    }, "", 0, 0, 0, "");
                 )?
             )?
 

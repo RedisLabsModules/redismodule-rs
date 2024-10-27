@@ -25,6 +25,6 @@ redis_module! {
     allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
-        ["expire.cmd", expire_cmd, "write fast deny-oom", 1, 1, 1],
+        ["expire.cmd", expire_cmd, "write fast deny-oom", 1, 1, 1, ""],
     ],
 }

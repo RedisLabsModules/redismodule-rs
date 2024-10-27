@@ -160,8 +160,8 @@ redis_module! {
         MY_REDIS_TYPE,
     ],
     commands: [
-        ["alloc.set", alloc_set, "write", 1, 1, 1],
-        ["alloc.get", alloc_get, "readonly", 1, 1, 1],
-        ["alloc.defragstats", alloc_defragstats, "readonly", 0, 0, 0]
+        ["alloc.set", alloc_set, "write", 1, 1, 1, ""],
+        ["alloc.get", alloc_get, "readonly", 1, 1, 1, ""],
+        ["alloc.defragstats", alloc_defragstats, "readonly", 0, 0, 0, ""],
     ],
 }

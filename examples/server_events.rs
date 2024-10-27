@@ -51,8 +51,8 @@ redis_module! {
     allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
-        ["num_flushed", num_flushed, "readonly", 0, 0, 0],
-        ["num_max_memory_changes", num_maxmemory_changes, "readonly", 0, 0, 0],
-        ["num_crons", num_crons, "readonly", 0, 0, 0],
+        ["num_flushed", num_flushed, "readonly", 0, 0, 0, ""],
+        ["num_max_memory_changes", num_maxmemory_changes, "readonly", 0, 0, 0, ""],
+        ["num_crons", num_crons, "readonly", 0, 0, 0, ""],
     ],
 }

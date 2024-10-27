@@ -25,6 +25,6 @@ redis_module! {
     allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
-        ["block", block, "", 0, 0, 0],
+        ["block", block, "", 0, 0, 0, ""],
     ],
 }

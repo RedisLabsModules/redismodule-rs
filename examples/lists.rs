@@ -43,6 +43,6 @@ redis_module! {
     allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
-        ["LPOPRPUSH", lpoprpush, "write fast deny-oom", 1, 2, 1],
+        ["LPOPRPUSH", lpoprpush, "write fast deny-oom", 1, 2, 1, ""],
     ],
 }

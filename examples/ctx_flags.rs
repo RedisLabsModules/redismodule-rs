@@ -18,6 +18,6 @@ redis_module! {
     allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
-        ["my_role", role, "readonly", 0, 0, 0],
+        ["my_role", role, "readonly", 0, 0, 0, ""],
     ],
 }

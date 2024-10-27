@@ -27,6 +27,6 @@ redis_module! {
     allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
-        ["hello.mul", hello_mul, "", 0, 0, 0],
+        ["hello.mul", hello_mul, "", 0, 0, 0, ""],
     ],
 }
