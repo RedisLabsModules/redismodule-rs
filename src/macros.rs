@@ -39,13 +39,12 @@ macro_rules! redis_command {
         {
             return $crate::raw::Status::Err as c_int;
         }
-        
+
         if $acl_categories != "" {
             let acl_categories = CString::new($acl_categories).unwrap();
 
-            let command = unsafe {
-                $crate::raw::RedisModule_GetCommand.unwrap()($ctx, name.as_ptr())
-            };
+            let command =
+                unsafe { $crate::raw::RedisModule_GetCommand.unwrap()($ctx, name.as_ptr()) };
             if command.is_null() {
                 return $crate::raw::Status::Err as c_int;
             }
