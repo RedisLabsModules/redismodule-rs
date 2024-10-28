@@ -28,6 +28,6 @@ redis_module! {
     allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
-        ["keys_pos", keys_pos, "getkeys-api", 1, 1, 1],
+        ["keys_pos", keys_pos, "getkeys-api", 1, 1, 1, ""],
     ],
 }

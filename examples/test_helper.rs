@@ -45,9 +45,9 @@ redis_module! {
     data_types: [],
     info: add_info,
     commands: [
-        ["test_helper.version", test_helper_version, "", 0, 0, 0],
-        ["test_helper._version_rm_call", test_helper_version_rm_call, "", 0, 0, 0],
-        ["test_helper.name", test_helper_command_name, "", 0, 0, 0],
-        ["test_helper.err", test_helper_err, "", 0, 0, 0],
+        ["test_helper.version", test_helper_version, "", 0, 0, 0, ""],
+        ["test_helper._version_rm_call", test_helper_version_rm_call, "", 0, 0, 0, ""],
+        ["test_helper.name", test_helper_command_name, "", 0, 0, 0, ""],
+        ["test_helper.err", test_helper_err, "", 0, 0, 0, ""],
     ],
 }

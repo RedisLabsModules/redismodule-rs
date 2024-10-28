@@ -41,6 +41,6 @@ redis_module! {
     allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
-        ["STREAM_POP", stream_read_from, "write", 1, 1, 1],
+        ["STREAM_POP", stream_read_from, "write", 1, 1, 1, ""],
     ],
 }

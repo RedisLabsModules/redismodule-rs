@@ -68,9 +68,9 @@ redis_module! {
     allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
     commands: [
-        ["events.send", event_send, "", 0, 0, 0],
-        ["events.num_key_miss", num_key_miss, "", 0, 0, 0],
-        ["events.num_keys", num_keys, "", 0, 0, 0],
+        ["events.send", event_send, "", 0, 0, 0, ""],
+        ["events.num_key_miss", num_key_miss, "", 0, 0, 0, ""],
+        ["events.num_keys", num_keys, "", 0, 0, 0, ""],
     ],
     event_handlers: [
         [@STRING: on_event],
