@@ -266,7 +266,7 @@ macro_rules! redis_module {
 
             $(
                 let category = CString::new($acl_category).unwrap();
-                if $crate::raw::RedisModule_SetCommandACLCategories.is_some() && unsafe {
+                if $crate::raw::RedisModule_AddACLCategory.is_some() && unsafe {
                     raw::RedisModule_AddACLCategory.unwrap()(ctx, category.as_ptr())
                 } == Status::Err as c_int
                 {
