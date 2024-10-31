@@ -54,7 +54,10 @@ pub struct CallOptions {
 }
 
 #[derive(Clone)]
-#[cfg(feature = "min-redis-compatibility-version-7-2")]
+#[cfg(any(
+    feature = "min-redis-compatibility-version-7-4",
+    feature = "min-redis-compatibility-version-7-2"
+))]
 pub struct BlockingCallOptions {
     options: CString,
 }
@@ -136,7 +139,10 @@ impl CallOptionsBuilder {
     /// Construct a CallOption object that can be used to run commands using call_blocking.
     /// The commands can be either blocking or none blocking. In case the command are blocking
     /// (like `blpop`) a [FutureCallReply] will be returned.
-    #[cfg(feature = "min-redis-compatibility-version-7-2")]
+    #[cfg(any(
+        feature = "min-redis-compatibility-version-7-4",
+        feature = "min-redis-compatibility-version-7-2"
+    ))]
     pub fn build_blocking(mut self) -> BlockingCallOptions {
         self.add_flag("K");
         BlockingCallOptions {
@@ -441,7 +447,10 @@ impl Context {
     }
 
     /// Same as [call_ext] but also allow to perform blocking commands like BLPOP.
-    #[cfg(feature = "min-redis-compatibility-version-7-2")]
+    #[cfg(any(
+        feature = "min-redis-compatibility-version-7-4",
+        feature = "min-redis-compatibility-version-7-2"
+    ))]
     pub fn call_blocking<
         'ctx,
         'a,
