@@ -49,15 +49,21 @@ macro_rules! redis_command {
                 return $crate::raw::Status::Err as c_int;
             }
 
-            if $crate::raw::RedisModule_SetCommandACLCategories.is_some()
-                && unsafe {
-                    $crate::raw::RedisModule_SetCommandACLCategories.unwrap()(
-                        command,
-                        acl_categories.as_ptr(),
-                    )
-                } == $crate::raw::Status::Err as c_int
+            if let Some(RM_SetCommandACLCategories) =
+                $crate::raw::RedisModule_SetCommandACLCategories
             {
-                return $crate::raw::Status::Err as c_int;
+                if RM_SetCommandACLCategories(command, acl_categories.as_ptr())
+                    == $crate::raw::Status::Err as c_int
+                {
+                    $crate::raw::redis_log(
+                        $ctx,
+                        &format!(
+                            "Error: failed to set command {} ACL categories {}",
+                            $command_name, $acl_categories
+                        ),
+                    );
+                    return $crate::raw::Status::Err as c_int;
+                }
             }
         }
     }};
@@ -266,12 +272,11 @@ macro_rules! redis_module {
 
             $(
                 let category = CString::new($acl_category).unwrap();
-                if $crate::raw::RedisModule_AddACLCategory.is_some() && unsafe {
-                    raw::RedisModule_AddACLCategory.unwrap()(ctx, category.as_ptr())
-                } == Status::Err as c_int
-                {
-                    redis_log(ctx, "Error: failed to add ACL category");
-                    return Err("Error: failed to add ACL category");
+                if let Some(RM_AddACLCategory) = raw::RedisModule_AddACLCategory {
+                    if RM_AddACLCategory(ctx, category.as_ptr()) == raw::Status::Err as c_int {
+                        raw::redis_log(ctx, "Error: failed to add ACL category");
+                        return raw::Status::Err as c_int;
+                    }
                 }
             )*
 
