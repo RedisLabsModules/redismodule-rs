@@ -49,12 +49,13 @@ macro_rules! redis_command {
                 return $crate::raw::Status::Err as c_int;
             }
 
-            if unsafe {
-                $crate::raw::RedisModule_SetCommandACLCategories.unwrap()(
-                    command,
-                    acl_categories.as_ptr(),
-                )
-            } == $crate::raw::Status::Err as c_int
+            if $crate::raw::RedisModule_SetCommandACLCategories.is_some()
+                && unsafe {
+                    $crate::raw::RedisModule_SetCommandACLCategories.unwrap()(
+                        command,
+                        acl_categories.as_ptr(),
+                    )
+                } == $crate::raw::Status::Err as c_int
             {
                 return $crate::raw::Status::Err as c_int;
             }
@@ -127,6 +128,7 @@ macro_rules! redis_module {
         data_types: [
             $($data_type:ident),* $(,)*
         ],
+        $(acl_category: $acl_category:expr,)* $(,)*
         $(init: $init_func:ident,)* $(,)*
         $(deinit: $deinit_func:ident,)* $(,)*
         $(info: $info_func:ident,)?
@@ -259,6 +261,17 @@ macro_rules! redis_module {
             $(
                 if (&$data_type).create_data_type(ctx).is_err() {
                     return raw::Status::Err as c_int;
+                }
+            )*
+
+            $(
+                let category = CString::new($acl_category).unwrap();
+                if $crate::raw::RedisModule_SetCommandACLCategories.is_some() && unsafe {
+                    raw::RedisModule_AddACLCategory.unwrap()(ctx, category.as_ptr())
+                } == Status::Err as c_int
+                {
+                    redis_log(ctx, "Error: failed to add ACL category");
+                    return Err("Error: failed to add ACL category");
                 }
             )*
 
