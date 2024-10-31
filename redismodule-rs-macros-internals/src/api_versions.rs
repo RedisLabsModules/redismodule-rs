@@ -5,6 +5,7 @@ use quote::quote;
 
 lazy_static::lazy_static! {
     pub(crate) static ref API_VERSION_MAPPING: HashMap<String, usize> = HashMap::from([
+        ("RedisModule_AddACLCategory".to_string(), 70400),
         ("RedisModule_AddPostNotificationJob".to_string(), 70200),
         ("RedisModule_SetCommandACLCategories".to_string(), 70200),
         ("RedisModule_GetOpenKeyModesAll".to_string(), 70200),
@@ -30,6 +31,7 @@ lazy_static::lazy_static! {
         (60200, "min-redis-compatibility-version-6-2".to_string()),
         (70000, "min-redis-compatibility-version-7-0".to_string()),
         (70200, "min-redis-compatibility-version-7-2".to_string()),
+        (70400, "min-redis-compatibility-version-7-4".to_string()),
     ];
 }
 

@@ -279,7 +279,10 @@ fn test_stream_reader() -> Result<()> {
 }
 
 #[test]
-#[cfg(feature = "min-redis-compatibility-version-7-2")]
+#[cfg(any(
+    feature = "min-redis-compatibility-version-7-4",
+    feature = "min-redis-compatibility-version-7-2"
+))]
 fn test_call() -> Result<()> {
     let port: u16 = 6488;
     let _guards = vec![start_redis_server_with_module("call", port)
@@ -631,7 +634,10 @@ fn test_redis_value_derive() -> Result<()> {
 }
 
 #[test]
-#[cfg(feature = "min-redis-compatibility-version-7-2")]
+#[cfg(any(
+    feature = "min-redis-compatibility-version-7-4",
+    feature = "min-redis-compatibility-version-7-2"
+))]
 fn test_call_blocking() -> Result<()> {
     let port: u16 = 6499;
     let _guards = vec![start_redis_server_with_module("call", port)
