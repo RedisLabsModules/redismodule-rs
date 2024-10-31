@@ -4,9 +4,53 @@ use redis::Connection;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::atomic::AtomicU16;
 use std::time::Duration;
 
+/// Starts a redis instance with the module provided as a module name
+/// and a port, returns the connection guards (`ChildGuard`) through
+/// which the redis instance can be interacted with.
+pub fn start_redis(module_name: &str, port: u16) -> Result<Vec<ChildGuard>, &'static str> {
+    Ok(vec![start_redis_server_with_module(module_name, port)
+        .map_err(|_| "failed to start redis server")?])
+}
+
+pub struct TestConnection {
+    _guards: Vec<ChildGuard>,
+    connection: Connection,
+}
+
+static TEST_PORT: AtomicU16 = AtomicU16::new(6479);
+
+impl TestConnection {
+    /// Creates a new connection to a Redis server with the module
+    /// provided as a module name.
+    pub fn new(module_name: &str) -> Self {
+        let port = TEST_PORT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
+        Self {
+            _guards: start_redis(module_name, port).expect("Redis instance started."),
+            connection: get_redis_connection(port).expect("Established connection to server."),
+        }
+    }
+}
+
+impl std::ops::Deref for TestConnection {
+    type Target = Connection;
+
+    fn deref(&self) -> &Self::Target {
+        &self.connection
+    }
+}
+
+impl std::ops::DerefMut for TestConnection {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.connection
+    }
+}
+
 /// Ensure child process is killed both on normal exit and when panicking due to a failed test.
+#[derive(Debug)]
 pub struct ChildGuard {
     name: &'static str,
     child: std::process::Child,
