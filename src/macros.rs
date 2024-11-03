@@ -274,7 +274,7 @@ macro_rules! redis_module {
                 let category = CString::new($acl_category).unwrap();
                 if let Some(RM_AddACLCategory) = raw::RedisModule_AddACLCategory {
                     if RM_AddACLCategory(ctx, category.as_ptr()) == raw::Status::Err as c_int {
-                        raw::redis_log(ctx, "Error: failed to add ACL category");
+                        raw::redis_log(ctx, &format!("Error: failed to add ACL category {}", $acl_category));
                         return raw::Status::Err as c_int;
                     }
                 }
