@@ -95,7 +95,7 @@ macro_rules! redis_command {
         } else if $mandatory_acl_categories != "" {
             $crate::raw::redis_log(
                 $ctx,
-                "Warning: Redis version does not support ACL categories",
+                "Error: Redis version does not support ACL categories",
             );
             return $crate::raw::Status::Err as c_int;
         }
@@ -307,8 +307,8 @@ macro_rules! redis_module {
             )*
 
             $(
-                let categories = CString::new($module_acl_categories).unwrap();
                 if let Some(RM_AddACLCategory) = raw::RedisModule_AddACLCategory {
+                    let categories = CString::new($module_acl_categories).unwrap();
                     if RM_AddACLCategory(ctx, categories.as_ptr()) == raw::Status::Err as c_int {
                         raw::redis_log(ctx, &format!("Error: failed to add ACL categories `{}`", $module_acl_categories));
                         return raw::Status::Err as c_int;

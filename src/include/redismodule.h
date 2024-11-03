@@ -1326,6 +1326,7 @@ static void RedisModule_InitAPI(RedisModuleCtx *ctx) {
     REDISMODULE_GET_API(CreateSubcommand);
     REDISMODULE_GET_API(SetCommandInfo);
     REDISMODULE_GET_API(SetCommandACLCategories);
+    REDISMODULE_GET_API(AddACLCategory);
     REDISMODULE_GET_API(SetModuleAttribs);
     REDISMODULE_GET_API(IsModuleNameBusy);
     REDISMODULE_GET_API(WrongArity);
