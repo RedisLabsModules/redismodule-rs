@@ -7,7 +7,8 @@ macro_rules! redis_command {
      $firstkey:expr,
      $lastkey:expr,
      $keystep:expr,
-     $acl_categories:expr) => {{
+     $acl_categories:expr
+    ) => {{
         let name = CString::new($command_name).unwrap();
         let flags = CString::new($command_flags).unwrap();
 
@@ -134,7 +135,7 @@ macro_rules! redis_module {
         data_types: [
             $($data_type:ident),* $(,)*
         ],
-        $(acl_category: $acl_category:expr,)* $(,)*
+        $(acl_category: $module_acl_categories:expr,)?
         $(init: $init_func:ident,)* $(,)*
         $(deinit: $deinit_func:ident,)* $(,)*
         $(info: $info_func:ident,)?
@@ -146,7 +147,7 @@ macro_rules! redis_module {
                 $firstkey:expr,
                 $lastkey:expr,
                 $keystep:expr,
-                $acl_categories:expr
+                $command_acl_categories:expr
               ]),* $(,)*
         ] $(,)*
         $(event_handlers: [
@@ -270,18 +271,25 @@ macro_rules! redis_module {
                 }
             )*
 
+            let mut module_acl_categories = CString::new("").unwrap();
             $(
-                let category = CString::new($acl_category).unwrap();
+                module_acl_categories = CString::new($module_acl_categories).unwrap();
                 if let Some(RM_AddACLCategory) = raw::RedisModule_AddACLCategory {
-                    if RM_AddACLCategory(ctx, category.as_ptr()) == raw::Status::Err as c_int {
-                        raw::redis_log(ctx, &format!("Error: failed to add ACL category {}", $acl_category));
+                    if RM_AddACLCategory(ctx, module_acl_categories.as_ptr()) == raw::Status::Err as c_int {
+                        raw::redis_log(ctx, &format!("Error: failed to add ACL category {}", $module_acl_categories));
                         return raw::Status::Err as c_int;
                     }
                 }
-            )*
+            )?
 
+            let module_acl_categories = module_acl_categories.to_str().unwrap();
             $(
-                $crate::redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep, $acl_categories);
+                let command_acl_categories = if module_acl_categories == "" {
+                    $command_acl_categories.to_string()
+                } else {
+                    format!("{} {}", module_acl_categories, $command_acl_categories)
+                };
+                $crate::redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep, command_acl_categories.as_str());
             )*
 
             if $crate::commands::register_commands(&context) == raw::Status::Err {
