@@ -710,15 +710,35 @@ impl Context {
 
     pub fn version_from_info(info: RedisValue) -> Result<Version, RedisError> {
         if let RedisValue::SimpleString(info_str) = info {
-            if let Some(ver) = utils::get_regexp_captures(
-                info_str.as_str(),
-                r"(?m)\bredis_version:([0-9]+)\.([0-9]+)\.([0-9]+)\b",
-            ) {
-                return Ok(Version {
-                    major: ver[0].parse::<c_int>().unwrap(),
-                    minor: ver[1].parse::<c_int>().unwrap(),
-                    patch: ver[2].parse::<c_int>().unwrap(),
-                });
+            let regex = regex::Regex::new(
+                r"(?m)\bredis_version:(?<major>[0-9]+)\.(?<minor>[0-9]+)\.(?<patch>[0-9]+)\b",
+            );
+
+            if regex.is_ok() {
+                let regex = regex.unwrap();
+                let ss = info_str.replace("\r\n", " ");
+                let ver_str: Vec<&str> = ss.split(' ').collect();
+                let mut s = "";
+                for item in ver_str.iter() {
+                    if item.contains("redis_version:") {
+                        s = item;
+                        break;
+                    }
+                }
+                //let s = ver_str.as_slice()[2];
+                let mut it = regex.captures_iter(s);
+                match it.next() {
+                    None => {
+                        return Err(RedisError::Str("Error getting redis_version"));
+                    }
+                    Some(caps) => {
+                        return Ok(Version {
+                            major: caps["major"].parse::<c_int>().unwrap(),
+                            minor: caps["minor"].parse::<c_int>().unwrap(),
+                            patch: caps["patch"].parse::<c_int>().unwrap(),
+                        });
+                    }
+                }
             }
         }
         Err(RedisError::Str("Error getting redis_version"))
