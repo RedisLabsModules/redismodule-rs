@@ -73,7 +73,7 @@ macro_rules! redis_command {
                             $command_name, acl_categories.to_str().unwrap()
                         ),
                     );
-                }
+                } else
             )?
             if $mandatory_acl_categories != "" {
                 acl_categories = CString::new($mandatory_acl_categories).unwrap();
