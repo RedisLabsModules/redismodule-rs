@@ -135,6 +135,9 @@ macro_rules! redis_module {
         data_types: [
             $($data_type:ident),* $(,)*
         ],
+        // eg: `acl_category: "name_of_module_acl_category",`
+        // This will add the module to the specified (optional) ACL category.
+        // All commands will inherit this category.
         $(acl_category: $module_acl_categories:expr,)?
         $(init: $init_func:ident,)* $(,)*
         $(deinit: $deinit_func:ident,)* $(,)*
