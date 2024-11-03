@@ -27,7 +27,7 @@ redis_module! {
     data_types: [],
     acl_category: "acl",
     commands: [
-        ["verify_key_access_for_user", verify_key_access_for_user, "", 0, 0, 0, "read"],
-        ["get_current_user", get_current_user, "", 0, 0, 0, "read"],
+        ["verify_key_access_for_user", verify_key_access_for_user, "", 0, 0, 0, "read", "acl"],
+        ["get_current_user", get_current_user, "", 0, 0, 0, "read", "acl"],
     ],
 }
