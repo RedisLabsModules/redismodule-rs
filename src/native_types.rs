@@ -34,7 +34,7 @@ impl RedisType {
     pub fn create_data_type(&self, ctx: *mut raw::RedisModuleCtx) -> Result<(), &str> {
         if self.name.len() != 9 {
             let msg = "Redis requires the length of native type names to be exactly 9 characters";
-            redis_log(ctx, format!("{msg}, name is: '{}'", self.name).as_str());
+            raw::redis_log(ctx, format!("{msg}, name is: '{}'", self.name).as_str());
             return Err(msg);
         }
 
@@ -50,27 +50,17 @@ impl RedisType {
         };
 
         if redis_type.is_null() {
-            redis_log(ctx, "Error: created data type is null");
+            raw::redis_log(ctx, "Error: created data type is null");
             return Err("Error: created data type is null");
         }
 
         *self.raw_type.borrow_mut() = redis_type;
 
-        redis_log(
+        raw::redis_log(
             ctx,
             format!("Created new data type '{}'", self.name).as_str(),
         );
 
         Ok(())
-    }
-}
-
-// TODO: Move to raw
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn redis_log(ctx: *mut raw::RedisModuleCtx, msg: &str) {
-    let level = CString::new("notice").unwrap(); // FIXME reuse this
-    let msg = CString::new(msg).unwrap();
-    unsafe {
-        raw::RedisModule_Log.unwrap()(ctx, level.as_ptr(), msg.as_ptr());
     }
 }
