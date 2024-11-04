@@ -276,6 +276,31 @@ fn test_get_current_user() -> Result<()> {
 }
 
 #[test]
+#[cfg(feature = "min-redis-compatibility-version-7-4")]
+fn test_set_acl_categories() -> Result<()> {
+    let mut con = TestConnection::new("acl");
+
+    let res: Vec<String> = redis::cmd("ACL").arg("CAT").query(&mut con)?;
+    assert!(res.contains(&"acl".to_owned()));
+
+    Ok(())
+}
+
+#[test]
+#[cfg(feature = "min-redis-compatibility-version-8-0")]
+fn test_set_acl_categories_commands() -> Result<()> {
+    let mut con = TestConnection::new("acl");
+
+    let res: Vec<String> = redis::cmd("ACL").arg("CAT").arg("acl").query(&mut con)?;
+    assert!(
+        res.contains(&"verify_key_access_for_user".to_owned())
+            && res.contains(&"get_current_user".to_owned())
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_verify_acl_on_user() -> Result<()> {
     let mut con = TestConnection::new("acl");
 
