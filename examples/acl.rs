@@ -1,6 +1,6 @@
 use redis_module::{
-    redis_module, AclPermissions, Context, NextArg, RedisError, RedisResult, RedisString,
-    RedisValue,
+    redis_module, AclCategory, AclPermissions, Context, NextArg, RedisError, RedisResult,
+    RedisString, RedisValue,
 };
 
 fn verify_key_access_for_user(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
@@ -25,9 +25,9 @@ redis_module! {
     version: 1,
     allocator: (redis_module::alloc::RedisAlloc, redis_module::alloc::RedisAlloc),
     data_types: [],
-    acl_category: "acl",
+    acl_categories: [AclCategory::from("acl"), ],
     commands: [
-        ["verify_key_access_for_user", verify_key_access_for_user, "", 0, 0, 0, "read", "acl"],
-        ["get_current_user", get_current_user, "", 0, 0, 0, "read", "acl"],
+        ["verify_key_access_for_user", verify_key_access_for_user, "", 0, 0, 0, AclCategory::Read, AclCategory::from("acl")],
+        ["get_current_user", get_current_user, "", 0, 0, 0, vec![AclCategory::Read, AclCategory::Fast], AclCategory::from("acl")],
     ],
 }
