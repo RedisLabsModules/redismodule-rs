@@ -3,21 +3,17 @@ use std::thread;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use crate::utils::{get_redis_connection, start_redis_server_with_module};
+use crate::utils::{get_redis_connection, start_redis_server_with_module, TestConnection};
 use anyhow::Context;
 use anyhow::Result;
-use redis::Value;
-use redis::{RedisError, RedisResult};
+use redis::{RedisError, RedisResult, Value};
+use redis_module::RedisValue;
 
 mod utils;
 
 #[test]
 fn test_hello() -> Result<()> {
-    let port: u16 = 6479;
-    let _guards = vec![start_redis_server_with_module("hello", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("hello");
 
     let res: Vec<i32> = redis::cmd("hello.mul")
         .arg(&[3, 4])
@@ -36,11 +32,7 @@ fn test_hello() -> Result<()> {
 
 #[test]
 fn test_keys_pos() -> Result<()> {
-    let port: u16 = 6480;
-    let _guards = vec![start_redis_server_with_module("keys_pos", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("keys_pos");
 
     let res: Vec<String> = redis::cmd("keys_pos")
         .arg(&["a", "1", "b", "2"])
@@ -59,11 +51,7 @@ fn test_keys_pos() -> Result<()> {
 
 #[test]
 fn test_helper_version() -> Result<()> {
-    let port: u16 = 6481;
-    let _guards = vec![start_redis_server_with_module("test_helper", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("test_helper");
 
     let res: Vec<i64> = redis::cmd("test_helper.version")
         .query(&mut con)
@@ -81,13 +69,7 @@ fn test_helper_version() -> Result<()> {
 
 #[test]
 fn test_command_name() -> Result<()> {
-    use redis_module::RedisValue;
-
-    let port: u16 = 6482;
-    let _guards = vec![start_redis_server_with_module("test_helper", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("test_helper");
 
     // Call the tested command
     let res: Result<String, RedisError> = redis::cmd("test_helper.name").query(&mut con);
@@ -128,11 +110,7 @@ fn test_helper_info() -> Result<()> {
     MODULES
         .into_iter()
         .try_for_each(|(module, has_dictionary)| {
-            let port: u16 = 6483;
-            let _guards = vec![start_redis_server_with_module(module, port)
-                .with_context(|| "failed to start redis server")?];
-            let mut con =
-                get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+            let mut con = TestConnection::new(module);
 
             let res: String = redis::cmd("INFO")
                 .arg(module)
@@ -153,11 +131,7 @@ fn test_info_handler_multiple_sections() -> Result<()> {
     const MODULES: [&str; 1] = ["info_handler_multiple_sections"];
 
     MODULES.into_iter().try_for_each(|module| {
-        let port: u16 = 6500;
-        let _guards = vec![start_redis_server_with_module(module, port)
-            .with_context(|| "failed to start redis server")?];
-        let mut con =
-            get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+        let mut con = TestConnection::new(module);
 
         let res: String = redis::cmd("INFO")
             .arg(format!("{module}_InfoSection2"))
@@ -174,11 +148,7 @@ fn test_info_handler_multiple_sections() -> Result<()> {
 #[allow(unused_must_use)]
 #[test]
 fn test_test_helper_err() -> Result<()> {
-    let port: u16 = 6484;
-    let _guards = vec![start_redis_server_with_module("hello", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("hello");
 
     // Make sure embedded nulls do not cause a crash
     redis::cmd("test_helper.err")
@@ -194,11 +164,7 @@ fn test_test_helper_err() -> Result<()> {
 
 #[test]
 fn test_string() -> Result<()> {
-    let port: u16 = 6485;
-    let _guards = vec![start_redis_server_with_module("string", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("string");
 
     redis::cmd("string.set")
         .arg(&["key", "value"])
@@ -214,11 +180,7 @@ fn test_string() -> Result<()> {
 
 #[test]
 fn test_scan() -> Result<()> {
-    let port: u16 = 6486;
-    let _guards = vec![start_redis_server_with_module("scan_keys", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("scan_keys");
 
     redis::cmd("set")
         .arg(&["x", "1"])
@@ -240,11 +202,7 @@ fn test_scan() -> Result<()> {
 
 #[test]
 fn test_stream_reader() -> Result<()> {
-    let port: u16 = 6487;
-    let _guards = vec![start_redis_server_with_module("stream", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("stream");
 
     let _: String = redis::cmd("XADD")
         .arg(&["s", "1-1", "foo", "bar"])
@@ -284,11 +242,7 @@ fn test_stream_reader() -> Result<()> {
     feature = "min-redis-compatibility-version-7-2"
 ))]
 fn test_call() -> Result<()> {
-    let port: u16 = 6488;
-    let _guards = vec![start_redis_server_with_module("call", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("call");
 
     let res: String = redis::cmd("call.test")
         .query(&mut con)
@@ -301,11 +255,7 @@ fn test_call() -> Result<()> {
 
 #[test]
 fn test_ctx_flags() -> Result<()> {
-    let port: u16 = 6489;
-    let _guards = vec![start_redis_server_with_module("ctx_flags", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("ctx_flags");
 
     let res: String = redis::cmd("my_role").query(&mut con)?;
 
@@ -316,11 +266,7 @@ fn test_ctx_flags() -> Result<()> {
 
 #[test]
 fn test_get_current_user() -> Result<()> {
-    let port: u16 = 6490;
-    let _guards = vec![start_redis_server_with_module("acl", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("acl");
 
     let res: String = redis::cmd("get_current_user").query(&mut con)?;
 
@@ -331,11 +277,7 @@ fn test_get_current_user() -> Result<()> {
 
 #[test]
 fn test_verify_acl_on_user() -> Result<()> {
-    let port: u16 = 6491;
-    let _guards = vec![start_redis_server_with_module("acl", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("acl");
 
     let res: String = redis::cmd("verify_key_access_for_user")
         .arg(&["default", "x"])
@@ -372,16 +314,12 @@ fn test_verify_acl_on_user() -> Result<()> {
 
 #[test]
 fn test_key_space_notifications() -> Result<()> {
-    let port: u16 = 6492;
-    let _guards = vec![start_redis_server_with_module("events", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("events");
 
     let res: usize = redis::cmd("events.num_key_miss").query(&mut con)?;
     assert_eq!(res, 0);
 
-    let _ = redis::cmd("GET").arg(&["x"]).query(&mut con)?;
+    redis::cmd("GET").arg(&["x"]).query(&mut con)?;
 
     let res: usize = redis::cmd("events.num_key_miss").query(&mut con)?;
     assert_eq!(res, 1);
@@ -396,11 +334,7 @@ fn test_key_space_notifications() -> Result<()> {
 
 #[test]
 fn test_context_mutex() -> Result<()> {
-    let port: u16 = 6493;
-    let _guards = vec![start_redis_server_with_module("threads", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("threads");
 
     let res: String = redis::cmd("set_static_data")
         .arg(&["foo"])
@@ -418,11 +352,7 @@ fn test_context_mutex() -> Result<()> {
 
 #[test]
 fn test_server_event() -> Result<()> {
-    let port: u16 = 6494;
-    let _guards = vec![start_redis_server_with_module("server_events", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("server_events");
 
     redis::cmd("flushall")
         .query(&mut con)
@@ -467,69 +397,67 @@ fn test_server_event() -> Result<()> {
 
 #[test]
 fn test_configuration() -> Result<()> {
-    let port: u16 = 6495;
-    let _guards = vec![start_redis_server_with_module("configuration", port)
-        .with_context(|| "failed to start redis server")?];
+    let mut con = TestConnection::new("configuration");
 
-    let config_get = |config: &str| -> Result<String> {
-        let mut con =
-            get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let config_get = |con: &mut TestConnection, config: &str| -> Result<String> {
         let res: Vec<String> = redis::cmd("config")
             .arg(&["get", config])
-            .query(&mut con)
+            .query(con)
             .with_context(|| "failed to run flushall")?;
         Ok(res[1].clone())
     };
 
-    let config_set = |config: &str, val: &str| -> Result<()> {
-        let mut con =
-            get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let config_set = |con: &mut TestConnection, config: &str, val: &str| -> Result<()> {
         let res: String = redis::cmd("config")
             .arg(&["set", config, val])
-            .query(&mut con)
+            .query(con)
             .with_context(|| "failed to run flushall")?;
         assert_eq!(res, "OK");
         Ok(())
     };
 
-    assert_eq!(config_get("configuration.i64")?, "10");
-    config_set("configuration.i64", "100")?;
-    assert_eq!(config_get("configuration.i64")?, "100");
+    assert_eq!(config_get(&mut con, "configuration.i64")?, "10");
+    config_set(&mut con, "configuration.i64", "100")?;
+    assert_eq!(config_get(&mut con, "configuration.i64")?, "100");
 
-    assert_eq!(config_get("configuration.atomic_i64")?, "10");
-    config_set("configuration.atomic_i64", "100")?;
-    assert_eq!(config_get("configuration.atomic_i64")?, "100");
+    assert_eq!(config_get(&mut con, "configuration.atomic_i64")?, "10");
+    config_set(&mut con, "configuration.atomic_i64", "100")?;
+    assert_eq!(config_get(&mut con, "configuration.atomic_i64")?, "100");
 
-    assert_eq!(config_get("configuration.redis_string")?, "default");
-    config_set("configuration.redis_string", "new")?;
-    assert_eq!(config_get("configuration.redis_string")?, "new");
+    assert_eq!(
+        config_get(&mut con, "configuration.redis_string")?,
+        "default"
+    );
+    config_set(&mut con, "configuration.redis_string", "new")?;
+    assert_eq!(config_get(&mut con, "configuration.redis_string")?, "new");
 
-    assert_eq!(config_get("configuration.string")?, "default");
-    config_set("configuration.string", "new")?;
-    assert_eq!(config_get("configuration.string")?, "new");
+    assert_eq!(config_get(&mut con, "configuration.string")?, "default");
+    config_set(&mut con, "configuration.string", "new")?;
+    assert_eq!(config_get(&mut con, "configuration.string")?, "new");
 
-    assert_eq!(config_get("configuration.mutex_string")?, "default");
-    config_set("configuration.mutex_string", "new")?;
-    assert_eq!(config_get("configuration.mutex_string")?, "new");
+    assert_eq!(
+        config_get(&mut con, "configuration.mutex_string")?,
+        "default"
+    );
+    config_set(&mut con, "configuration.mutex_string", "new")?;
+    assert_eq!(config_get(&mut con, "configuration.mutex_string")?, "new");
 
-    assert_eq!(config_get("configuration.atomic_bool")?, "yes");
-    config_set("configuration.atomic_bool", "no")?;
-    assert_eq!(config_get("configuration.atomic_bool")?, "no");
+    assert_eq!(config_get(&mut con, "configuration.atomic_bool")?, "yes");
+    config_set(&mut con, "configuration.atomic_bool", "no")?;
+    assert_eq!(config_get(&mut con, "configuration.atomic_bool")?, "no");
 
-    assert_eq!(config_get("configuration.bool")?, "yes");
-    config_set("configuration.bool", "no")?;
-    assert_eq!(config_get("configuration.bool")?, "no");
+    assert_eq!(config_get(&mut con, "configuration.bool")?, "yes");
+    config_set(&mut con, "configuration.bool", "no")?;
+    assert_eq!(config_get(&mut con, "configuration.bool")?, "no");
 
-    assert_eq!(config_get("configuration.enum")?, "Val1");
-    config_set("configuration.enum", "Val2")?;
-    assert_eq!(config_get("configuration.enum")?, "Val2");
+    assert_eq!(config_get(&mut con, "configuration.enum")?, "Val1");
+    config_set(&mut con, "configuration.enum", "Val2")?;
+    assert_eq!(config_get(&mut con, "configuration.enum")?, "Val2");
 
-    assert_eq!(config_get("configuration.enum_mutex")?, "Val1");
-    config_set("configuration.enum_mutex", "Val2")?;
-    assert_eq!(config_get("configuration.enum_mutex")?, "Val2");
+    assert_eq!(config_get(&mut con, "configuration.enum_mutex")?, "Val1");
+    config_set(&mut con, "configuration.enum_mutex", "Val2")?;
+    assert_eq!(config_get(&mut con, "configuration.enum_mutex")?, "Val2");
 
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
     let res: i64 = redis::cmd("configuration.num_changes")
         .query(&mut con)
         .with_context(|| "failed to run flushall")?;
@@ -540,11 +468,7 @@ fn test_configuration() -> Result<()> {
 
 #[test]
 fn test_response() -> Result<()> {
-    let port: u16 = 6496;
-    let _guards = vec![start_redis_server_with_module("response", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("response");
 
     redis::cmd("hset")
         .arg(&["k", "a", "b", "c", "d", "e", "b", "f", "g"])
@@ -572,11 +496,7 @@ fn test_response() -> Result<()> {
 
 #[test]
 fn test_command_proc_macro() -> Result<()> {
-    let port: u16 = 6497;
-    let _guards = vec![start_redis_server_with_module("proc_macro_commands", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("proc_macro_commands");
 
     let res: Vec<String> = redis::cmd("COMMAND")
         .arg(&["GETKEYS", "classic_keys", "x", "foo", "y", "bar"])
@@ -611,11 +531,7 @@ fn test_command_proc_macro() -> Result<()> {
 
 #[test]
 fn test_redis_value_derive() -> Result<()> {
-    let port: u16 = 6498;
-    let _guards = vec![start_redis_server_with_module("proc_macro_commands", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("proc_macro_commands");
 
     let res: Value = redis::cmd("redis_value_derive")
         .query(&mut con)
@@ -639,11 +555,7 @@ fn test_redis_value_derive() -> Result<()> {
     feature = "min-redis-compatibility-version-7-2"
 ))]
 fn test_call_blocking() -> Result<()> {
-    let port: u16 = 6499;
-    let _guards = vec![start_redis_server_with_module("call", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("call");
 
     let res: Option<String> = redis::cmd("call.blocking")
         .query(&mut con)
@@ -662,11 +574,7 @@ fn test_call_blocking() -> Result<()> {
 
 #[test]
 fn test_open_key_with_flags() -> Result<()> {
-    let port: u16 = 6501;
-    let _guards = vec![start_redis_server_with_module("open_key_with_flags", port)
-        .with_context(|| "failed to start redis server")?];
-    let mut con =
-        get_redis_connection(port).with_context(|| "failed to connect to redis server")?;
+    let mut con = TestConnection::new("open_key_with_flags");
 
     // Avoid active expriation
     redis::cmd("DEBUG")
