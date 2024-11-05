@@ -63,11 +63,12 @@ macro_rules! redis_command {
             let mut optional_failed = true;
             let mut acl_categories = CString::default();
             $(
-                optional_failed = false;
                 let optional = AclCategory::from($optional_acl_categories);
+                assert!(optional != AclCategory::None);
+                optional_failed = false;
                 if mandatory != AclCategory::None && optional != AclCategory::None {
                     acl_categories = CString::new(format!("{mandatory} {optional}")).unwrap();
-                } else if optional != AclCategory::None {
+                } else {
                     acl_categories = CString::new(format!("{optional}")).unwrap();
                 }
                 // Warn if optional ACL categories are not set, but don't fail.
