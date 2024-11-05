@@ -66,7 +66,7 @@ macro_rules! redis_command {
                 let optional = AclCategory::from($optional_acl_categories);
                 assert!(optional != AclCategory::None);
                 optional_failed = false;
-                if mandatory != AclCategory::None && optional != AclCategory::None {
+                if mandatory != AclCategory::None {
                     acl_categories = CString::new(format!("{mandatory} {optional}")).unwrap();
                 } else {
                     acl_categories = CString::new(format!("{optional}")).unwrap();
