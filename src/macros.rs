@@ -10,7 +10,7 @@ macro_rules! redis_command {
      $mandatory_acl_categories:expr
      $(, $optional_acl_categories:expr)?
     ) => {{
-        use redis_module::AclCategory;
+        use $crate::AclCategory;
 
         let name = CString::new($command_name).unwrap();
         let flags = CString::new($command_flags).unwrap();
