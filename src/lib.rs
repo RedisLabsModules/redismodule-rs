@@ -108,11 +108,6 @@ pub fn basic_info_command_handler(ctx: &InfoContext, for_crash_report: bool) {
         .for_each(|e| log::error!("Couldn't build info for the module's custom handler: {e}"));
 }
 
-/// Initialize RedisModuleAPI without register as a module.
-pub fn init_api(ctx: &Context) {
-    unsafe { crate::raw::Export_RedisModule_InitAPI(ctx.ctx) };
-}
-
 pub(crate) unsafe fn deallocate_pointer<P>(p: *mut P) {
     std::ptr::drop_in_place(p);
     std::alloc::dealloc(p as *mut u8, std::alloc::Layout::new::<P>());
