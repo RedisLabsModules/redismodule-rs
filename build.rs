@@ -42,11 +42,15 @@ fn main() {
     // tricks that we need to complete the build.
 
     const EXPERIMENTAL_API: &str = "REDISMODULE_EXPERIMENTAL_API";
+    const RLEC_API: &str = "REDISMODULE_RLEC";
+    const REDISMODULE_MAIN: &str = "REDISMODULE_MAIN";
 
     let mut build = cc::Build::new();
 
     build
         .define(EXPERIMENTAL_API, None)
+        .define(RLEC_API, None)
+        .define(REDISMODULE_MAIN, None)
         .file("src/redismodule.c")
         .include("src/include/")
         .compile("redismodule");
@@ -55,7 +59,10 @@ fn main() {
 
     let bindings = bindings_generator
         .clang_arg(format!("-D{EXPERIMENTAL_API}"))
+        .clang_arg(format!("-D{RLEC_API}"))
+        .clang_arg(format!("-D{REDISMODULE_MAIN}"))
         .header("src/include/redismodule.h")
+        .header("src/include/redismodule-rlec.h")
         .allowlist_var("(REDIS|Redis).*")
         .blocklist_type("__darwin_.*")
         .allowlist_type("RedisModule.*")

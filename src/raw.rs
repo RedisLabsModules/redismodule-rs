@@ -198,8 +198,6 @@ extern "C" {
         module_version: c_int,
         api_version: c_int,
     ) -> c_int;
-
-    pub fn Export_RedisModule_InitAPI(ctx: *mut RedisModuleCtx) -> c_void;
 }
 
 ///////////////////////////////////////////////////////////////
