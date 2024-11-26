@@ -111,6 +111,22 @@ impl RedisKey {
         unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
     }
 
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_GetExpire` is missing in redismodule.h
+    #[must_use]
+    pub fn get_expire(&self) -> i64 {
+        unsafe { raw::RedisModule_GetExpire.unwrap()(self.key_inner) }
+    }
+
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_GetAbsExpire` is missing in redismodule.h
+    #[must_use]
+    pub fn get_abs_expire(&self) -> i64 {
+        unsafe { raw::RedisModule_GetAbsExpire.unwrap()(self.key_inner) }
+    }
+
     /// Detects whether the key pointer given to us by Redis is null.
     #[must_use]
     pub fn is_null(&self) -> bool {
