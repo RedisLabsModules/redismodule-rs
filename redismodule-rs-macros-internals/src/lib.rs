@@ -143,7 +143,7 @@ pub fn api(item: TokenStream) -> TokenStream {
             } else if #[cfg(any(#(#all_upper_features, )*))] {
                 #new_ver_func
             } else {
-                compile_error!("min-redis-compatibility-version is not set correctly")
+                compile_error!("Cannot generate the api! macro code. The \"min-redis-compatibility-version\" feature is not set up correctly")
             }
         }
     };
