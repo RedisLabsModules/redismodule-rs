@@ -155,7 +155,11 @@ macro_rules! redis_module {
             ) } == raw::Status::Err as c_int { return raw::Status::Err as c_int; }
 
             let context = $crate::Context::new(ctx);
-            let args = $crate::decode_args(ctx, argv, argc);
+            let args = if argc == 0 {
+                Vec::new()
+            } else {
+                $crate::decode_args(ctx, argv, argc)
+            };
 
             $(
                 if $init_func(&context, &args) == $crate::Status::Err {
