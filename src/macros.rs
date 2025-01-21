@@ -10,7 +10,7 @@ macro_rules! redis_command {
      $mandatory_acl_categories:expr
      $(, $optional_acl_categories:expr)?
     ) => {{
-        use redis_module::AclCategory;
+        use $crate::AclCategory;
 
         let name = CString::new($command_name).unwrap();
         let flags = CString::new($command_flags).unwrap();
@@ -48,18 +48,17 @@ macro_rules! redis_command {
             return $crate::raw::Status::Err as c_int;
         }
 
-        let command =
-            unsafe { $crate::raw::RedisModule_GetCommand.unwrap()($ctx, name.as_ptr()) };
-        if command.is_null() {
-            $crate::raw::redis_log(
-                $ctx,
-                &format!("Error: failed to get command {}", $command_name),
-            );
-            return $crate::raw::Status::Err as c_int;
-        }
-
         let mandatory = AclCategory::from($mandatory_acl_categories);
         if let Some(RM_SetCommandACLCategories) = $crate::raw::RedisModule_SetCommandACLCategories {
+            let command =
+            unsafe { $crate::raw::RedisModule_GetCommand.unwrap()($ctx, name.as_ptr()) };
+            if command.is_null() {
+                $crate::raw::redis_log(
+                    $ctx,
+                    &format!("Error: failed to get command {}", $command_name),
+                );
+                return $crate::raw::Status::Err as c_int;
+            }
             let mut optional_failed = true;
             let mut acl_categories = CString::default();
             $(
@@ -417,7 +416,9 @@ macro_rules! redis_module {
                         register_enum_configuration(&context, $enum_configuration_name, $enum_configuration_val, default, $enum_flags_options, $enum_on_changed);
                     )*
                 )?
-                raw::RedisModule_LoadConfigs.unwrap()(ctx);
+                if let Some(load_config) = raw::RedisModule_LoadConfigs {
+                    load_config(ctx);
+                }
 
                 $(
                     $crate::redis_command!(ctx, $module_config_get_command, |ctx, args: Vec<RedisString>| {

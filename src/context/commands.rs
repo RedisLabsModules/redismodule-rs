@@ -504,6 +504,10 @@ pub fn register_commands(ctx: &Context) -> Status {
 pub fn register_commands(ctx: &Context) -> Status {
     register_commands_internal(ctx).map_or_else(
         |e| {
+            /* Make sure new command registration API is not been used. */
+            if COMMANDS_LIST.is_empty() {
+                return Status::Ok;
+            }
             ctx.log_warning(&e.to_string());
             Status::Err
         },
