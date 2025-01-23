@@ -125,6 +125,8 @@ impl From<Status> for Result<(), &str> {
 bitflags! {
     #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
     pub struct NotifyEvent : c_int {
+        const KEYSPACE = REDISMODULE_NOTIFY_KEYSPACE;
+        const KEYEVENT = REDISMODULE_NOTIFY_KEYEVENT;
         const GENERIC = REDISMODULE_NOTIFY_GENERIC;
         const STRING = REDISMODULE_NOTIFY_STRING;
         const LIST = REDISMODULE_NOTIFY_LIST;
