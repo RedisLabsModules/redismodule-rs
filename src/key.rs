@@ -47,6 +47,8 @@ bitflags! {
         const NOEXPIRE = REDISMODULE_OPEN_KEY_NOEXPIRE as c_int;
         /// Avoid any effects from fetching the key.
         const NOEFFECTS = REDISMODULE_OPEN_KEY_NOEFFECTS as c_int;
+        /// Access lazy expire fields
+        const ACCESS_EXPIRED = REDISMODULE_OPEN_KEY_ACCESS_EXPIRED as c_int;
     }
 }
 

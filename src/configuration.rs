@@ -34,6 +34,9 @@ bitflags! {
 
         /// For enum configs, this config will allow multiple entries to be combined as bit flags.
         const BITFLAGS = raw::REDISMODULE_CONFIG_BITFLAGS;
+
+        /// For configs, will avoid prefixing the config name with the module name.
+        const UNPREFIXED = raw::REDISMODULE_CONFIG_UNPREFIXED;
     }
 }
 
