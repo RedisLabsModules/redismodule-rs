@@ -6,7 +6,7 @@
 
 # redismodule-rs
 
-This crate provides an idiomatic Rust API for the [Redis Modules API](https://redis.io/topics/modules-intro).
+This crate provides an idiomatic Rust API for the [Redis Modules API](https://redis.io/docs/latest/develop/reference/modules/).
 It allows writing Redis modules in Rust, without needing to use raw pointers or unsafe code. See [here](https://docs.rs/redis-module/latest) for the most recent API documentation.
 
 # Running the example module
