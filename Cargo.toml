@@ -143,13 +143,18 @@ redis-module-macros = { path = "./redismodule-rs-macros"}
 redis-module = { path = "./", default-features = false }
 
 [build-dependencies]
-bindgen = "0.66"
+bindgen = { version = "0.66", default-features = false, features = ["logging", "prettyplease"]}
 cc = "1"
 
 [features]
-default = ["min-redis-compatibility-version-6-0"]
+default = ["min-redis-compatibility-version-6-0", "bindgen-runtime"]
 min-redis-compatibility-version-7-4 = ["redis-module/min-redis-compatibility-version-7-4"]
 min-redis-compatibility-version-7-2 = ["redis-module/min-redis-compatibility-version-7-2"]
 min-redis-compatibility-version-7-0 = ["redis-module/min-redis-compatibility-version-7-0"]
 min-redis-compatibility-version-6-2 = ["redis-module/min-redis-compatibility-version-6-2"]
 min-redis-compatibility-version-6-0 = ["redis-module/min-redis-compatibility-version-6-0"]
+
+# Enable static linking to libclang in bindgen
+bindgen-static = ["bindgen/static"]
+# Enable dynamic linking to libclang in bindgen
+bindgen-runtime = ["bindgen/runtime"]
