@@ -268,7 +268,7 @@ pub fn call_reply_big_number(reply: *mut RedisModuleCallReply) -> Option<String>
 /// # Panics
 ///
 /// Panics if the Redis server doesn't support replying with bool (since RESP3).
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[allow(clippy::not_unsafe_ptr_arg_deref, invalid_null_arguments)]
 pub fn call_reply_verbatim_string(reply: *mut RedisModuleCallReply) -> Option<(String, Vec<u8>)> {
     unsafe {
         let mut len: size_t = 0;

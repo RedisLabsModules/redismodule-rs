@@ -19,12 +19,12 @@ pub struct StreamIterator<'key> {
 
 impl<'key> StreamIterator<'key> {
     pub(crate) fn new(
-        key: &RedisKey,
+        key: &'key RedisKey,
         mut from: Option<raw::RedisModuleStreamID>,
         mut to: Option<raw::RedisModuleStreamID>,
         exclusive: bool,
         reverse: bool,
-    ) -> Result<StreamIterator, RedisError> {
+    ) -> Result<StreamIterator<'key>, RedisError> {
         let mut flags = if exclusive {
             raw::REDISMODULE_STREAM_ITERATOR_EXCLUSIVE as i32
         } else {
