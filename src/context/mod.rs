@@ -1352,7 +1352,7 @@ impl<'a> InfoContextBuilder<'a> {
     }
 
     /// Returns a section builder.
-    pub fn add_section(self, name: &'a str) -> InfoContextBuilderSectionBuilder {
+    pub fn add_section(self, name: &'a str) -> InfoContextBuilderSectionBuilder<'a> {
         InfoContextBuilderSectionBuilder {
             info_builder: self,
             name: name.to_owned(),

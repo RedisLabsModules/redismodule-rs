@@ -169,7 +169,7 @@ impl RedisKey {
         Ok(val)
     }
 
-    pub fn get_stream_iterator(&self, reverse: bool) -> Result<StreamIterator, RedisError> {
+    pub fn get_stream_iterator(&self, reverse: bool) -> Result<StreamIterator<'_>, RedisError> {
         StreamIterator::new(self, None, None, false, reverse)
     }
 
@@ -179,7 +179,7 @@ impl RedisKey {
         to: Option<raw::RedisModuleStreamID>,
         exclusive: bool,
         reverse: bool,
-    ) -> Result<StreamIterator, RedisError> {
+    ) -> Result<StreamIterator<'_>, RedisError> {
         StreamIterator::new(self, from, to, exclusive, reverse)
     }
 }
@@ -245,7 +245,7 @@ impl RedisKeyWritable {
         self.key_type() == KeyType::Empty
     }
 
-    pub fn as_string_dma(&self) -> Result<StringDMA, RedisError> {
+    pub fn as_string_dma(&self) -> Result<StringDMA<'_>, RedisError> {
         StringDMA::new(self)
     }
 

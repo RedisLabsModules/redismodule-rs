@@ -3,9 +3,23 @@ name: CI
 on: [pull_request]
 
 jobs:
+  get-nightly-version:
+    runs-on: ubuntu-latest
+    outputs:
+      nightly-version: ${{ steps.get-nightly.outputs.version }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Get nightly version from rust-toolchain.toml
+        id: get-nightly
+        run: |
+          NIGHTLY_VERSION=$(grep 'channel = ' rust-toolchain.toml | sed 's/.*"\(.*\)".*/\1/')
+          echo "version=$NIGHTLY_VERSION" >> $GITHUB_OUTPUT
+
   test:
     name: Build and run the unit tests using the latest rust.
     runs-on: ${{ matrix.os }}
+    needs: get-nightly-version
     strategy:
       fail-fast: false
       matrix:
@@ -18,8 +32,8 @@ jobs:
           - [7-0, "7.2"]
           - [7-2, "7.2"]
         toolchain:
-          - 1.81.0
           - stable
+          - ${{ needs.get-nightly-version.outputs.nightly-version }}
 
     steps:
       - name: Checkout sources
