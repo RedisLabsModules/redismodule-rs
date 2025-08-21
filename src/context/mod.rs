@@ -782,6 +782,10 @@ impl Context {
         unsafe { raw::RedisModule_SetContextUser.unwrap()(self.ctx, ptr::null_mut()) };
     }
 
+    pub fn dbsize(&self) -> u64 {
+        unsafe { raw::RedisModule_DbSize.unwrap()(self.ctx) }
+    }
+
     /// Verify the the given user has the give ACL permission on the given key.
     /// Return Ok(()) if the user has the permissions or error (with relevant error message)
     /// if the validation failed.
