@@ -12,12 +12,9 @@ impl ParseCallbacks for RedisModuleCallback {
     fn int_macro(&self, name: &str, _value: i64) -> Option<IntKind> {
         if name.starts_with("REDISMODULE_SUBEVENT_") || name.starts_with("REDISMODULE_EVENT_") {
             Some(IntKind::U64)
-        } else if name.starts_with("REDISMODULE_REPLY_")
-            || name.starts_with("REDISMODULE_KEYTYPE_")
-            || name.starts_with("REDISMODULE_AUX_")
-            || name == "REDISMODULE_OK"
-            || name == "REDISMODULE_ERR"
-            || name == "REDISMODULE_LIST_HEAD"
+        } else if name.starts_with("REDISMODULE_REPLY") {
+            Some(IntKind::I32)
+        } else if name == "REDISMODULE_LIST_HEAD"
             || name == "REDISMODULE_LIST_TAIL"
         {
             // These values are used as `enum` discriminants, and thus must be `isize`.

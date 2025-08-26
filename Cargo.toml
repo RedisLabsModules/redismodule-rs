@@ -133,6 +133,7 @@ serde = { version = "1", features = ["derive"] }
 nix = { version = "0.26", default-features = false }
 cfg-if = "1"
 redis-module-macros-internals = { path = "./redismodule-rs-macros-internals" }
+strum = {version = "0.27.2",features = ["derive"]}
 log = "0.4"
 
 [dev-dependencies]
@@ -145,6 +146,10 @@ redis-module = { path = "./", default-features = false }
 [build-dependencies]
 bindgen = { version = "0.66", default-features = false, features = ["logging", "prettyplease"]}
 cc = "1"
+
+#[build-dependencies.bindgen]
+#version = "0.71.1"
+#default-features = false
 
 [features]
 default = ["min-redis-compatibility-version-6-0", "bindgen-runtime"]

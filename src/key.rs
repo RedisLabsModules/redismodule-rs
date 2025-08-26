@@ -110,7 +110,8 @@ impl RedisKey {
     /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
     #[must_use]
     pub fn key_type(&self) -> raw::KeyType {
-        unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
+        let discriminant = unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) };
+        KeyType::from_repr(discriminant as u32).unwrap()
     }
 
     /// Detects whether the key pointer given to us by Redis is null.
@@ -379,7 +380,8 @@ impl RedisKeyWritable {
     /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
     #[must_use]
     pub fn key_type(&self) -> raw::KeyType {
-        unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
+        let discriminant = unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) };
+        KeyType::from_repr(discriminant as u32).unwrap()
     }
 
     pub fn open_with_redis_string(
@@ -670,7 +672,7 @@ fn to_raw_mode(mode: KeyMode) -> raw::KeyMode {
 /// Will panic if `RedisModule_KeyType` or `RedisModule_ModuleTypeGetType` are missing in redismodule.h
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn verify_type(key_inner: *mut raw::RedisModuleKey, redis_type: &RedisType) -> RedisResult {
-    let key_type: KeyType = unsafe { raw::RedisModule_KeyType.unwrap()(key_inner) }.into();
+    let key_type: KeyType = KeyType::from_repr(unsafe { raw::RedisModule_KeyType.unwrap()(key_inner) as u32 }).unwrap();
 
     if key_type != KeyType::Empty {
         // The key exists; check its type
