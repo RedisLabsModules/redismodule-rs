@@ -130,7 +130,7 @@ strum_macros = "0.24"
 backtrace = "0.3"
 linkme = "0.3"
 serde = { version = "1", features = ["derive"] }
-nix = "0.26"
+nix = { version = "0.26", default-features = false }
 cfg-if = "1"
 redis-module-macros-internals = { path = "./redismodule-rs-macros-internals" }
 log = "0.4"
