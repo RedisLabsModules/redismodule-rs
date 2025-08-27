@@ -32,6 +32,7 @@ pub mod call_reply;
 pub mod commands;
 pub mod defrag;
 pub mod info;
+pub mod key_scan_cursor;
 pub mod keys_cursor;
 pub mod server_events;
 pub mod thread_safe;

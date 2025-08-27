@@ -285,6 +285,10 @@ impl RedisString {
 impl Drop for RedisString {
     fn drop(&mut self) {
         if !self.inner.is_null() {
+            let ctx = Context::new(self.ctx);
+            let out = format!("Dropping RedisString '{}'", self.to_string_lossy());
+            ctx.log_notice(&out); 
+
             unsafe {
                 raw::RedisModule_FreeString.unwrap()(self.ctx, self.inner);
             }
