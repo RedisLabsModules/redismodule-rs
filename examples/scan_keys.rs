@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-
 // This example shows the usage of the scan functionality of the Rust Redis Module API Wrapper.
 // 
 // The example implements three commands:
