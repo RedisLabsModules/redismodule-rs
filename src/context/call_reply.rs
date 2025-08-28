@@ -31,6 +31,11 @@ impl<'root> StringCallReply<'root> {
         };
         unsafe { slice::from_raw_parts(reply_string, len) }
     }
+
+    /// Return the raw pointer to the underlying [RedisModuleCallReply].
+    pub fn get_raw(&self) -> *mut RedisModuleCallReply {
+        self.reply.as_ptr()
+    }
 }
 
 impl<'root> Drop for StringCallReply<'root> {
@@ -76,6 +81,11 @@ impl<'root> ErrorCallReply<'root> {
             RedisModule_CallReplyStringPtr.unwrap()(self.reply.as_ptr(), &mut len) as *mut u8
         };
         unsafe { slice::from_raw_parts(reply_string, len) }
+    }
+
+    /// Return the raw pointer to the underlying [RedisModuleCallReply].
+    pub fn get_raw(&self) -> *mut RedisModuleCallReply {
+        self.reply.as_ptr()
     }
 }
 
@@ -150,6 +160,11 @@ impl<'root> I64CallReply<'root> {
     pub fn to_i64(&self) -> i64 {
         call_reply_integer(self.reply.as_ptr())
     }
+
+    /// Return the raw pointer to the underlying [RedisModuleCallReply].
+    pub fn get_raw(&self) -> *mut RedisModuleCallReply {
+        self.reply.as_ptr()
+    }
 }
 
 impl<'root> Drop for I64CallReply<'root> {
@@ -204,6 +219,11 @@ impl<'root> ArrayCallReply<'root> {
     pub fn len(&self) -> usize {
         call_reply_length(self.reply.as_ptr())
     }
+
+    /// Return the raw pointer to the underlying [RedisModuleCallReply].
+    pub fn get_raw(&self) -> *mut RedisModuleCallReply {
+        self.reply.as_ptr()
+    }
 }
 
 pub struct ArrayCallReplyIterator<'root, 'curr> {
@@ -254,6 +274,13 @@ pub struct NullCallReply<'root> {
     _dummy: PhantomData<&'root ()>,
 }
 
+impl<'root> NullCallReply<'root> {
+    /// Return the raw pointer to the underlying [RedisModuleCallReply].
+    pub fn get_raw(&self) -> *mut RedisModuleCallReply {
+        self.reply.as_ptr()
+    }
+}
+
 impl<'root> Drop for NullCallReply<'root> {
     fn drop(&mut self) {
         free_call_reply(self.reply.as_ptr());
@@ -302,6 +329,11 @@ impl<'root> MapCallReply<'root> {
     /// Return the number of elements in the [MapCallReply].
     pub fn len(&self) -> usize {
         call_reply_length(self.reply.as_ptr())
+    }
+
+    /// Return the raw pointer to the underlying [RedisModuleCallReply].
+    pub fn get_raw(&self) -> *mut RedisModuleCallReply {
+        self.reply.as_ptr()
     }
 }
 
@@ -384,6 +416,11 @@ impl<'root> SetCallReply<'root> {
     pub fn len(&self) -> usize {
         call_reply_length(self.reply.as_ptr())
     }
+
+    /// Return the raw pointer to the underlying [RedisModuleCallReply].
+    pub fn get_raw(&self) -> *mut RedisModuleCallReply {
+        self.reply.as_ptr()
+    }
 }
 
 pub struct SetCallReplyIterator<'root, 'curr> {
@@ -445,6 +482,11 @@ impl<'root> BoolCallReply<'root> {
     pub fn to_bool(&self) -> bool {
         call_reply_bool(self.reply.as_ptr())
     }
+
+    /// Return the raw pointer to the underlying [RedisModuleCallReply].
+    pub fn get_raw(&self) -> *mut RedisModuleCallReply {
+        self.reply.as_ptr()
+    }
 }
 
 impl<'root> Drop for BoolCallReply<'root> {
@@ -477,6 +519,11 @@ impl<'root> DoubleCallReply<'root> {
     /// Return the double value of the [BoolCallReply] as f64.
     pub fn to_double(&self) -> f64 {
         call_reply_double(self.reply.as_ptr())
+    }
+
+    /// Return the raw pointer to the underlying [RedisModuleCallReply].
+    pub fn get_raw(&self) -> *mut RedisModuleCallReply {
+        self.reply.as_ptr()
     }
 }
 
@@ -512,6 +559,11 @@ impl<'root> BigNumberCallReply<'root> {
     pub fn to_string(&self) -> Option<String> {
         call_reply_big_number(self.reply.as_ptr())
     }
+
+    /// Return the raw pointer to the underlying [RedisModuleCallReply].
+    pub fn get_raw(&self) -> *mut RedisModuleCallReply {
+        self.reply.as_ptr()
+    }
 }
 
 impl<'root> Drop for BigNumberCallReply<'root> {
@@ -538,6 +590,13 @@ impl<'root> Display for BigNumberCallReply<'root> {
 pub struct VerbatimStringCallReply<'root> {
     reply: NonNull<RedisModuleCallReply>,
     _dummy: PhantomData<&'root ()>,
+}
+
+impl<'root> VerbatimStringCallReply<'root> {
+    /// Return the raw pointer to the underlying [RedisModuleCallReply].
+    pub fn get_raw(&self) -> *mut RedisModuleCallReply {
+        self.reply.as_ptr()
+    }
 }
 
 /// RESP3 state that the verbatim string format must be of length 3.
@@ -637,6 +696,25 @@ pub enum CallReply<'root> {
     Double(DoubleCallReply<'root>),
     BigNumber(BigNumberCallReply<'root>),
     VerbatimString(VerbatimStringCallReply<'root>),
+}
+
+impl<'root> CallReply<'root> {
+    /// Return the raw pointer to the underlying [RedisModuleCallReply].
+    pub fn get_raw(&self) -> *mut RedisModuleCallReply {
+        match self {
+            CallReply::Unknown => std::ptr::null_mut(),
+            CallReply::I64(inner) => inner.get_raw(),
+            CallReply::String(inner) => inner.get_raw(),
+            CallReply::Array(inner) => inner.get_raw(),
+            CallReply::Null(inner) => inner.get_raw(),
+            CallReply::Map(inner) => inner.get_raw(),
+            CallReply::Set(inner) => inner.get_raw(),
+            CallReply::Bool(inner) => inner.get_raw(),
+            CallReply::Double(inner) => inner.get_raw(),
+            CallReply::BigNumber(inner) => inner.get_raw(),
+            CallReply::VerbatimString(inner) => inner.get_raw(),
+        }
+    }
 }
 
 /// Send implementation to [CallReply].
