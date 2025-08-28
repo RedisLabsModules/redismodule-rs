@@ -1,30 +1,33 @@
-use std::{ffi::c_void, ptr::{self, addr_of_mut}};
+use std::{
+    ffi::c_void,
+    ptr::{self, addr_of_mut},
+};
 
 use crate::{key::RedisKey, raw, Context, RedisString};
 
 /// A cursor to scan fields and values in a hash key.
-/// 
+///
 /// This is a wrapper around the RedisModule_ScanKey function from the C API. It provides access via [`ScanKeyCursor::foreach] and provides
 /// a Rust iterator.
-/// 
+///
 /// Example usage:
 /// ```no_run
-/// 
+///
 /// ```
-/// 
+///
 /// The iterator yields tuples of (field: RedisString, value: RedisString).
-/// 
+///
 /// ## Implementation notes
-/// 
+///
 /// The `RedisModule_ScanKey` function from the C API uses a callback to return the field and value strings. We
 /// distinguish two cases:
-/// 
-/// 1. Either the callback is called once, 
-/// 2. or multiple times 
-/// 
+///
+/// 1. Either the callback is called once,
+/// 2. or multiple times
+///
 /// and this depends if a rehash happens during the scan.
 pub struct ScanKeyCursor {
-    key: RedisKey,  
+    key: RedisKey,
     inner_cursor: *mut raw::RedisModuleScanCursor,
 }
 
@@ -94,14 +97,8 @@ enum IteratorState {
     HasBufferedItems,
     Done,
 }
-
-enum StackSlotState {
-    Empty,
-    Filled(ScanKeyIteratorItem),
-}
-
 struct StackSlot<'a> {
-    state: StackSlotState,
+    //state: StackSlotState,
     ctx: Context,
     buf: &'a mut Vec<ScanKeyIteratorItem>,
 }
@@ -119,12 +116,10 @@ impl ScanKeyCursorIterator<'_> {
 
     fn next_scan_call(&mut self) -> Option<ScanKeyIteratorItem> {
         let ctx_ptr = self.cursor.key.ctx;
-        let ctx = Context::new(ctx_ptr);
-        
+
         let mut stack_slot = StackSlot {
-            state: StackSlotState::Empty,
             ctx: Context::new(ctx_ptr),
-            buf: &mut self.buf
+            buf: &mut self.buf,
         };
 
         let data_ptr = addr_of_mut!(stack_slot).cast::<c_void>();
@@ -149,14 +144,12 @@ impl ScanKeyCursorIterator<'_> {
             // we may still have buffered items
         }
 
-        let StackSlotState::Filled(reval) = stack_slot.state else {
-            // should not happen
-            panic!("ScanKey callback did not fill the stack slot");
-        };
-
-        ctx.log_notice(&format!("next Reval field: {}, value: {}", reval.0, reval.1));
-
-        Some(reval)
+        if stack_slot.buf.is_empty() {
+            // no items were returned, try again
+            None
+        } else {
+            self.next_buffered_item()
+        }
     }
 
     fn next_buffered_item(&mut self) -> Option<ScanKeyIteratorItem> {
@@ -166,7 +159,7 @@ impl ScanKeyCursorIterator<'_> {
 }
 
 /// The callback that is called by `RedisModule_ScanKey` to return the field and value strings.
-/// 
+///
 /// The `data` pointer is a stack slot of type `RawData` that is used to pass the data back to the iterator.
 unsafe extern "C" fn foreach_callback<F: Fn(&RedisKey, &RedisString, &RedisString)>(
     key: *mut raw::RedisModuleKey,
@@ -182,7 +175,7 @@ unsafe extern "C" fn foreach_callback<F: Fn(&RedisKey, &RedisString, &RedisStrin
 
     let callback = unsafe { &mut *(data.cast::<F>()) };
     callback(&key, &field, &value);
-    
+
     // we're not the owner of field and value strings
     field.take();
     value.take();
@@ -191,7 +184,7 @@ unsafe extern "C" fn foreach_callback<F: Fn(&RedisKey, &RedisString, &RedisStrin
 }
 
 /// The callback that is called by `RedisModule_ScanKey` to return the field and value strings.
-/// 
+///
 /// The `data` pointer is a stack slot of type `RawData` that is used to pass the data back to the iterator.
 unsafe extern "C" fn iterator_callback(
     _key: *mut raw::RedisModuleKey,
@@ -211,22 +204,19 @@ unsafe extern "C" fn iterator_callback(
     let field = RedisString::from_redis_module_string(slot.ctx.get_raw(), field);
     let value = RedisString::from_redis_module_string(slot.ctx.get_raw(), value);
 
-    match slot.state {
-        StackSlotState::Empty => {
-            let out = format!("CB - Fill empty slot - Field: {}, Value: {}", field, value);
-            slot.ctx.log_notice(&out);
-            slot.state = StackSlotState::Filled((field, value));
-        }
-        StackSlotState::Filled(_) => {
-            // This is the case where the callback is called multiple times.
-            // We need to buffer the data in the iterator state.
-            let out = format!("CB - Buffer for future use - Field: {}, Value: {}", field, value);
-            slot.ctx.log_notice(&out);
-            slot.buf.push((field, value));
-            
-        }
+    if slot.buf.is_empty() {
+        let out = format!("CB - Value tu return - Field: {}, Value: {}", field, value);
+        slot.ctx.log_notice(&out);
+    } else {
+        // This is the case where the callback is called multiple times.
+        // We need to buffer the data in the iterator state.
+        let out = format!(
+            "CB - Buffer for future use - Field: {}, Value: {}",
+            field, value
+        );
+        slot.ctx.log_notice(&out);
     }
-
+    slot.buf.push((field, value));
 }
 
 // Implements an iterator for `KeysCursor` that yields (RedisKey, *mut RedisModuleString, *mut RedisModuleString) in a Rust for loop.
