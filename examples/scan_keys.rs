@@ -41,14 +41,13 @@ fn scan_key_foreach(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let key = ctx.open_key_with_flags(key_name, KeyFlags::NOEFFECTS | KeyFlags::NOEXPIRE | KeyFlags::ACCESS_EXPIRED );
     let cursor  = ScanKeyCursor::new(key);
     
-    let res = RefCell::new(Vec::new());
+    let mut res = Vec::new();
     cursor.foreach(|_key, field, value| {
-        let mut res = res.borrow_mut();
         res.push(RedisValue::BulkRedisString(field.clone()));
         res.push(RedisValue::BulkRedisString(value.clone()));
     });
 
-    Ok(RedisValue::Array(res.take()))
+    Ok(RedisValue::Array(res))
 }
 
 /// Scans all fields and values in a hash key and returns them as an array of RedisString.

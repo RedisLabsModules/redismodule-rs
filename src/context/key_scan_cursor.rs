@@ -83,7 +83,7 @@ impl ScanKeyCursor {
     }
 
     /// Implements a callback based foreach loop over all fields and values in the hash key, use that for optimal performance.
-    pub fn foreach<F: Fn(&RedisKey, &RedisString, &RedisString)>(&self, f: F) {
+    pub fn foreach<F: FnMut(&RedisKey, &RedisString, &RedisString)>(&self, f: F) {
         // Safety: Assumption: c-side initialized the function ptr and it is is never changed,
         // i.e. after module initialization the function pointers stay valid till the end of the program.
         let scan_key = unsafe { raw::RedisModule_ScanKey.unwrap() };
@@ -210,7 +210,7 @@ impl ScanKeyCursorIterator<'_> {
 ///
 /// The `data` pointer is the closure given to [`ScanKeyCursor::foreach`] and the callback forwards
 /// references to the key, field and value to that closure.
-unsafe extern "C" fn foreach_callback<F: Fn(&RedisKey, &RedisString, &RedisString)>(
+unsafe extern "C" fn foreach_callback<F: FnMut(&RedisKey, &RedisString, &RedisString)>(
     key: *mut raw::RedisModuleKey,
     field: *mut raw::RedisModuleString,
     value: *mut raw::RedisModuleString,
