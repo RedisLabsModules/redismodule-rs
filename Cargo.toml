@@ -147,10 +147,6 @@ redis-module = { path = "./", default-features = false }
 bindgen = { version = "0.66", default-features = false, features = ["logging", "prettyplease"]}
 cc = "1"
 
-#[build-dependencies.bindgen]
-#version = "0.71.1"
-#default-features = false
-
 [features]
 default = ["min-redis-compatibility-version-6-0", "bindgen-runtime"]
 

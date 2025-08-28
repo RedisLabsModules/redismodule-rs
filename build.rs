@@ -14,14 +14,6 @@ impl ParseCallbacks for RedisModuleCallback {
             Some(IntKind::U64)
         } else if name.starts_with("REDISMODULE_REPLY") {
             Some(IntKind::I32)
-        } else if name == "REDISMODULE_LIST_HEAD"
-            || name == "REDISMODULE_LIST_TAIL"
-        {
-            // These values are used as `enum` discriminants, and thus must be `isize`.
-            Some(IntKind::Custom {
-                name: "isize",
-                is_signed: true,
-            })
         } else if name.starts_with("REDISMODULE_NOTIFY_") {
             Some(IntKind::Int)
         } else {

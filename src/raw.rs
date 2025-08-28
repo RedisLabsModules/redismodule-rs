@@ -29,13 +29,6 @@ bitflags! {
     pub struct KeyMode: c_int {
         const READ = REDISMODULE_READ as c_int;
         const WRITE = REDISMODULE_WRITE as c_int;
-
-        const KEYOPEN_NOTOUCH = REDISMODULE_OPEN_KEY_NOTOUCH as c_int;
-        const KEYOPEN_NONOTIFY = REDISMODULE_OPEN_KEY_NONOTIFY as c_int;
-        const KEYOPEN_NOSTATS = REDISMODULE_OPEN_KEY_NOSTATS as c_int;
-        const KEYOPEN_NOEFFECTS = REDISMODULE_OPEN_KEY_NOEFFECTS as c_int;
-        const KEYOPEN_NOEXPIRE = REDISMODULE_OPEN_KEY_NOEXPIRE as c_int;
-        const KEYOPEN_ACCESSEXPIRED = REDISMODULE_OPEN_KEY_ACCESS_EXPIRED as c_int;
     }
 }
 
@@ -60,7 +53,14 @@ pub enum KeyType {
     Stream = REDISMODULE_KEYTYPE_STREAM,
 }
 
-#[derive(Primitive, Debug, PartialEq, Eq)]
+impl From<c_int> for KeyType {
+    fn from(v: c_int) -> Self {
+        Self::from_i32(v).unwrap()
+    }
+}
+
+#[repr(u32)]
+#[derive(Primitive, Debug, PartialEq, Eq, strum::FromRepr)]
 pub enum Where {
     ListHead = REDISMODULE_LIST_HEAD,
     ListTail = REDISMODULE_LIST_TAIL,

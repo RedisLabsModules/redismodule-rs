@@ -201,6 +201,41 @@ fn test_scan() -> Result<()> {
 }
 
 #[test]
+fn test_scan_key_it() -> Result<()> {
+    let mut con = TestConnection::new("scan_keys");
+
+    redis::cmd("hset")
+        .arg(&[
+            "user:123", "name", "Alice", "age", "29", "location", "Austin",
+        ])
+        .query::<()>(&mut con)
+        .with_context(|| "failed to hset")?;
+
+    let res: Vec<String> = redis::cmd("scan_key_it")
+        .arg(&["user:123"])
+        .query(&mut con)?;
+    assert_eq!(&res, &["name", "Alice", "age", "29", "location", "Austin"]);
+    Ok(())
+}
+
+#[test]
+fn test_scan_key_foreach() -> Result<()> {
+    let mut con = TestConnection::new("scan_keys");
+    redis::cmd("hset")
+        .arg(&[
+            "user:123", "name", "Alice", "age", "29", "location", "Austin",
+        ])
+        .query::<()>(&mut con)
+        .with_context(|| "failed to hset")?;
+
+    let res: Vec<String> = redis::cmd("scan_key_fe")
+        .arg(&["user:123"])
+        .query(&mut con)?;
+    assert_eq!(&res, &["name", "Alice", "age", "29", "location", "Austin"]);
+    Ok(())
+}
+
+#[test]
 fn test_stream_reader() -> Result<()> {
     let mut con = TestConnection::new("stream");
 
