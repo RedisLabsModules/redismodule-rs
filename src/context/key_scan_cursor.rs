@@ -5,33 +5,69 @@ use std::{
 
 use crate::{key::RedisKey, raw, Context, RedisString};
 
-/// A cursor to scan fields and values in a hash key.
+/// A cursor to scan field/value pairs of a (hash) key.
 ///
-/// This is a wrapper around the RedisModule_ScanKey function from the C API. It provides access via [`ScanKeyCursor::foreach] and provides
-/// a Rust iterator.
+/// This is a wrapper around the [RedisModule_ScanKey](https://redis.io/docs/latest/develop/reference/modules/modules-api-ref/#redismodule_scankey) 
+/// function from the C API. It provides access via [`ScanKeyCursor::foreach`] and provides a Rust iterator via [`ScanKeyCursor::iter`].
+/// 
+/// Use the former if the operation can be performed in the callback, as it is more efficient. Use the latter if you need to collect the results and/or
+/// want to have access to the Rust iterator API.
 ///
-/// Example usage:
+/// ## Example usage
+/// 
+/// Here we show how to extract values to communicate them back to the Redis client. We assume that the following hash key is setup:
+/// 
 /// ```no_run
-///
+/// HSET user:123 name Alice age 29 location Austin
 /// ```
+/// 
+/// For using the `foreach` method:
+/// 
+/// ```no_run
+/// fn example_scan_key_foreach(ctx: &Context) -> RedisResult {
+///    let key = ctx.open_key_with_flags("user:123", KeyFlags::NOEFFECTS | KeyFlags::NOEXPIRE | KeyFlags::ACCESS_EXPIRED );
+///    let cursor  = ScanKeyCursor::new(key);
+///    
+///    let res = RefCell::new(Vec::new());
+///    cursor.foreach(|_key, field, value| {
+///        let mut res = res.borrow_mut();
+///        res.push(RedisValue::BulkRedisString(field.clone()));
+///        res.push(RedisValue::BulkRedisString(value.clone()));
+///    });
 ///
-/// The iterator yields tuples of (field: RedisString, value: RedisString).
-///
-/// ## Implementation notes
-///
-/// The `RedisModule_ScanKey` function from the C API uses a callback to return the field and value strings. We
-/// distinguish two cases:
-///
-/// 1. Either the callback is called once,
-/// 2. or multiple times
-///
-/// and this depends if a rehash happens during the scan.
+///    Ok(RedisValue::Array(res.take()))
+/// }
+/// ```
+/// 
+/// For using the `iter` method:
+/// 
+/// ```no_run
+/// fn example_scan_key_foreach(ctx: &Context) -> RedisResult {
+///     let mut res = Vec::new();
+///     let key = ctx.open_key_with_flags("user:123", KeyFlags::NOEFFECTS | KeyFlags::NOEXPIRE | KeyFlags::ACCESS_EXPIRED );
+///     let cursor  = ScanKeyCursor::new(key);
+///     for (field, value) in cursor.iter().enumerate() {
+///         res.push(RedisValue::BulkRedisString(field));
+///         res.push(RedisValue::BulkRedisString(value));
+///     }
+///     Ok(RedisValue::Array(res))
+/// }
+/// ```
+/// 
+/// Both methods will produce the following output:
+/// 
+/// ```text
+/// 1) "name"
+/// 2) "Alice"
+/// 3) "age"
+/// 4) "29"
+/// 5) "location"
+/// 6) "Austin"
+/// ```
 pub struct ScanKeyCursor {
     key: RedisKey,
     inner_cursor: *mut raw::RedisModuleScanCursor,
 }
-
-//type ScanKeyCallback<F> = F where F: FnMut(&RedisKey, &RedisString, &RedisString);
 
 impl ScanKeyCursor {
     pub fn new(key: RedisKey) -> Self {
@@ -85,6 +121,7 @@ pub struct ScanKeyCursorIterator<'a> {
     /// The cursor that is used for the iteration
     cursor: &'a ScanKeyCursor,
 
+    // todo: use a vector with stack allocation for better performance
     /// Buffer to hold the uninitialized data if the C callback is called multiple times.
     buf: Vec<ScanKeyIteratorItem>,
 
@@ -92,13 +129,17 @@ pub struct ScanKeyCursorIterator<'a> {
     last_call: bool,
 }
 
+/// The state machine for the iterator
 enum IteratorState {
     NeedToCallScanKey,
     HasBufferedItems,
     Done,
 }
+
+/// A stack slot that is used to pass data from the C callback to the iterator.
+/// 
+/// It is mainly used to access the context and to store the buffered items.
 struct StackSlot<'a> {
-    //state: StackSlotState,
     ctx: Context,
     buf: &'a mut Vec<ScanKeyIteratorItem>,
 }
