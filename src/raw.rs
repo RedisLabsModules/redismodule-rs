@@ -40,8 +40,7 @@ bitflags! {
     }
 }
 
-#[repr(u32)]
-#[derive(Primitive, Debug, PartialEq, Eq, strum::FromRepr)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum KeyType {
     Empty = REDISMODULE_KEYTYPE_EMPTY,
     String = REDISMODULE_KEYTYPE_STRING,
@@ -59,15 +58,13 @@ impl From<c_int> for KeyType {
     }
 }
 
-#[repr(u32)]
-#[derive(Primitive, Debug, PartialEq, Eq, strum::FromRepr)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Where {
     ListHead = REDISMODULE_LIST_HEAD,
     ListTail = REDISMODULE_LIST_TAIL,
 }
 
-#[repr(i32)]
-#[derive(Primitive, Debug, PartialEq, Eq, strum::FromRepr)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum ReplyType {
     Unknown = REDISMODULE_REPLY_UNKNOWN,
     String = REDISMODULE_REPLY_STRING,
@@ -89,15 +86,13 @@ impl From<c_int> for ReplyType {
     }
 }
 
-#[repr(u32)]
-#[derive(Primitive, Debug, PartialEq, Eq, strum::FromRepr)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Aux {
     Before = REDISMODULE_AUX_BEFORE_RDB,
     After = REDISMODULE_AUX_AFTER_RDB,
 }
 
-#[repr(u32)]
-#[derive(Primitive, Debug, PartialEq, Eq, strum::FromRepr)]
+#[derive(Primitive, Debug, PartialEq, Eq)]
 pub enum Status {
     Ok = REDISMODULE_OK,
     Err = REDISMODULE_ERR,
