@@ -201,7 +201,7 @@ fn test_scan() -> Result<()> {
 }
 
 #[test]
-fn test_scan_key_foreach() -> Result<()> {
+fn test_scan_key() -> Result<()> {
     let mut con = TestConnection::new("scan_keys");
     redis::cmd("hset")
         .arg(&[
@@ -210,7 +210,24 @@ fn test_scan_key_foreach() -> Result<()> {
         .query::<()>(&mut con)
         .with_context(|| "failed to hset")?;
 
-    let res: Vec<String> = redis::cmd("scan_key_fe")
+    let res: Vec<String> = redis::cmd("scan_key")
+        .arg(&["user:123"])
+        .query(&mut con)?;
+    assert_eq!(&res, &["name", "Alice", "age", "29", "location", "Austin"]);
+    Ok(())
+}
+
+#[test]
+fn test_scan_key_for_each() -> Result<()> {
+    let mut con = TestConnection::new("scan_keys");
+    redis::cmd("hset")
+        .arg(&[
+            "user:123", "name", "Alice", "age", "29", "location", "Austin",
+        ])
+        .query::<()>(&mut con)
+        .with_context(|| "failed to hset")?;
+
+    let res: Vec<String> = redis::cmd("scan_key_foreach")
         .arg(&["user:123"])
         .query(&mut con)?;
     assert_eq!(&res, &["name", "Alice", "age", "29", "location", "Austin"]);
