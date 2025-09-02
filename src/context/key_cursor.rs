@@ -7,7 +7,7 @@ use crate::{key::RedisKey, raw, RedisString};
 
 /// A cursor to scan field/value pairs of a (hash) key.
 ///
-/// It provides access via a closure given to [`ScanKeyCursor::foreach`] or if you need more control, you can use [`ScanKeyCursor::scan`] 
+/// It provides access via a closure given to [`ScanKeyCursor::for_each`] or if you need more control, you can use [`ScanKeyCursor::scan`] 
 /// and implement your own loop, e.g. to allow an early stop.
 ///
 /// ## Example usage
@@ -21,12 +21,12 @@ use crate::{key::RedisKey, raw, RedisString};
 /// The following example command implementation scans all fields and values in the hash key and returns them as an array of RedisString.
 ///
 /// ```ignore
-/// fn example_scan_key_foreach(ctx: &Context) -> RedisResult {
+/// fn example_scan_key_for_each(ctx: &Context) -> RedisResult {
 ///    let key = ctx.open_key_with_flags("user:123", KeyFlags::NOEFFECTS | KeyFlags::NOEXPIRE | KeyFlags::ACCESS_EXPIRED );
 ///    let cursor  = ScanKeyCursor::new(key);
 ///    
 ///    let res = RefCell::new(Vec::new());
-///    cursor.foreach(|_key, field, value| {
+///    cursor.for_each(|_key, field, value| {
 ///        let mut res = res.borrow_mut();
 ///        res.push(RedisValue::BulkRedisString(field.clone()));
 ///        res.push(RedisValue::BulkRedisString(value.clone()));
@@ -64,8 +64,7 @@ impl ScanKeyCursor {
     }
 
     pub fn scan<F: FnMut(&RedisKey, &RedisString, &RedisString)>(&self, f: F) -> bool {
-        // the following is the callback definition
-        // foreach `ScanKey` call the callback may be called multiple times
+        // the following is the callback definition. The callback may be called multiple times per `RedisModule_ScanKey` invocation.
         use pimpl::scan_callback;
 
         // Safety: The c-side initialized the function ptr and it is is never changed,
@@ -82,10 +81,8 @@ impl ScanKeyCursor {
         res != 0
     }
 
-    /// Implements a callback based foreach loop over all fields and values in the hash key, use that for optimal performance.
-    pub fn foreach<F: FnMut(&RedisKey, &RedisString, &RedisString)>(&self, mut f: F) {
-        // the following is the callback definition
-        // foreach `ScanKey` call the callback may be called multiple times
+    /// Implements a callback based for_each loop over all fields and values in the hash key, use that for optimal performance.
+    pub fn for_each<F: FnMut(&RedisKey, &RedisString, &RedisString)>(&self, mut f: F) {
         while self.scan(&mut f) {
             // do nothing, the callback does the work
         }
@@ -102,9 +99,9 @@ impl Drop for ScanKeyCursor {
 mod pimpl {
     use super::*;
 
-    /// The callback that is used by [`ScanKeyCursor::scan`] and [`ScanKeyCursor::foreach`] as argument to `RedisModule_ScanKey`.
+    /// The callback that is used by [`ScanKeyCursor::scan`] and [`ScanKeyCursor::for_each`] as argument to `RedisModule_ScanKey`.
     ///
-    /// The `data` pointer is the closure given to [`ScanKeyCursor::foreach`] and the callback forwards
+    /// The `data` pointer is the closure given to [`ScanKeyCursor::for_each`] and the callback forwards
     /// references to the key, field and value to that closure.
     pub(super) unsafe extern "C" fn scan_callback<
         F: FnMut(&RedisKey, &RedisString, &RedisString),

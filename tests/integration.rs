@@ -227,7 +227,7 @@ fn test_scan_key_for_each() -> Result<()> {
         .query::<()>(&mut con)
         .with_context(|| "failed to hset")?;
 
-    let res: Vec<String> = redis::cmd("scan_key_foreach")
+    let res: Vec<String> = redis::cmd("scan_key_for_each")
         .arg(&["user:123"])
         .query(&mut con)?;
     assert_eq!(&res, &["name", "Alice", "age", "29", "location", "Austin"]);

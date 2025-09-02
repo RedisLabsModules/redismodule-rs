@@ -4,7 +4,7 @@
 // 
 // 1. `scan_keys` - scans all keys in the database and returns their names as an array of RedisString.
 // 2. `scan_key <key>` - scans all fields by using a closure and a  while loop, thus allowing an early stop. Don't use the early stop but collects all the field/value pairs as an array of RedisString.
-// 3. `scan_key_foreach <key>` - scans all fields and values in a hash key using a closure that stores the field/value pairs as an array of RedisString.
+// 3. `scan_key_for_each <key>` - scans all fields and values in a hash key using a closure that stores the field/value pairs as an array of RedisString.
 
 use redis_module::{
     key::{KeyFlags, RedisKey}, redis_module, Context, KeysCursor, RedisError, RedisResult, RedisString, RedisValue, ScanKeyCursor
@@ -48,7 +48,7 @@ fn scan_key(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 
 /// Scans all fields and values in a hash key and returns them as an array of RedisString.
 /// The command takes one argument: the name of the hash key to scan.
-fn scan_key_foreach(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+fn scan_key_for_each(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     // only argument is the key name
     if args.len() != 2 {
         return Err(RedisError::WrongArity);
@@ -59,7 +59,7 @@ fn scan_key_foreach(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let cursor  = ScanKeyCursor::new(key);
     
     let mut res = Vec::new();
-    cursor.foreach(|_key, field, value| {
+    cursor.for_each(|_key, field, value| {
         res.push(RedisValue::BulkRedisString(field.clone()));
         res.push(RedisValue::BulkRedisString(value.clone()));
     });
@@ -78,6 +78,6 @@ redis_module! {
     commands: [
         ["scan_keys", scan_keys, "readonly", 0, 0, 0, ""],
         ["scan_key", scan_key, "readonly", 0, 0, 0, ""],
-        ["scan_key_foreach", scan_key_foreach, "readonly", 0, 0, 0, ""],
+        ["scan_key_for_each", scan_key_for_each, "readonly", 0, 0, 0, ""],
     ],
 }
