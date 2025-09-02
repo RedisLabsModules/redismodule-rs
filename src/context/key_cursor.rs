@@ -7,7 +7,7 @@ use crate::{key::RedisKey, raw, RedisString};
 
 /// A cursor to scan field/value pairs of a (hash) key.
 ///
-/// It provides access via a closure given to [`ScanKeyCursor::for_each`] or if you need more control, you can use [`ScanKeyCursor::scan`] 
+/// It provides access via a closure given to [`ScanKeyCursor::for_each`] or if you need more control, you can use [`ScanKeyCursor::scan`]
 /// and implement your own loop, e.g. to allow an early stop.
 ///
 /// ## Example usage
@@ -64,8 +64,34 @@ impl ScanKeyCursor {
     }
 
     pub fn scan<F: FnMut(&RedisKey, &RedisString, &RedisString)>(&self, f: F) -> bool {
-        // the following is the callback definition. The callback may be called multiple times per `RedisModule_ScanKey` invocation.
-        use pimpl::scan_callback;
+        // The following is the callback definition. The callback may be called multiple times per `RedisModule_ScanKey` invocation.
+        // The callback is used by [`ScanKeyCursor::scan`] and [`ScanKeyCursor::for_each`] as argument to `RedisModule_ScanKey`.
+        //
+        // The `data` pointer is the closure given to [`ScanKeyCursor::scan`] or [`ScanKeyCursor::for_each`]. 
+        // The callback forwards references to the key, field and value to that closure.
+        unsafe extern "C" fn scan_callback<
+            F: FnMut(&RedisKey, &RedisString, &RedisString),
+        >(
+            key: *mut raw::RedisModuleKey,
+            field: *mut raw::RedisModuleString,
+            value: *mut raw::RedisModuleString,
+            data: *mut c_void,
+        ) {
+            let ctx = ptr::null_mut();
+            let key = RedisKey::from_raw_parts(ctx, key);
+
+            let field = RedisString::from_redis_module_string(ctx, field);
+            let value = RedisString::from_redis_module_string(ctx, value);
+
+            let callback = unsafe { &mut *(data.cast::<F>()) };
+            callback(&key, &field, &value);
+
+            // we're not the owner of field and value strings
+            field.take();
+            value.take();
+
+            key.take(); // we're not the owner of the key either
+        }
 
         // Safety: The c-side initialized the function ptr and it is is never changed,
         // i.e. after module initialization the function pointers stay valid till the end of the program.
@@ -92,38 +118,5 @@ impl ScanKeyCursor {
 impl Drop for ScanKeyCursor {
     fn drop(&mut self) {
         unsafe { raw::RedisModule_ScanCursorDestroy.unwrap()(self.inner_cursor) };
-    }
-}
-
-// the module contains the private implementation details of the cursor.
-mod pimpl {
-    use super::*;
-
-    /// The callback that is used by [`ScanKeyCursor::scan`] and [`ScanKeyCursor::for_each`] as argument to `RedisModule_ScanKey`.
-    ///
-    /// The `data` pointer is the closure given to [`ScanKeyCursor::for_each`] and the callback forwards
-    /// references to the key, field and value to that closure.
-    pub(super) unsafe extern "C" fn scan_callback<
-        F: FnMut(&RedisKey, &RedisString, &RedisString),
-    >(
-        key: *mut raw::RedisModuleKey,
-        field: *mut raw::RedisModuleString,
-        value: *mut raw::RedisModuleString,
-        data: *mut c_void,
-    ) {
-        let ctx = ptr::null_mut();
-        let key = RedisKey::from_raw_parts(ctx, key);
-
-        let field = RedisString::from_redis_module_string(ctx, field);
-        let value = RedisString::from_redis_module_string(ctx, value);
-
-        let callback = unsafe { &mut *(data.cast::<F>()) };
-        callback(&key, &field, &value);
-
-        // we're not the owner of field and value strings
-        field.take();
-        value.take();
-
-        key.take(); // we're not the owner of the key either
     }
 }
