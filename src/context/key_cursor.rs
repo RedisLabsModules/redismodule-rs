@@ -63,15 +63,21 @@ impl ScanKeyCursor {
         unsafe { raw::RedisModule_ScanCursorRestart.unwrap()(self.inner_cursor) };
     }
 
+    /// Implements a call to `RedisModule_ScanKey` and calls the given closure for each callback invocation by ScanKey.
+    /// Returns `true` if there are more fields to scan, `false` otherwise.
+    ///
+    /// The callback may be called multiple times per `RedisModule_ScanKey` invocation.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// while cursor.scan(|_key, field, value| {
+    ///    // do something with field and value
+    /// }) {
+    ///   // do something between scans if needed, like an early stop
+    /// }
     pub fn scan<F: FnMut(&RedisKey, &RedisString, &RedisString)>(&self, f: F) -> bool {
-        // The following is the callback definition. The callback may be called multiple times per `RedisModule_ScanKey` invocation.
-        // The callback is used by [`ScanKeyCursor::scan`] and [`ScanKeyCursor::for_each`] as argument to `RedisModule_ScanKey`.
-        //
-        // The `data` pointer is the closure given to [`ScanKeyCursor::scan`] or [`ScanKeyCursor::for_each`]. 
-        // The callback forwards references to the key, field and value to that closure.
-        unsafe extern "C" fn scan_callback<
-            F: FnMut(&RedisKey, &RedisString, &RedisString),
-        >(
+        unsafe extern "C" fn scan_callback<F: FnMut(&RedisKey, &RedisString, &RedisString)>(
             key: *mut raw::RedisModuleKey,
             field: *mut raw::RedisModuleString,
             value: *mut raw::RedisModuleString,
@@ -95,8 +101,10 @@ impl ScanKeyCursor {
 
         // Safety: The c-side initialized the function ptr and it is is never changed,
         // i.e. after module initialization the function pointers stay valid till the end of the program.
+        let scan_key = unsafe { raw::RedisModule_ScanKey.unwrap() };
+
         let res = unsafe {
-            raw::RedisModule_ScanKey.unwrap()(
+            scan_key(
                 self.key.key_inner,
                 self.inner_cursor,
                 Some(scan_callback::<F>),
@@ -107,7 +115,8 @@ impl ScanKeyCursor {
         res != 0
     }
 
-    /// Implements a callback based for_each loop over all fields and values in the hash key, use that for optimal performance.
+    /// Implements a callback based for_each loop over all fields and values in the hash key.
+    /// If you need more control, e.g. stopping after a scan invocation, then use [`ScanKeyCursor::scan`] directly.
     pub fn for_each<F: FnMut(&RedisKey, &RedisString, &RedisString)>(&self, mut f: F) {
         while self.scan(&mut f) {
             // do nothing, the callback does the work

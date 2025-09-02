@@ -162,17 +162,19 @@ impl RedisString {
     }
 
     /// Create a RedisString from a raw C string and length. The String will be copied.
-    /// 
+    ///
     /// # Safety
-    /// The caller must ensure that the provided pointer is valid and points to a memory region 
+    /// The caller must ensure that the provided pointer is valid and points to a memory region
     /// that is at least `len` bytes long.
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
-    pub unsafe fn from_raw_parts(ctx: Option<NonNull<raw::RedisModuleCtx>>, s: *const c_char, len: libc::size_t) -> Self {
+    pub unsafe fn from_raw_parts(
+        ctx: Option<NonNull<raw::RedisModuleCtx>>,
+        s: *const c_char,
+        len: libc::size_t,
+    ) -> Self {
         let ctx = ctx.map_or(std::ptr::null_mut(), |v| v.as_ptr());
 
-        let inner = unsafe {
-            raw::RedisModule_CreateString.unwrap()(ctx, s, len)
-        };
+        let inner = unsafe { raw::RedisModule_CreateString.unwrap()(ctx, s, len) };
 
         Self { ctx, inner }
     }
