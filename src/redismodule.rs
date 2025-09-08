@@ -161,7 +161,7 @@ impl RedisString {
         Self { ctx, inner }
     }
 
-    /// Create a RedisString from a raw C string and length. The String will be copied.
+    /// Create a RedisString from a raw C string and length. The provided C String will be copied.
     ///
     /// # Safety
     /// The caller must ensure that the provided pointer is valid and points to a memory region

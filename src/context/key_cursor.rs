@@ -70,7 +70,7 @@ impl ScanKeyCursor {
     ///
     /// ## Example
     ///
-    /// ```
+    /// ```ignore
     /// while cursor.scan(|_key, field, value| {
     ///    // do something with field and value
     /// }) {

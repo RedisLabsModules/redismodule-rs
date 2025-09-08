@@ -699,20 +699,20 @@ pub enum CallReply<'root> {
 }
 
 impl<'root> CallReply<'root> {
-    /// Return the raw pointer to the underlying [RedisModuleCallReply].
-    pub fn get_raw(&self) -> *mut RedisModuleCallReply {
+    /// Return the raw pointer to the underlying [RedisModuleCallReply], or `None` if this is the `Unknown` variant.
+    pub fn get_raw(&self) -> Option<*mut RedisModuleCallReply> {
         match self {
-            CallReply::Unknown => std::ptr::null_mut(),
-            CallReply::I64(inner) => inner.get_raw(),
-            CallReply::String(inner) => inner.get_raw(),
-            CallReply::Array(inner) => inner.get_raw(),
-            CallReply::Null(inner) => inner.get_raw(),
-            CallReply::Map(inner) => inner.get_raw(),
-            CallReply::Set(inner) => inner.get_raw(),
-            CallReply::Bool(inner) => inner.get_raw(),
-            CallReply::Double(inner) => inner.get_raw(),
-            CallReply::BigNumber(inner) => inner.get_raw(),
-            CallReply::VerbatimString(inner) => inner.get_raw(),
+            CallReply::Unknown => None,
+            CallReply::I64(inner) => Some(inner.get_raw()),
+            CallReply::String(inner) => Some(inner.get_raw()),
+            CallReply::Array(inner) => Some(inner.get_raw()),
+            CallReply::Null(inner) => Some(inner.get_raw()),
+            CallReply::Map(inner) => Some(inner.get_raw()),
+            CallReply::Set(inner) => Some(inner.get_raw()),
+            CallReply::Bool(inner) => Some(inner.get_raw()),
+            CallReply::Double(inner) => Some(inner.get_raw()),
+            CallReply::BigNumber(inner) => Some(inner.get_raw()),
+            CallReply::VerbatimString(inner) => Some(inner.get_raw()),
         }
     }
 }
