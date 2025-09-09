@@ -158,7 +158,7 @@ min-redis-compatibility-version-6-0 = ["redis-module/min-redis-compatibility-ver
 
 # Enable static linking to libclang in bindgen (incompatible with `bindgen-runtime`)
 bindgen-static = ["bindgen/static"]
-# Enable dynamic linking to libclang in bindgen (default)
+# Enable dynamic linking to libclang in bindgen (default, incompatible with `bindgen-static`)
 bindgen-runtime = ["bindgen/runtime"]
 
 # List all features here, that are not in a exclusive or relationship
