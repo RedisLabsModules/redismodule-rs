@@ -86,16 +86,16 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: cargo clippy --all-targets --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
+        run: cargo clippy --all-targets --no-default-features --features "bindgen/runtime min-redis-compatibility-version-${{ matrix.redis-version[0] }}"
 
       - name: Build debug
-        run: cargo build --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
+        run: cargo build --no-default-features --features "bindgen/runtime min-redis-compatibility-version-${{ matrix.redis-version[0] }}"
 
       - name: Build release
-        run: cargo build --release --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
+        run: cargo build --release --no-default-features --features "bindgen/runtime min-redis-compatibility-version-${{ matrix.redis-version[0] }}"
 
       - name: Test
-        run: cargo test --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }}
+        run: cargo test --no-default-features --features "bindgen/runtime min-redis-compatibility-version-${{ matrix.redis-version[0] }}"
 
       - name: Doc
-        run: cargo doc --all-features
+        run: cargo doc --no-default-features --features "all-features-but-xor bindgen/runtime min-redis-compatibility-version-${{ matrix.redis-version[0] }}"
