@@ -63,13 +63,24 @@ jobs:
         with:
             python-version: '3.10'
 
+      - name: Install Clang (for bindgen)
+        run: |
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            sudo apt-get update
+            sudo apt-get install -y libclang-dev
+          elif [[ "${{ runner.os }}" == "macOS" ]]; then
+            # Install LLVM which provides libclang
+            brew install llvm
+            # Set environment variables for bindgen to find libclang
+            echo "LIBCLANG_PATH=$(brew --prefix llvm)/lib" >> $GITHUB_ENV
+            echo "LLVM_CONFIG_PATH=$(brew --prefix llvm)/bin/llvm-config" >> $GITHUB_ENV
+          fi
+
       - name: Install toolchain
         id: tc
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
-          profile: minimal
-          override: true
           components: rustfmt, clippy
 
       - name: Setup cache
@@ -80,22 +91,22 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-test-${{ steps.tc.outputs.rustc_hash }}-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-test-${{ matrix.toolchain }}-${{ hashFiles('**/Cargo.toml') }}
 
       - name: Format
         run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: cargo clippy --all-targets --no-default-features --features "bindgen/runtime min-redis-compatibility-version-${{ matrix.redis-version[0] }}"
+        run: cargo clippy --all-targets --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }},bindgen-runtime
 
       - name: Build debug
-        run: cargo build --no-default-features --features "bindgen/runtime min-redis-compatibility-version-${{ matrix.redis-version[0] }}"
+        run: cargo build --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }},bindgen-runtime
 
       - name: Build release
-        run: cargo build --release --no-default-features --features "bindgen/runtime min-redis-compatibility-version-${{ matrix.redis-version[0] }}"
+        run: cargo build --release --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }},bindgen-runtime
 
       - name: Test
-        run: cargo test --no-default-features --features "bindgen/runtime min-redis-compatibility-version-${{ matrix.redis-version[0] }}"
+        run: cargo test --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }},bindgen-runtime
 
       - name: Doc
         run: cargo doc --no-default-features --features "all-features-but-xor bindgen/runtime min-redis-compatibility-version-${{ matrix.redis-version[0] }}"
