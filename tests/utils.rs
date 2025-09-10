@@ -95,6 +95,17 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
 
     let module_path = format!("{}", module_path.display());
 
+    let rdb_filename = format!("test-on-port-{}.rdb", port);
+    let rdb_out_dir = std::env::current_dir().unwrap();
+    let rdb_out_dir = rdb_out_dir.join(format!("target/integration-test/instance-p{}", port));
+    if rdb_out_dir.exists() {
+        fs::remove_dir_all(&rdb_out_dir)
+            .with_context(|| format!("Removing existing rdb file: {}", rdb_out_dir.display()))?;
+    }
+
+    fs::create_dir_all(&rdb_out_dir)
+        .with_context(|| format!("Creating rdb output dir: {}", rdb_out_dir.display()))?;
+
     let args = &[
         "--port",
         &port.to_string(),
@@ -102,6 +113,10 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
         module_path.as_str(),
         "--enable-debug-command",
         "yes",
+        "--dir",
+        rdb_out_dir.to_str().unwrap(),
+        "--dbfilename",
+        rdb_filename.as_str(),
     ];
 
     let redis_server = Command::new("redis-server")
