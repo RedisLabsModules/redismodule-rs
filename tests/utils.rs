@@ -96,11 +96,15 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
     let module_path = format!("{}", module_path.display());
 
     let rdb_filename = format!("test-on-port-{}.rdb", port);
-    let rdb_out_dir = std::env::current_dir().unwrap();
+    let rdb_out_dir = std::env::current_dir()?;
     let rdb_out_dir = rdb_out_dir.join(format!("target/integration-test/instance-p{}", port));
     if rdb_out_dir.exists() {
-        fs::remove_dir_all(&rdb_out_dir)
-            .with_context(|| format!("Removing existing rdb file: {}", rdb_out_dir.display()))?;
+        fs::remove_dir_all(&rdb_out_dir).with_context(|| {
+            format!(
+                "Removing existing rdb output dir: {}",
+                rdb_out_dir.display()
+            )
+        })?;
     }
 
     fs::create_dir_all(&rdb_out_dir)
@@ -114,7 +118,9 @@ pub fn start_redis_server_with_module(module_name: &str, port: u16) -> Result<Ch
         "--enable-debug-command",
         "yes",
         "--dir",
-        rdb_out_dir.to_str().unwrap(),
+        rdb_out_dir
+            .to_str()
+            .expect("RDB output directory path contains invalid UTF-8 characters"),
         "--dbfilename",
         rdb_filename.as_str(),
     ];
