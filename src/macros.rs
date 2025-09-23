@@ -167,9 +167,9 @@ macro_rules! redis_module {
     (
         name: $module_name:expr,
         version: $module_version:expr,
-        /// Global allocator for the redis module defined.
-        /// In most of the cases, the Redis allocator ([crate::alloc::RedisAlloc])
-        /// should be used.
+        // Global allocator for the redis module defined.
+        // In most of the cases, the Redis allocator ([crate::alloc::RedisAlloc])
+        // should be used.
         allocator: ($allocator_type:ty, $allocator_init:expr),
         data_types: [
             $($data_type:ident),* $(,)*
