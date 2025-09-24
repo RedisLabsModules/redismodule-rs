@@ -1,0 +1,28 @@
+# .github/workflows/crate-owner-add.yml
+name: Crate owners — add
+
+on:
+  workflow_dispatch:
+
+jobs:
+  add-owner:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Ensure cargo is available
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: ""   # minimal install; no extra components
+
+      - name: Cargo login (crates.io token from repo secret)
+        run: echo "$CARGO_REGISTRY_TOKEN" | cargo login --token -
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: List Owners
+        run: cargo owner --list redis-module
+
+      - name: Invite user as owner
+        run: cargo owner --add oshadmi redis-module
