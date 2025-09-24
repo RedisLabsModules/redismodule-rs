@@ -1,10 +1,10 @@
 [package]
 name = "redis-module-macros-internals"
-version = "99.99.99"
 authors = ["Meir Shpilraien <meir@redis.com>"]
-edition = "2021"
 description = "A macros crate for redismodule-rs"
-license = "BSD-3-Clause"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
 repository = "https://github.com/RedisLabsModules/redismodule-rs"
 keywords = ["redis", "plugin"]
 categories = ["database", "api-bindings"]

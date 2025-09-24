@@ -1,11 +1,19 @@
+[workspace]
+members = [".", "redismodule-rs-macros", "redismodule-rs-macros-internals"]
+
+[workspace.package]
+version = "2.0.7"
+license = "BSD-3-Clause"
+edition = "2021"
+
 [package]
 name = "redis-module"
-version = "99.99.99"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
 authors = ["Gavrie Philipson <gavrie@redis.com>", "Guy Korland <guy.korland@redis.com>"]
-edition = "2021"
 build = "build.rs"
 description = "A toolkit for building Redis modules in Rust"
-license = "BSD-3-Clause"
 repository = "https://github.com/RedisLabsModules/redismodule-rs"
 readme = "README.md"
 keywords = ["redis", "plugin"]
