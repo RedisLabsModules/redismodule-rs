@@ -70,7 +70,7 @@ impl RedisKey {
         Self { ctx, key_inner }
     }
 
-    pub(crate) fn open_with_flags(
+    pub fn open_with_flags(
         ctx: *mut raw::RedisModuleCtx,
         key: &RedisString,
         flags: KeyFlags,
@@ -80,7 +80,7 @@ impl RedisKey {
         Self { ctx, key_inner }
     }
 
-    pub(crate) const fn from_raw_parts(
+    pub const fn from_raw_parts(
         ctx: *mut raw::RedisModuleCtx,
         key_inner: *mut raw::RedisModuleKey,
     ) -> Self {
@@ -206,7 +206,7 @@ impl RedisKeyWritable {
         Self { ctx, key_inner }
     }
 
-    pub(crate) fn open_with_flags(
+    pub fn open_with_flags(
         ctx: *mut raw::RedisModuleCtx,
         key: &RedisString,
         flags: KeyFlags,
