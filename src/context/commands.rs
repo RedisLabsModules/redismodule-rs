@@ -590,6 +590,13 @@ api! {[
             // Register the extra data of the command
             let command = unsafe { RedisModule_GetCommand(ctx.ctx, name.as_ptr()) };
 
+            if command.is_null() {
+                return Err(RedisError::String(format!(
+                    "Failed finding command {} after registration.",
+                    command_info.name
+                )));
+            }
+
             if let Some(acl_categories) = command_info.acl_categories {
                 let acl_categories = CString::new(acl_categories.join(" ")).map_err(|e| RedisError::String(e.to_string()))?;
                 if unsafe { RedisModule_SetCommandACLCategories(command, acl_categories.as_ptr()) } == raw::Status::Err as i32 {
@@ -598,13 +605,6 @@ api! {[
                         command_info.name
                     )));
                 }
-            }
-
-            if command.is_null() {
-                return Err(RedisError::String(format!(
-                    "Failed finding command {} after registration.",
-                    command_info.name
-                )));
             }
 
             let summary = command_info
