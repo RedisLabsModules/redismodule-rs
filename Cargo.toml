@@ -134,6 +134,7 @@ nix = "0.26"
 cfg-if = "1"
 redis-module-macros-internals = { path = "./redismodule-rs-macros-internals" }
 log = "0.4"
+common = { path = "./common" }
 
 [dev-dependencies]
 anyhow = "1"

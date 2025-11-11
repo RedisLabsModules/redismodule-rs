@@ -7,6 +7,7 @@ use libc::c_char;
 use linkme::distributed_slice;
 use redis_module_macros_internals::api;
 use std::ffi::CString;
+use std::iter;
 use std::mem::MaybeUninit;
 use std::os::raw::c_int;
 use std::ptr;
@@ -311,6 +312,79 @@ impl From<&KeySpec> for raw::RedisModuleCommandKeySpec {
 type CommandCallback =
     extern "C" fn(*mut raw::RedisModuleCtx, *mut *mut raw::RedisModuleString, i32) -> i32;
 
+bitflags! {
+    pub struct CommandArgFlags : u32 {
+        const NONE = raw::REDISMODULE_CMD_ARG_NONE;
+        const OPTIONAL = raw::REDISMODULE_CMD_ARG_OPTIONAL;
+        const MULTIPLE = raw::REDISMODULE_CMD_ARG_MULTIPLE;
+        const MULTIPLE_TOKEN = raw::REDISMODULE_CMD_ARG_MULTIPLE_TOKEN;
+    }
+}
+
+impl TryFrom<&str> for CommandArgFlags {
+    type Error = RedisError;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value.to_lowercase().as_str() {
+            "none" => Ok(CommandArgFlags::NONE),
+            "optional" => Ok(CommandArgFlags::OPTIONAL),
+            "multiple" => Ok(CommandArgFlags::MULTIPLE),
+            "multiple_token" => Ok(CommandArgFlags::MULTIPLE_TOKEN),
+            _ => Err(RedisError::String(format!(
+                "Value {value} is not a valid command arg flag."
+            ))),
+        }
+    }
+}
+
+impl From<Vec<CommandArgFlags>> for CommandArgFlags {
+    fn from(value: Vec<CommandArgFlags>) -> Self {
+        value
+            .into_iter()
+            .fold(CommandArgFlags::empty(), |a, item| a | item)
+    }
+}
+
+pub struct RedisModuleCommandArg {
+    name: String,
+    type_: u32,
+    key_spec_index: Option<u32>,
+    token: Option<String>,
+    summary: Option<String>,
+    since: Option<String>,
+    flags: CommandArgFlags,
+    deprecated_since: Option<String>,
+    subargs: Option<Vec<RedisModuleCommandArg>>,
+    display_text: Option<String>,
+}
+
+impl RedisModuleCommandArg {
+    pub fn new(
+        name: String,
+        type_: u32,
+        key_spec_index: Option<u32>,
+        token: Option<String>,
+        summary: Option<String>,
+        since: Option<String>,
+        flags: CommandArgFlags,
+        deprecated_since: Option<String>,
+        subargs: Option<Vec<RedisModuleCommandArg>>,
+        display_text: Option<String>,
+    ) -> RedisModuleCommandArg {
+        RedisModuleCommandArg {
+            name,
+            type_,
+            key_spec_index,
+            token,
+            summary,
+            since,
+            flags,
+            deprecated_since,
+            subargs,
+            display_text,
+        }
+    }
+}
+
 /// A struct represent a CommandInfo
 pub struct CommandInfo {
     name: String,
@@ -323,6 +397,8 @@ pub struct CommandInfo {
     arity: i64,
     key_spec: Vec<KeySpec>,
     callback: CommandCallback,
+    args: Vec<RedisModuleCommandArg>,
+    acl_categories: Option<Vec<String>>,
 }
 
 impl CommandInfo {
@@ -337,6 +413,8 @@ impl CommandInfo {
         arity: i64,
         key_spec: Vec<KeySpec>,
         callback: CommandCallback,
+        args: Vec<RedisModuleCommandArg>,
+        acl_categories: Option<Vec<String>>,
     ) -> CommandInfo {
         CommandInfo {
             name,
@@ -349,6 +427,8 @@ impl CommandInfo {
             arity,
             key_spec,
             callback,
+            args,
+            acl_categories,
         }
     }
 }
@@ -364,10 +444,115 @@ pub fn get_redis_key_spec(key_spec: Vec<KeySpec>) -> Vec<raw::RedisModuleCommand
     redis_key_spec
 }
 
+fn convert_command_arg_to_raw(arg: &RedisModuleCommandArg) -> raw::RedisModuleCommandArg {
+    let name = CString::new(arg.name.as_str()).unwrap().into_raw();
+    let token = arg
+        .token
+        .as_ref()
+        .map(|v| CString::new(v.as_str()).unwrap().into_raw())
+        .unwrap_or(ptr::null_mut());
+    let summary = arg
+        .summary
+        .as_ref()
+        .map(|v| CString::new(v.as_str()).unwrap().into_raw())
+        .unwrap_or(ptr::null_mut());
+    let since = arg
+        .since
+        .as_ref()
+        .map(|v| CString::new(v.as_str()).unwrap().into_raw())
+        .unwrap_or(ptr::null_mut());
+    let deprecated_since = arg
+        .deprecated_since
+        .as_ref()
+        .map(|v| CString::new(v.as_str()).unwrap().into_raw())
+        .unwrap_or(ptr::null_mut());
+    let display_text = arg
+        .display_text
+        .as_ref()
+        .map(|v| CString::new(v.as_str()).unwrap().into_raw())
+        .unwrap_or(ptr::null_mut());
+
+    let subargs = arg.subargs.as_ref().map_or(ptr::null_mut(), |v| {
+        Box::into_raw(
+            v.iter()
+                .map(convert_command_arg_to_raw)
+                .chain(iter::once(unsafe { MaybeUninit::zeroed().assume_init() }))
+                .collect::<Vec<_>>()
+                .into_boxed_slice(),
+        )
+        .cast()
+    });
+
+    raw::RedisModuleCommandArg {
+        name,
+        type_: arg.type_,
+        key_spec_index: arg.key_spec_index.unwrap_or(u32::MAX) as c_int,
+        token,
+        summary,
+        since,
+        flags: arg.flags.bits() as c_int,
+        deprecated_since,
+        subargs,
+        display_text,
+    }
+}
+
+pub fn get_redis_command_args(
+    args: Vec<RedisModuleCommandArg>,
+) -> Option<Vec<raw::RedisModuleCommandArg>> {
+    if args.is_empty() {
+        return None;
+    }
+
+    let raw_args: Vec<raw::RedisModuleCommandArg> = args
+        .iter()
+        .map(convert_command_arg_to_raw)
+        .chain(iter::once(unsafe { MaybeUninit::zeroed().assume_init() }))
+        .collect();
+
+    Some(raw_args)
+}
+
+fn free_command_arg(arg: &raw::RedisModuleCommandArg) {
+    if !arg.name.is_null() {
+        drop(unsafe { CString::from_raw(arg.name as *mut c_char) });
+    }
+    if !arg.token.is_null() {
+        drop(unsafe { CString::from_raw(arg.token as *mut c_char) });
+    }
+    if !arg.summary.is_null() {
+        drop(unsafe { CString::from_raw(arg.summary as *mut c_char) });
+    }
+    if !arg.since.is_null() {
+        drop(unsafe { CString::from_raw(arg.since as *mut c_char) });
+    }
+    if !arg.deprecated_since.is_null() {
+        drop(unsafe { CString::from_raw(arg.deprecated_since as *mut c_char) });
+    }
+    if !arg.display_text.is_null() {
+        drop(unsafe { CString::from_raw(arg.display_text as *mut c_char) });
+    }
+
+    if !arg.subargs.is_null() {
+        let mut i = 0;
+        loop {
+            let subarg_ptr = unsafe { arg.subargs.offset(i) };
+            if unsafe { (*subarg_ptr).name.is_null() } {
+                break;
+            }
+            free_command_arg(unsafe { &*subarg_ptr });
+            i += 1;
+        }
+        let len = i as usize + 1;
+        drop(unsafe { Vec::from_raw_parts(arg.subargs, len, len) });
+    }
+}
+
 api! {[
         RedisModule_CreateCommand,
         RedisModule_GetCommand,
         RedisModule_SetCommandInfo,
+        RedisModule_SetCommandACLCategories,
     ],
     /// Register all the commands located on `COMMNADS_LIST`.
     fn register_commands_internal(ctx: &Context) -> Result<(), RedisError> {
@@ -409,6 +594,16 @@ api! {[
                 )));
             }
 
+            if let Some(acl_categories) = command_info.acl_categories {
+                let acl_categories = CString::new(acl_categories.join(" ")).map_err(|e| RedisError::String(e.to_string()))?;
+                if unsafe { RedisModule_SetCommandACLCategories(command, acl_categories.as_ptr()) } == raw::Status::Err as i32 {
+                    return Err(RedisError::String(format!(
+                        "Failed setting ACL categories for command {}.",
+                        command_info.name
+                    )));
+                }
+            }
+
             let summary = command_info
                 .summary
                 .as_ref()
@@ -432,6 +627,8 @@ api! {[
 
             let key_specs = get_redis_key_spec(command_info.key_spec);
 
+            let args = get_redis_command_args(command_info.args);
+
             let mut redis_command_info = raw::RedisModuleCommandInfo {
                 version: &COMMNAD_INFO_VERSION,
                 summary: summary.as_ref().map(|v| v.as_ptr()).unwrap_or(ptr::null_mut()),
@@ -441,7 +638,7 @@ api! {[
                 tips: tips.as_ref().map(|v| v.as_ptr()).unwrap_or(ptr::null_mut()),
                 arity: command_info.arity as c_int,
                 key_specs: key_specs.as_ptr() as *mut raw::RedisModuleCommandKeySpec,
-                args: ptr::null_mut(),
+                args: args.as_ref().map(Vec::as_ptr).unwrap_or(ptr::null_mut()) as *mut raw::RedisModuleCommandArg,
             };
 
             if unsafe { RedisModule_SetCommandInfo(command, &mut redis_command_info as *mut raw::RedisModuleCommandInfo) } == raw::Status::Err as i32 {
@@ -463,6 +660,8 @@ api! {[
                     }
                 }
             });
+
+            args.unwrap_or_default().iter().for_each(free_command_arg);
 
             Ok(())
         })
