@@ -398,7 +398,6 @@ pub struct CommandInfo {
     callback: CommandCallback,
     args: Vec<RedisModuleCommandArg>,
     acl_categories: Option<Vec<String>>,
-
 }
 
 impl CommandInfo {
@@ -415,7 +414,6 @@ impl CommandInfo {
         callback: CommandCallback,
         args: Vec<RedisModuleCommandArg>,
         acl_categories: Option<Vec<String>>,
-
     ) -> CommandInfo {
         CommandInfo {
             name,
@@ -502,7 +500,9 @@ fn convert_command_arg_to_raw(arg: &RedisModuleCommandArg) -> raw::RedisModuleCo
     }
 }
 
-pub fn get_redis_command_args(args: Vec<RedisModuleCommandArg>) -> Option<Vec<raw::RedisModuleCommandArg>> {
+pub fn get_redis_command_args(
+    args: Vec<RedisModuleCommandArg>,
+) -> Option<Vec<raw::RedisModuleCommandArg>> {
     if args.is_empty() {
         return None;
     }

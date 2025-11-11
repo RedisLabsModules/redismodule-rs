@@ -106,4 +106,3 @@ impl std::fmt::Display for AclCategory {
         write!(f, "{}", String::from(self.clone()))
     }
 }
-
