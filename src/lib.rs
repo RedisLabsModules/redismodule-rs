@@ -34,7 +34,8 @@ pub use crate::context::defrag;
 pub use crate::context::key_cursor::ScanKeyCursor;
 pub use crate::context::keys_cursor::KeysCursor;
 pub use crate::context::server_events;
-pub use crate::context::AclCategory;
+pub use common::AclCategory;
+
 pub use crate::context::AclPermissions;
 #[cfg(any(
     feature = "min-redis-compatibility-version-7-4",

@@ -1,3 +1,4 @@
+use common::AclCategory;
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
 use quote::quote;
@@ -223,6 +224,68 @@ pub struct KeySpecArg {
     find_keys: FindKeys,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub enum CommandArgType {
+    String,
+    Integer,
+    Double,
+    Key,
+    Pattern,
+    UnixTime,
+    PureToken,
+    OneOf,
+    Block,
+}
+
+impl From<CommandArgType> for u32 {
+    fn from(arg_type: CommandArgType) -> Self {
+        match arg_type {
+            CommandArgType::String => 0,
+            CommandArgType::Integer => 1,
+            CommandArgType::Double => 2,
+            CommandArgType::Key => 3,
+            CommandArgType::Pattern => 4,
+            CommandArgType::UnixTime => 5,
+            CommandArgType::PureToken => 6,
+            CommandArgType::OneOf => 7,
+            CommandArgType::Block => 8,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub enum CommandArgFlags {
+    None,
+    Optional,
+    Multiple,
+    MultipleToken,
+}
+
+impl From<&CommandArgFlags> for &'static str {
+    fn from(value: &CommandArgFlags) -> Self {
+        match value {
+            CommandArgFlags::None => "NONE",
+            CommandArgFlags::Optional => "OPTIONAL",
+            CommandArgFlags::Multiple => "MULTIPLE",
+            CommandArgFlags::MultipleToken => "MULTIPLE_TOKEN",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CommandArg {
+    pub name: String,
+    pub arg_type: CommandArgType,
+    pub key_spec_index: Option<u32>,
+    pub token: Option<String>,
+    pub summary: Option<String>,
+    pub since: Option<String>,
+    pub flags: Option<Vec<CommandArgFlags>>,
+    pub deprecated_since: Option<String>,
+    pub subargs: Option<Vec<CommandArg>>,
+    pub display_text: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 struct Args {
     name: Option<String>,
@@ -234,6 +297,8 @@ struct Args {
     tips: Option<String>,
     arity: i64,
     key_spec: Vec<KeySpecArg>,
+    args: Option<Vec<CommandArg>>,
+    acl_categories: Option<Vec<AclCategory>>,
 }
 
 impl Parse for Args {
@@ -245,6 +310,52 @@ impl Parse for Args {
 fn to_token_stream(s: Option<String>) -> proc_macro2::TokenStream {
     s.map(|v| quote! {Some(#v.to_owned())})
         .unwrap_or(quote! {None})
+}
+
+fn generate_command_arg(arg: &CommandArg) -> proc_macro2::TokenStream {
+    let name = &arg.name;
+    let arg_type: u32 = arg.arg_type.into();
+    let key_spec_index = arg
+        .key_spec_index
+        .map(|v| quote! {Some(#v)})
+        .unwrap_or(quote! {None});
+    let token = to_token_stream(arg.token.clone());
+    let summary = to_token_stream(arg.summary.clone());
+    let since = to_token_stream(arg.since.clone());
+    let flags: Vec<&'static str> = arg
+        .flags
+        .as_ref()
+        .map(|v| v.iter().map(|v| v.into()).collect())
+        .unwrap_or_default();
+    let flags = quote! {
+        vec![#(redis_module::commands::CommandArgFlags::try_from(#flags)?, )*]
+    };
+    let deprecated_since = to_token_stream(arg.deprecated_since.clone());
+    let display_text = to_token_stream(arg.display_text.clone());
+
+    let subargs = if let Some(subargs_vec) = &arg.subargs {
+        let subargs_tokens: Vec<_> = subargs_vec.iter().map(generate_command_arg).collect();
+        quote! {
+            Some(vec![#(#subargs_tokens),*])
+        }
+    } else {
+        quote! { None }
+    };
+
+    quote! {
+        redis_module::commands::RedisModuleCommandArg::new(
+            #name.to_owned(),
+            #arg_type,
+            #key_spec_index,
+            #token,
+            #summary,
+            #since,
+            #flags.into(),
+            #deprecated_since,
+            #subargs,
+            #display_text,
+        )
+    }
 }
 
 pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -358,6 +469,24 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
         })
         .collect();
 
+    let command_args: Vec<_> = args
+        .args
+        .as_ref()
+        .map(|v| v.iter().map(generate_command_arg).collect())
+        .unwrap_or_default();
+
+    let acl_categories = args
+        .acl_categories
+        .map(|v| v.into_iter().map(String::from).collect::<Vec<_>>());
+
+    let acl_categories_tokens = if let Some(categories) = &acl_categories {
+        quote! {
+            Some(vec![#(#categories.to_owned()),*])
+        }
+    } else {
+        quote! { None }
+    };
+
     let gen = quote! {
         #func
 
@@ -385,6 +514,7 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
                     ),
                 )*
             ];
+            let command_args = vec![#(#command_args),*];
             Ok(redis_module::commands::CommandInfo::new(
                 #name_literal.to_owned(),
                 Some(#flags_literal.to_owned()),
@@ -396,6 +526,8 @@ pub(crate) fn redis_command(attr: TokenStream, item: TokenStream) -> TokenStream
                 #arity_literal,
                 key_spec,
                 #c_function_name,
+                command_args,
+                #acl_categories_tokens,
             ))
         }
     };
