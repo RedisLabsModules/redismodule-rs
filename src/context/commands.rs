@@ -7,6 +7,7 @@ use libc::c_char;
 use linkme::distributed_slice;
 use redis_module_macros_internals::api;
 use std::ffi::CString;
+use std::iter;
 use std::mem::MaybeUninit;
 use std::os::raw::c_int;
 use std::ptr;
@@ -471,20 +472,19 @@ fn convert_command_arg_to_raw(arg: &RedisModuleCommandArg) -> raw::RedisModuleCo
         .map(|v| CString::new(v.as_str()).unwrap().into_raw())
         .unwrap_or(ptr::null_mut());
 
-    let subargs = match &arg.subargs {
-        Some(subargs_vec) => {
-            let mut raw_subargs: Vec<raw::RedisModuleCommandArg> = subargs_vec
-                .iter()
-                .map(|subarg| convert_command_arg_to_raw(subarg))
-                .collect();
-
-            let zerod: raw::RedisModuleCommandArg = unsafe { MaybeUninit::zeroed().assume_init() };
-            raw_subargs.push(zerod);
-
-            Box::into_raw(raw_subargs.into_boxed_slice()) as *mut raw::RedisModuleCommandArg
-        }
-        None => ptr::null_mut(),
-    };
+    let subargs = arg
+        .subargs
+        .as_ref()
+        .map(|v| {
+            Box::into_raw(
+                v.iter()
+                    .map(convert_command_arg_to_raw)
+                    .chain(iter::once(unsafe { MaybeUninit::zeroed().assume_init() }))
+                    .collect::<Vec<_>>()
+                    .into_boxed_slice(),
+            ) as *mut raw::RedisModuleCommandArg
+        })
+        .unwrap_or(ptr::null_mut());
 
     raw::RedisModuleCommandArg {
         name,
@@ -507,13 +507,11 @@ pub fn get_redis_command_args(
         return None;
     }
 
-    let mut raw_args: Vec<raw::RedisModuleCommandArg> = args
+    let raw_args: Vec<raw::RedisModuleCommandArg> = args
         .iter()
-        .map(|arg| convert_command_arg_to_raw(arg))
+        .map(convert_command_arg_to_raw)
+        .chain(iter::once(unsafe { MaybeUninit::zeroed().assume_init() }))
         .collect();
-
-    let zerod: raw::RedisModuleCommandArg = unsafe { MaybeUninit::zeroed().assume_init() };
-    raw_args.push(zerod);
 
     Some(raw_args)
 }
@@ -643,7 +641,7 @@ api! {[
                 tips: tips.as_ref().map(|v| v.as_ptr()).unwrap_or(ptr::null_mut()),
                 arity: command_info.arity as c_int,
                 key_specs: key_specs.as_ptr() as *mut raw::RedisModuleCommandKeySpec,
-                args: args.as_ref().map(|v| v.as_ptr()).unwrap_or(ptr::null_mut()) as *mut raw::RedisModuleCommandArg,
+                args: args.as_ref().map(Vec::as_ptr).unwrap_or(ptr::null_mut()) as *mut raw::RedisModuleCommandArg,
             };
 
             if unsafe { RedisModule_SetCommandInfo(command, &mut redis_command_info as *mut raw::RedisModuleCommandInfo) } == raw::Status::Err as i32 {
@@ -666,9 +664,7 @@ api! {[
                 }
             });
 
-            args.map(|v| v.into_iter()).unwrap_or_default().for_each(|arg| {
-                free_command_arg(&arg);
-            });
+            args.unwrap_or_default().iter().for_each(free_command_arg);
 
             Ok(())
         })
