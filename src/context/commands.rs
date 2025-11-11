@@ -475,16 +475,15 @@ fn convert_command_arg_to_raw(arg: &RedisModuleCommandArg) -> raw::RedisModuleCo
     let subargs = arg
         .subargs
         .as_ref()
-        .map(|v| {
+        .map_or(ptr::null_mut(), |v| {
             Box::into_raw(
                 v.iter()
                     .map(convert_command_arg_to_raw)
                     .chain(iter::once(unsafe { MaybeUninit::zeroed().assume_init() }))
                     .collect::<Vec<_>>()
                     .into_boxed_slice(),
-            ) as *mut raw::RedisModuleCommandArg
-        })
-        .unwrap_or(ptr::null_mut());
+            ).cast()
+        });
 
     raw::RedisModuleCommandArg {
         name,
