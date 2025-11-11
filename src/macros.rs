@@ -182,7 +182,7 @@ macro_rules! redis_module {
         $(init: $init_func:ident,)* $(,)*
         $(deinit: $deinit_func:ident,)* $(,)*
         $(info: $info_func:ident,)?
-        commands: [
+        $(commands: [
             $([
                 $name:expr,
                 $command:expr,
@@ -193,7 +193,7 @@ macro_rules! redis_module {
                 $mandatory_command_acl_categories:expr
                 $(, $optional_command_acl_categories:expr)?
               ]),* $(,)*
-        ] $(,)*
+        ] $(,)*)?
         $(event_handlers: [
             $([
                 $(@$event_type:ident) +:
@@ -333,8 +333,10 @@ macro_rules! redis_module {
             )?
 
             $(
-                $crate::redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep, $mandatory_command_acl_categories $(, $optional_command_acl_categories)?);
-            )*
+                $(
+                    $crate::redis_command!(ctx, $name, $command, $flags, $firstkey, $lastkey, $keystep, $mandatory_command_acl_categories $(, $optional_command_acl_categories)?);
+                )*
+            )?
 
             if $crate::commands::register_commands(&context) == raw::Status::Err {
                 return raw::Status::Err as c_int;
