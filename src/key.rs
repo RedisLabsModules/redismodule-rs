@@ -59,12 +59,6 @@ pub struct RedisKey {
 }
 
 impl RedisKey {
-    pub(crate) fn take(mut self) -> *mut raw::RedisModuleKey {
-        let res = self.key_inner;
-        self.key_inner = std::ptr::null_mut();
-        res
-    }
-
     pub fn open(ctx: *mut raw::RedisModuleCtx, key: &RedisString) -> Self {
         let key_inner = raw::open_key(ctx, key.inner, to_raw_mode(KeyMode::Read));
         Self { ctx, key_inner }
@@ -80,11 +74,27 @@ impl RedisKey {
         Self { ctx, key_inner }
     }
 
-    pub const fn from_raw_parts(
+    /// Construct a new `RedisKey` from a pointer to a redismodule context and a key.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    /// 1. The `ctx` pointer remains valid for the lifetime of the `RedisKey`.
+    /// 2. The `key_inner` pointer remains valid for the lifetime of the `RedisKey`.
+    pub const unsafe fn from_raw_parts(
         ctx: *mut raw::RedisModuleCtx,
         key_inner: *mut raw::RedisModuleKey,
     ) -> Self {
         Self { ctx, key_inner }
+    }
+
+    /// Decomposes a `RedisKey` into its raw components: `(redismodule context pointer, key pointer)`.
+    ///
+    /// After calling this function, the caller is responsible for cleaning up the raw key previously managed by the `RedisKey`.
+    /// The only way to do this safely is to convert the raw redismodule context and key pointers back into a `RedisKey` with
+    /// the [`from_raw_parts`][Self::from_raw_parts] function, allowing the destructor to perform the cleanup.
+    pub fn to_raw_parts(self) -> (*mut raw::RedisModuleCtx, *mut raw::RedisModuleKey) {
+        (self.ctx, self.key_inner)
     }
 
     /// # Panics
