@@ -87,6 +87,28 @@ impl RedisKey {
         Self { ctx, key_inner }
     }
 
+    /// Returns a raw pointer to the name of this key.
+    ///
+    /// The caller must ensure that the key outlives the pointer this function returns, or else it will end up dangling.
+    pub fn name_raw(&self) -> *const raw::RedisModuleString {
+        unsafe { (raw::RedisModule_GetKeyNameFromModuleKey.unwrap())(self.key_inner) }
+    }
+
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
+    #[must_use]
+    pub fn key_type(&self) -> raw::KeyType {
+        unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
+    }
+
+    /// Detects whether the key pointer given to us by Redis is null.
+    #[must_use]
+    pub fn is_null(&self) -> bool {
+        let null_key: *mut raw::RedisModuleKey = ptr::null_mut();
+        self.key_inner == null_key
+    }
+
     /// # Panics
     ///
     /// Will panic if `RedisModule_ModuleTypeGetValue` is missing in redismodule.h
@@ -103,21 +125,6 @@ impl RedisKey {
         let value = unsafe { &*value };
 
         Ok(Some(value))
-    }
-
-    /// # Panics
-    ///
-    /// Will panic if `RedisModule_KeyType` is missing in redismodule.h
-    #[must_use]
-    pub fn key_type(&self) -> raw::KeyType {
-        unsafe { raw::RedisModule_KeyType.unwrap()(self.key_inner) }.into()
-    }
-
-    /// Detects whether the key pointer given to us by Redis is null.
-    #[must_use]
-    pub fn is_null(&self) -> bool {
-        let null_key: *mut raw::RedisModuleKey = ptr::null_mut();
-        self.key_inner == null_key
     }
 
     pub fn read(&self) -> Result<Option<&[u8]>, RedisError> {
