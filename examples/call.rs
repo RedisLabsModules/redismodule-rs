@@ -159,10 +159,10 @@ fn call_blocking_from_detach_ctx(ctx: &Context, _: Vec<RedisString>) -> RedisRes
 fn call_dump_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
     // Set a key with a value
     ctx.call("SET", &["test_dump_key", "test_value"])?;
-    
+
     // Call DUMP which returns binary data (may not be valid UTF-8)
     let dump_result = ctx.call("DUMP", &["test_dump_key"])?;
-    
+
     // Verify we got a result (should be StringBuffer for binary data)
     match dump_result {
         RedisValue::StringBuffer(data) => {
@@ -177,10 +177,10 @@ fn call_dump_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
             return Err(RedisError::Str("DUMP returned unexpected type"));
         }
     }
-    
+
     // Clean up
     ctx.call("DEL", &["test_dump_key"])?;
-    
+
     Ok("pass".into())
 }
 
