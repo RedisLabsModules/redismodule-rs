@@ -263,10 +263,20 @@ impl<'root> From<&CallReply<'root>> for RedisValue {
             ),
             CallReply::Bool(reply) => RedisValue::Bool(reply.to_bool()),
             CallReply::Double(reply) => RedisValue::Float(reply.to_double()),
-            CallReply::BigNumber(reply) => RedisValue::BigNumber(reply.to_string().unwrap()),
-            CallReply::VerbatimString(reply) => {
-                RedisValue::VerbatimString(reply.to_parts().unwrap())
-            }
+            CallReply::BigNumber(reply) => reply
+                .to_string()
+                .map(RedisValue::BigNumber)
+                .unwrap_or_else(|| {
+                    // BigNumber should always be valid UTF-8, but if not, treat as raw bytes
+                    RedisValue::StaticError("Invalid BigNumber: not valid UTF-8")
+                }),
+            CallReply::VerbatimString(reply) => reply
+                .to_parts()
+                .map(RedisValue::VerbatimString)
+                .unwrap_or_else(|| {
+                    // VerbatimString format should always be valid UTF-8, but if not, treat as error
+                    RedisValue::StaticError("Invalid VerbatimString: format not valid UTF-8")
+                }),
         }
     }
 }
