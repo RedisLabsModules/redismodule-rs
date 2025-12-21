@@ -156,6 +156,34 @@ fn call_blocking_from_detach_ctx(ctx: &Context, _: Vec<RedisString>) -> RedisRes
     Ok(RedisValue::NoReply)
 }
 
+fn call_dump_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
+    // Set a key with a value
+    ctx.call("SET", &["test_dump_key", "test_value"])?;
+    
+    // Call DUMP which returns binary data (may not be valid UTF-8)
+    let dump_result = ctx.call("DUMP", &["test_dump_key"])?;
+    
+    // Verify we got a result (should be StringBuffer for binary data)
+    match dump_result {
+        RedisValue::StringBuffer(data) => {
+            if data.is_empty() {
+                return Err(RedisError::Str("DUMP returned empty data"));
+            }
+        }
+        RedisValue::SimpleString(_) => {
+            // Also acceptable if the binary data happens to be valid UTF-8
+        }
+        _ => {
+            return Err(RedisError::Str("DUMP returned unexpected type"));
+        }
+    }
+    
+    // Clean up
+    ctx.call("DEL", &["test_dump_key"])?;
+    
+    Ok("pass".into())
+}
+
 //////////////////////////////////////////////////////
 
 redis_module! {
@@ -167,5 +195,6 @@ redis_module! {
         ["call.test", call_test, "", 0, 0, 0, ""],
         ["call.blocking", call_blocking, "", 0, 0, 0, ""],
         ["call.blocking_from_detached_ctx", call_blocking_from_detach_ctx, "", 0, 0, 0, ""],
+        ["call.dump_test", call_dump_test, "", 0, 0, 0, ""],
     ],
 }

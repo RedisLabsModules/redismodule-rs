@@ -233,7 +233,10 @@ impl<'root> From<&CallReply<'root>> for RedisValue {
                 RedisValue::Array(reply.iter().map(|v| (&v).into()).collect())
             }
             CallReply::I64(reply) => RedisValue::Integer(reply.to_i64()),
-            CallReply::String(reply) => RedisValue::SimpleString(reply.to_string().unwrap()),
+            CallReply::String(reply) => reply
+                .to_string()
+                .map(RedisValue::SimpleString)
+                .unwrap_or_else(|| RedisValue::StringBuffer(reply.as_bytes().to_vec())),
             CallReply::Null(_) => RedisValue::Null,
             CallReply::Map(reply) => RedisValue::Map(
                 reply
