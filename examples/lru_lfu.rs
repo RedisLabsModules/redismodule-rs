@@ -1,4 +1,6 @@
-use redis_module::{redis_module, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue};
+use redis_module::{
+    redis_module, Context, NextArg, RedisError, RedisResult, RedisString, RedisValue,
+};
 use std::time::Duration;
 
 fn set_lru_cmd(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
@@ -9,10 +11,10 @@ fn set_lru_cmd(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let mut args = args.into_iter().skip(1);
     let key_name = args.next_arg()?;
     let lru_idle_ms = args.next_i64()?;
-    
+
     let key = ctx.open_key_writable(&key_name);
     key.set_lru(Duration::from_millis(lru_idle_ms as u64))?;
-    
+
     Ok(RedisValue::SimpleStringStatic("OK"))
 }
 
@@ -23,7 +25,7 @@ fn get_lru_cmd(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 
     let mut args = args.into_iter().skip(1);
     let key_name = args.next_arg()?;
-    
+
     let key = ctx.open_key(&key_name);
     match key.get_lru()? {
         Some(lru_idle) => Ok(RedisValue::Integer(lru_idle.as_millis() as i64)),
@@ -39,10 +41,10 @@ fn set_lfu_cmd(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     let mut args = args.into_iter().skip(1);
     let key_name = args.next_arg()?;
     let lfu_freq = args.next_i64()?;
-    
+
     let key = ctx.open_key_writable(&key_name);
     key.set_lfu(lfu_freq)?;
-    
+
     Ok(RedisValue::SimpleStringStatic("OK"))
 }
 
@@ -53,7 +55,7 @@ fn get_lfu_cmd(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 
     let mut args = args.into_iter().skip(1);
     let key_name = args.next_arg()?;
-    
+
     let key = ctx.open_key(&key_name);
     match key.get_lfu()? {
         Some(lfu_freq) => Ok(RedisValue::Integer(lfu_freq)),
