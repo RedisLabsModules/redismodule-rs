@@ -515,8 +515,8 @@ pub fn get_lru(key: *mut RedisModuleKey, lru_idle: *mut c_longlong) -> Status {
 /// Set the key access frequency.
 ///
 /// Only relevant if the server's maxmemory policy is LFU based.
-/// The frequency is a logarithmic counter that provides an indication of the access frequency
-/// only (must be <= 255).
+/// The frequency is a logarithmic counter that provides an indication of the access frequency.
+/// Note: The value should be <= 255, but validation is performed at the higher-level API.
 ///
 /// # Panics
 ///
