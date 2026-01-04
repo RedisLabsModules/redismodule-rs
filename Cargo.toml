@@ -124,6 +124,10 @@ crate-type = ["cdylib"]
 name = "lru_lfu"
 crate-type = ["cdylib"]
 
+[[example]]
+name = "command_filter"
+crate-type = ["cdylib"]
+
 [dependencies]
 bitflags = "2"
 libc = "0.2"
