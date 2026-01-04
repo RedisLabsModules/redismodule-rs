@@ -182,6 +182,52 @@ impl RedisKey {
     ) -> Result<StreamIterator<'_>, RedisError> {
         StreamIterator::new(self, from, to, exclusive, reverse)
     }
+
+    /// Get the key last access time.
+    ///
+    /// Returns `None` if the server's eviction policy is LFU based.
+    /// Otherwise returns idle time as a `Duration`.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_GetLRU` is missing in redismodule.h (Redis < 6.0.0)
+    pub fn get_lru(&self) -> Result<Option<Duration>, RedisError> {
+        let mut lru_idle: i64 = 0;
+
+        match raw::get_lru(self.key_inner, &mut lru_idle) {
+            raw::Status::Ok => {
+                if lru_idle == -1 {
+                    Ok(None)
+                } else {
+                    Ok(Some(Duration::from_millis(lru_idle as u64)))
+                }
+            }
+            raw::Status::Err => Err(RedisError::Str("Error while getting key LRU")),
+        }
+    }
+
+    /// Get the key access frequency.
+    ///
+    /// Returns `None` if the server's eviction policy is not LFU based.
+    /// Otherwise returns the frequency counter value.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_GetLFU` is missing in redismodule.h (Redis < 6.0.0)
+    pub fn get_lfu(&self) -> Result<Option<i64>, RedisError> {
+        let mut lfu_freq: i64 = 0;
+
+        match raw::get_lfu(self.key_inner, &mut lfu_freq) {
+            raw::Status::Ok => {
+                if lfu_freq == -1 {
+                    Ok(None)
+                } else {
+                    Ok(Some(lfu_freq))
+                }
+            }
+            raw::Status::Err => Err(RedisError::Str("Error while getting key LFU")),
+        }
+    }
 }
 
 impl Drop for RedisKey {
@@ -347,6 +393,95 @@ impl RedisKeyWritable {
             // Error may occur if the key wasn't open for writing or is an
             // empty key.
             raw::Status::Err => Err(RedisError::Str("Error while removing key expire")),
+        }
+    }
+
+    /// Set the key last access time for LRU based eviction.
+    ///
+    /// Not relevant if the server's maxmemory policy is LFU based.
+    /// Value is idle time in milliseconds.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_SetLRU` is missing in redismodule.h (Redis < 6.0.0)
+    pub fn set_lru(&self, lru_idle: Duration) -> RedisResult {
+        let lru_millis = lru_idle.as_millis();
+
+        let lru_time = i64::try_from(lru_millis).map_err(|_| {
+            RedisError::String(format!("Error LRU idle time {lru_millis} is not allowed"))
+        })?;
+
+        match raw::set_lru(self.key_inner, lru_time) {
+            raw::Status::Ok => REDIS_OK,
+            raw::Status::Err => Err(RedisError::Str("Error while setting key LRU")),
+        }
+    }
+
+    /// Get the key last access time.
+    ///
+    /// Returns `None` if the server's eviction policy is LFU based.
+    /// Otherwise returns idle time as a `Duration`.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_GetLRU` is missing in redismodule.h (Redis < 6.0.0)
+    pub fn get_lru(&self) -> Result<Option<Duration>, RedisError> {
+        let mut lru_idle: i64 = 0;
+
+        match raw::get_lru(self.key_inner, &mut lru_idle) {
+            raw::Status::Ok => {
+                if lru_idle == -1 {
+                    Ok(None)
+                } else {
+                    Ok(Some(Duration::from_millis(lru_idle as u64)))
+                }
+            }
+            raw::Status::Err => Err(RedisError::Str("Error while getting key LRU")),
+        }
+    }
+
+    /// Set the key access frequency.
+    ///
+    /// Only relevant if the server's maxmemory policy is LFU based.
+    /// The frequency is a logarithmic counter that provides an indication of the access frequency
+    /// (must be <= 255).
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_SetLFU` is missing in redismodule.h (Redis < 6.0.0)
+    pub fn set_lfu(&self, lfu_freq: i64) -> RedisResult {
+        if lfu_freq < 0 || lfu_freq > 255 {
+            return Err(RedisError::String(format!(
+                "Error LFU frequency {lfu_freq} must be between 0 and 255"
+            )));
+        }
+
+        match raw::set_lfu(self.key_inner, lfu_freq) {
+            raw::Status::Ok => REDIS_OK,
+            raw::Status::Err => Err(RedisError::Str("Error while setting key LFU")),
+        }
+    }
+
+    /// Get the key access frequency.
+    ///
+    /// Returns `None` if the server's eviction policy is not LFU based.
+    /// Otherwise returns the frequency counter value.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_GetLFU` is missing in redismodule.h (Redis < 6.0.0)
+    pub fn get_lfu(&self) -> Result<Option<i64>, RedisError> {
+        let mut lfu_freq: i64 = 0;
+
+        match raw::get_lfu(self.key_inner, &mut lfu_freq) {
+            raw::Status::Ok => {
+                if lfu_freq == -1 {
+                    Ok(None)
+                } else {
+                    Ok(Some(lfu_freq))
+                }
+            }
+            raw::Status::Err => Err(RedisError::Str("Error while getting key LFU")),
         }
     }
 

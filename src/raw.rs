@@ -485,6 +485,59 @@ pub fn set_expire(key: *mut RedisModuleKey, expire: c_longlong) -> Status {
     unsafe { RedisModule_SetExpire.unwrap()(key, expire).into() }
 }
 
+/// Set the key last access time for LRU based eviction.
+///
+/// Not relevant if the server's maxmemory policy is LFU based.
+/// Value is idle time in milliseconds.
+///
+/// # Panics
+///
+/// Panics if `RedisModule_SetLRU` is not available (Redis < 6.0.0).
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[inline]
+pub fn set_lru(key: *mut RedisModuleKey, lru_idle: c_longlong) -> Status {
+    unsafe { RedisModule_SetLRU.unwrap()(key, lru_idle).into() }
+}
+
+/// Get the key last access time.
+///
+/// Value is idletime in milliseconds or -1 if the server's eviction policy is LFU based.
+///
+/// # Panics
+///
+/// Panics if `RedisModule_GetLRU` is not available (Redis < 6.0.0).
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[inline]
+pub fn get_lru(key: *mut RedisModuleKey, lru_idle: *mut c_longlong) -> Status {
+    unsafe { RedisModule_GetLRU.unwrap()(key, lru_idle).into() }
+}
+
+/// Set the key access frequency.
+///
+/// Only relevant if the server's maxmemory policy is LFU based.
+/// The frequency is a logarithmic counter that provides an indication of the access frequency
+/// only (must be <= 255).
+///
+/// # Panics
+///
+/// Panics if `RedisModule_SetLFU` is not available (Redis < 6.0.0).
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[inline]
+pub fn set_lfu(key: *mut RedisModuleKey, lfu_freq: c_longlong) -> Status {
+    unsafe { RedisModule_SetLFU.unwrap()(key, lfu_freq).into() }
+}
+
+/// Get the key access frequency or -1 if the server's eviction policy is not LFU based.
+///
+/// # Panics
+///
+/// Panics if `RedisModule_GetLFU` is not available (Redis < 6.0.0).
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[inline]
+pub fn get_lfu(key: *mut RedisModuleKey, lfu_freq: *mut c_longlong) -> Status {
+    unsafe { RedisModule_GetLFU.unwrap()(key, lfu_freq).into() }
+}
+
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn string_dma(key: *mut RedisModuleKey, len: *mut size_t, mode: KeyMode) -> *mut c_char {
