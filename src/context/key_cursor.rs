@@ -1,5 +1,6 @@
 use std::{
     ffi::c_void,
+    mem,
     ptr::{self},
 };
 
@@ -24,7 +25,7 @@ use crate::{key::RedisKey, raw, RedisString};
 /// fn example_scan_key_for_each(ctx: &Context) -> RedisResult {
 ///    let key = ctx.open_key_with_flags("user:123", KeyFlags::NOEFFECTS | KeyFlags::NOEXPIRE | KeyFlags::ACCESS_EXPIRED );
 ///    let cursor  = ScanKeyCursor::new(key);
-///    
+///
 ///    let res = RefCell::new(Vec::new());
 ///    cursor.for_each(|_key, field, value| {
 ///        let mut res = res.borrow_mut();
@@ -92,11 +93,10 @@ impl ScanKeyCursor {
             let callback = unsafe { &mut *(data.cast::<F>()) };
             callback(&key, &field, &value);
 
-            // we're not the owner of field and value strings
-            field.take();
-            value.take();
-
-            key.take(); // we're not the owner of the key either
+            // We don't own any of the passed in pointers, so we must ensure we don't run their destructors here
+            mem::forget(field);
+            mem::forget(value);
+            mem::forget(key);
         }
 
         // Safety: The c-side initialized the function ptr and it is is never changed,

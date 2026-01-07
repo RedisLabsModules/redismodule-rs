@@ -3,13 +3,14 @@ use crate::key::RedisKey;
 use crate::raw;
 use crate::redismodule::RedisString;
 use std::ffi::c_void;
+use std::mem;
 use std::ptr::NonNull;
 
 pub struct KeysCursor {
     inner_cursor: *mut raw::RedisModuleScanCursor,
 }
 
-extern "C" fn scan_callback<C: FnMut(&Context, RedisString, Option<&RedisKey>)>(
+extern "C" fn scan_callback<C: FnMut(&Context, &RedisString, Option<&RedisKey>)>(
     ctx: *mut raw::RedisModuleCtx,
     key_name: *mut raw::RedisModuleString,
     key: *mut raw::RedisModuleKey,
@@ -20,13 +21,17 @@ extern "C" fn scan_callback<C: FnMut(&Context, RedisString, Option<&RedisKey>)>(
     let redis_key = if key.is_null() {
         None
     } else {
-        Some(RedisKey::from_raw_parts(ctx, key))
+        // Safety: The returned `RedisKey` does not outlive this callbacks and so by necessity
+        // the pointers passed in as parameters are valid for its entire lifetime.
+        Some(unsafe { RedisKey::from_raw_parts(ctx, key) })
     };
     let callback = unsafe { &mut *(private_data.cast::<C>()) };
-    callback(&context, key_name, redis_key.as_ref());
+    callback(&context, &key_name, redis_key.as_ref());
 
-    // we are not the owner of the key, so we must take the underline *mut raw::RedisModuleKey so it will not be freed.
-    redis_key.map(|v| v.take());
+    // We don't own any of the passed in pointers and have just created "temporary RAII types".
+    // We must ensure we don't run their destructors here.
+    mem::forget(redis_key);
+    mem::forget(key_name);
 }
 
 impl KeysCursor {
@@ -35,7 +40,7 @@ impl KeysCursor {
         Self { inner_cursor }
     }
 
-    pub fn scan<F: FnMut(&Context, RedisString, Option<&RedisKey>)>(
+    pub fn scan<F: FnMut(&Context, &RedisString, Option<&RedisKey>)>(
         &self,
         ctx: &Context,
         callback: &F,
