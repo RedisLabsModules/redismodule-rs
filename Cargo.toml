@@ -120,6 +120,10 @@ crate-type = ["cdylib"]
 name = "expire"
 crate-type = ["cdylib"]
 
+[[example]]
+name = "command_filter"
+crate-type = ["cdylib"]
+
 [dependencies]
 bitflags = "2"
 libc = "0.2"
