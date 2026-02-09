@@ -144,7 +144,7 @@ redis-module-macros = { path = "./redismodule-rs-macros"}
 redis-module = { path = "./", default-features = false }
 
 [build-dependencies]
-bindgen = { version = "0.66", default-features = false, features = ["logging", "prettyplease"]}
+bindgen = { version = "0.72.1", default-features = false, features = ["logging", "prettyplease"]}
 cc = "1"
 
 [features]
