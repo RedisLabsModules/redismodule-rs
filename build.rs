@@ -34,6 +34,10 @@ impl ParseCallbacks for RedisModuleCallback {
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=src/redismodule.c");
+    println!("cargo:rerun-if-changed=src/include/redismodule.h");
+    println!("cargo:rerun-if-changed=build.rs");
+
     // Build a Redis pseudo-library so that we have symbols that we can link
     // against while building Rust code.
     //
