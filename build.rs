@@ -40,22 +40,58 @@ fn main() {
     // include/redismodule.h is vendored in from the Redis project and
     // src/redismodule.c is a stub that includes it and plays a few other
     // tricks that we need to complete the build.
+    //
+    // Users can provide a custom redismodule.h by setting the
+    // REDIS_MODULE_H environment variable to the path of their custom header file.
 
     const EXPERIMENTAL_API: &str = "REDISMODULE_EXPERIMENTAL_API";
+
+    // Determine which redismodule.h to use
+    let (header_path, include_dir) = if let Ok(custom_header) = env::var("REDIS_MODULE_H") {
+        let custom_path = PathBuf::from(&custom_header);
+
+        // Validate that the custom header exists
+        if !custom_path.exists() {
+            panic!(
+                "Custom REDIS_MODULE_H path does not exist: {}",
+                custom_header
+            );
+        }
+
+        // Get the directory containing the custom header for the include path
+        let include_dir = custom_path
+            .parent()
+            .expect("REDIS_MODULE_H must have a parent directory")
+            .to_path_buf();
+
+        println!("cargo:warning=Using custom redismodule.h from: {}", custom_header);
+        println!("cargo:rerun-if-changed={}", custom_header);
+
+        (custom_path, include_dir)
+    } else {
+        // Use the default vendored header
+        let default_header = PathBuf::from("src/include/redismodule.h");
+        let default_include = PathBuf::from("src/include/");
+
+        println!("cargo:rerun-if-changed=src/include/redismodule.h");
+
+        (default_header, default_include)
+    };
 
     let mut build = cc::Build::new();
 
     build
         .define(EXPERIMENTAL_API, None)
         .file("src/redismodule.c")
-        .include("src/include/")
+        .include(&include_dir)
         .compile("redismodule");
 
     let bindings_generator = bindgen::Builder::default();
 
     let bindings = bindings_generator
         .clang_arg(format!("-D{EXPERIMENTAL_API}"))
-        .header("src/include/redismodule.h")
+        .clang_arg(format!("-I{}", include_dir.display()))
+        .header(header_path.to_str().expect("Invalid header path"))
         .allowlist_var("(REDIS|Redis).*")
         .blocklist_type("__darwin_.*")
         .allowlist_type("RedisModule.*")

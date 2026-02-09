@@ -26,6 +26,23 @@ See the [examples](examples) directory for some sample modules.
 This crate tries to provide high-level wrappers around the standard Redis Modules API, while preserving the API's basic concepts.
 Therefore, following the [Redis Modules API](https://redis.io/topics/modules-intro) documentation will be mostly relevant here as well.
 
+## Using a custom redismodule.h
+
+By default, this crate uses a vendored version of `redismodule.h` from the Redis project. If you need to use a custom version of this header file (for example, to test against a newer Redis version or a modified API), you can specify it using the `REDIS_MODULE_H` environment variable:
+
+```bash
+# Build with a custom redismodule.h
+REDIS_MODULE_H=/path/to/custom/redismodule.h cargo build
+
+# Or set it for your entire project
+export REDIS_MODULE_H=/path/to/custom/redismodule.h
+cargo build
+```
+
+**Note:** The custom header file must be in its own directory (the build script uses the parent directory as an include path).
+
+The build script will validate that the specified file exists and use it instead of the default vendored header.
+
 # Redis Modules based on this crate
 
 The following are some modules that are built on this crate:
