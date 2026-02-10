@@ -1,0 +1,32 @@
+name: Open a release PR
+
+on:
+  workflow_dispatch: # Manual trigger only
+
+jobs:
+  # Create a PR with the new versions and changelog, preparing the next release.
+  # A release will be automatically published when the PR is merged into master.
+  release-pr:
+    name: Open a release PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: release-plz-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Run release-plz
+        uses: release-plz/action@v0.5
+        with:
+          command: release-pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
