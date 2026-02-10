@@ -634,6 +634,23 @@ fn test_call_blocking() -> Result<()> {
 }
 
 #[test]
+#[cfg(any(
+    feature = "min-redis-compatibility-version-7-4",
+    feature = "min-redis-compatibility-version-7-2"
+))]
+fn test_call_dump() -> Result<()> {
+    let mut con = TestConnection::new("call");
+
+    let res: String = redis::cmd("call.dump_test")
+        .query(&mut con)
+        .with_context(|| "failed to run call.dump_test")?;
+
+    assert_eq!(&res, "pass");
+
+    Ok(())
+}
+
+#[test]
 fn test_open_key_with_flags() -> Result<()> {
     let mut con = TestConnection::new("open_key_with_flags");
 
