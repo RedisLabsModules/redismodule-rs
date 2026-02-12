@@ -14,6 +14,7 @@ pub mod stream;
 
 pub mod configuration;
 mod context;
+pub mod dictionary;
 pub mod key;
 pub mod logging;
 mod macros;
