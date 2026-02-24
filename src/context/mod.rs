@@ -1393,4 +1393,9 @@ bitflags! {
         /// Redis is currently async loading database for diskless replication.
         const ASYNC_LOADING = raw::REDISMODULE_CTX_FLAGS_ASYNC_LOADING as c_int;
     }
+
+    #[cfg(feature = "experimental-api")]
+    pub fn emit_aof(&self, io: *mut raw::RedisModuleIO, command: &str, args: &[&str]) {
+        raw::emit_aof(self.ctx, io, command, args)
+    }
 }
