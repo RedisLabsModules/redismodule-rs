@@ -1,16 +1,10 @@
 #ifndef REDISMODULE_H
 #define REDISMODULE_H
 
-// clang-format off
-
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #define REDISMODULE_H_ENTERPRISE
 
@@ -48,7 +42,7 @@ typedef long long ustime_t;
 /* API versions. */
 #define REDISMODULE_APIVER_1 1
 
-/* Version of the RedisModuleTypeMethods structure. Once the RedisModuleTypeMethods
+/* Version of the RedisModuleTypeMethods structure. Once the RedisModuleTypeMethods 
  * structure is changed, this version number needs to be changed synchronistically. */
 #define REDISMODULE_TYPE_METHOD_VERSION 5
 
@@ -140,7 +134,7 @@ typedef long long ustime_t;
 #define REDISMODULE_HASH_CFIELDS     (1<<2)
 #define REDISMODULE_HASH_EXISTS      (1<<3)
 #define REDISMODULE_HASH_COUNT_ALL   (1<<4)
-#define REDISMODULE_HASH_EXPIRE_TIME (1<<5)
+#define REDISMODULE_HASH_EXPIRE_TIME (1<<5) 
 
 #define REDISMODULE_CONFIG_DEFAULT 0 /* This is the default for a module config. */
 #define REDISMODULE_CONFIG_IMMUTABLE (1ULL<<0) /* Can this value only be set at startup? */
@@ -389,13 +383,6 @@ typedef uint64_t RedisModuleTimerID;
  * This flag should not be used directly by the module.
  * Use RedisModule_GetModuleOptionsAll instead. */
 #define _REDISMODULE_OPTIONS_FLAGS_NEXT (1<<4)
-
-/* Fork-specific option flags. Placed at high bits to maintain ABI compatibility
- * with OSS Redis, which allocates option flags sequentially from bit 0. */
-
-/* Prevent direct-to-disk key writes during RDB loading and RESTORE in
- * BigRedis mode. See RM_SetModuleOptions for details. */
-#define REDISMODULE_OPTIONS_REQUIRE_LOADED_KEYS_IN_RAM    (1<<30)
 
 /* When set, Redis will not call RedisModule_MarkKeyAsDirty(), implicitly in
  * RedisModule_ModuleTypeSetValue, and the module needs to do that when manually when keys
@@ -702,7 +689,7 @@ static const RedisModuleEvent
     /* Deprecated since Redis 7.0, not used anymore. */
     __attribute__ ((deprecated))
     RedisModuleEvent_ReplBackup = {
-        REDISMODULE_EVENT_REPL_BACKUP,
+        REDISMODULE_EVENT_REPL_BACKUP, 
         1
     },
     RedisModuleEvent_ReplAsyncLoad = {
@@ -1193,16 +1180,7 @@ typedef struct RedisModuleTypeMethods {
 #define REDISMODULE_GET_API(name) \
     RedisModule_GetApi("RedisModule_" #name, ((void **)&RedisModule_ ## name))
 
-/* Default API declaration prefix.
- * IMPORTANT: When copying the header, make sure to keep this logic intact.
- * If REDISMODULE_MAIN is not defined, use 'extern' so that each translation
- * unit declares the symbols without defining them.
- * Only the file that defines REDISMODULE_MAIN (typically the one that calls
- * RedisModule_Init) will define the actual symbols. */
-#ifndef REDISMODULE_MAIN
-#define REDISMODULE_API extern
-#endif
-
+/* Default API declaration prefix (not 'extern' for backwards compatibility) */
 #ifndef REDISMODULE_API
 #define REDISMODULE_API
 #endif
@@ -2018,7 +1996,7 @@ static int RedisModule_Init(RedisModuleCtx *ctx, const char *name, int ver, int 
     REDISMODULE_GET_API(GetModuleUserFromUserName);
     REDISMODULE_GET_API(ACLCheckCommandPermissions);
     REDISMODULE_GET_API(ACLCheckKeyPermissions);
-    REDISMODULE_GET_API(ACLCheckKeyPrefixPermissions);
+    REDISMODULE_GET_API(ACLCheckKeyPrefixPermissions);    
     REDISMODULE_GET_API(ACLCheckChannelPermissions);
     REDISMODULE_GET_API(ACLAddLogEntry);
     REDISMODULE_GET_API(ACLAddLogEntryByUserName);
@@ -2123,9 +2101,4 @@ static int RedisModule_Init(RedisModuleCtx *ctx, const char *name, int ver, int 
 #define RMAPI_FUNC_SUPPORTED(func) (func != NULL)
 
 #endif /* REDISMODULE_CORE */
-
-#ifdef __cplusplus
-}
-#endif
-
 #endif /* REDISMODULE_H */
