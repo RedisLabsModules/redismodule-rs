@@ -516,6 +516,18 @@ struct RedisModuleCtx;
 struct RedisModuleDefragCtx;
 typedef void (*RedisModuleEventCallback)(struct RedisModuleCtx *ctx, RedisModuleEvent eid, uint64_t subevent, void *data);
 
+/* Big Module API - Callbacks
+ * ----------------------------
+ * Callback registered by modules for disk usage queries.
+ * This typedef is in the common section so it's visible to both core and modules. */
+#define REDISMODULE_BIG_CALLBACKS_VERSION 1
+typedef struct RedisModuleBigCallbacks {
+    uint64_t version;              /* Version of this structure for ABI compat. */
+    size_t (*getDiskUsage)(void);  /* Returns module's disk usage (SST files, etc.) */
+} RedisModuleBigCallbacksV1;
+
+#define RedisModuleBigCallbacks RedisModuleBigCallbacksV1
+
 /* IMPORTANT: When adding a new version of one of below structures that contain
  * event data (RedisModuleFlushInfoV1 for example) we have to avoid renaming the
  * old RedisModuleEvent structure.
@@ -1329,6 +1341,16 @@ REDISMODULE_API int (*RedisModule_RdbLoad)(RedisModuleCtx *ctx, RedisModuleRdbSt
 REDISMODULE_API int (*RedisModule_RdbSave)(RedisModuleCtx *ctx, RedisModuleRdbStream *stream, int flags) REDISMODULE_ATTR;
 REDISMODULE_API const char * (*RedisModule_GetInternalSecret)(RedisModuleCtx *ctx, size_t *len) REDISMODULE_ATTR;
 
+/* bigredis extensions
+ * -------------------*/
+REDISMODULE_API int (*RedisModule_BigModuleRegister)(RedisModuleCtx *ctx, RedisModuleBigCallbacks *callbacks) REDISMODULE_ATTR;
+REDISMODULE_API ssize_t (*RedisModule_BigWriteBufferBudgetInit)(RedisModuleCtx *ctx, int percentage) REDISMODULE_ATTR;
+REDISMODULE_API void (*RedisModule_BigWriteBufferBudgetRelease)(RedisModuleCtx *ctx) REDISMODULE_ATTR;
+REDISMODULE_API char* (*RedisModule_BigGetDbPath)(RedisModuleCtx *ctx, const char *index_name) REDISMODULE_ATTR;
+REDISMODULE_API int (*RedisModule_BigRegisterDb)(RedisModuleCtx *ctx, void *db_handle, void **cf_handles, size_t num_cf_handles) REDISMODULE_ATTR;
+REDISMODULE_API int (*RedisModule_BigRegisterDbAddCf)(RedisModuleCtx *ctx, void *db_handle, void *cf_handle) REDISMODULE_ATTR;
+REDISMODULE_API int (*RedisModule_BigUnregisterDb)(RedisModuleCtx *ctx, void *db_handle) REDISMODULE_ATTR;
+
 #define RedisModule_IsAOFClient(id) ((id) == UINT64_MAX)
 
 /* This is included inline inside each Redis module. */
@@ -1700,6 +1722,15 @@ static int RedisModule_InitAPI(RedisModuleCtx *ctx) {
     REDISMODULE_GET_API(RdbLoad);
     REDISMODULE_GET_API(RdbSave);
     REDISMODULE_GET_API(GetInternalSecret);
+
+    /* Bigredis Extensions */
+    REDISMODULE_GET_API(BigModuleRegister);
+    REDISMODULE_GET_API(BigWriteBufferBudgetInit);
+    REDISMODULE_GET_API(BigWriteBufferBudgetRelease);
+    REDISMODULE_GET_API(BigGetDbPath);
+    REDISMODULE_GET_API(BigRegisterDb);
+    REDISMODULE_GET_API(BigRegisterDbAddCf);
+    REDISMODULE_GET_API(BigUnregisterDb);
 }
 static int RedisModule_Init(RedisModuleCtx *ctx, const char *name, int ver, int apiver) {
     RedisModule_InitAPI(ctx);
