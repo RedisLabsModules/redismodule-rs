@@ -1647,6 +1647,16 @@ REDISMODULE_API const char *(*RedisModule_KeyTypeName)(RedisModuleKey *kp) REDIS
 REDISMODULE_API int (*RedisModule_ShardingGetKeySlot)(RedisModuleString *keyname) REDISMODULE_ATTR;
 REDISMODULE_API void (*RedisModule_ShardingGetSlotRange)(int *first_slot, int *last_slot) REDISMODULE_ATTR;
 
+/* bigredis extensions
+ * -------------------*/
+REDISMODULE_API int (*RedisModule_BigModuleRegister)(RedisModuleCtx *ctx, RedisModuleBigCallbacks *callbacks) REDISMODULE_ATTR;
+REDISMODULE_API ssize_t (*RedisModule_BigWriteBufferBudgetInit)(RedisModuleCtx *ctx, int percentage) REDISMODULE_ATTR;
+REDISMODULE_API void (*RedisModule_BigWriteBufferBudgetRelease)(RedisModuleCtx *ctx) REDISMODULE_ATTR;
+REDISMODULE_API char* (*RedisModule_BigGetDbPath)(RedisModuleCtx *ctx, const char *index_name) REDISMODULE_ATTR;
+REDISMODULE_API int (*RedisModule_BigRegisterDb)(RedisModuleCtx *ctx, void *db_handle, void **cf_handles, size_t num_cf_handles) REDISMODULE_ATTR;
+REDISMODULE_API int (*RedisModule_BigRegisterDbAddCf)(RedisModuleCtx *ctx, void *db_handle, void *cf_handle) REDISMODULE_ATTR;
+REDISMODULE_API int (*RedisModule_BigUnregisterDb)(RedisModuleCtx *ctx, void *db_handle) REDISMODULE_ATTR;
+
 #define RedisModule_IsAOFClient(id) ((id) == UINT64_MAX)
 
 /* This is included inline inside each Redis module. */
