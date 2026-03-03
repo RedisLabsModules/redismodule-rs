@@ -8,7 +8,7 @@ extern crate num_traits;
 
 use std::cmp::Ordering;
 use std::ffi::{c_ulonglong, CStr, CString};
-use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong, c_void};
+use std::os::raw::{c_char, c_double, c_int, c_long, c_longlong};
 use std::ptr;
 use std::slice;
 
@@ -200,8 +200,6 @@ extern "C" {
         module_version: c_int,
         api_version: c_int,
     ) -> c_int;
-
-    pub fn Export_RedisModule_InitAPI(ctx: *mut RedisModuleCtx) -> c_void;
 }
 
 ///////////////////////////////////////////////////////////////
