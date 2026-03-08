@@ -3,23 +3,9 @@ name: CI
 on: [pull_request]
 
 jobs:
-  get-nightly-version:
-    runs-on: ubuntu-latest
-    outputs:
-      nightly-version: ${{ steps.get-nightly.outputs.version }}
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-      - name: Get nightly version from rust-toolchain.toml
-        id: get-nightly
-        run: |
-          NIGHTLY_VERSION=$(grep 'channel = ' rust-toolchain.toml | sed 's/.*"\(.*\)".*/\1/')
-          echo "version=$NIGHTLY_VERSION" >> $GITHUB_OUTPUT
-
   test:
     name: Build and run the unit tests using the latest rust.
     runs-on: ${{ matrix.os }}
-    needs: get-nightly-version
     strategy:
       fail-fast: false
       matrix:
@@ -33,35 +19,34 @@ jobs:
           - [7-2, "7.2"]
         toolchain:
           - stable
-          - ${{ needs.get-nightly-version.outputs.nightly-version }}
 
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
-            submodules: recursive
+          submodules: recursive
 
       - name: Checkout redis sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
-            submodules: recursive
-            repository: redis/redis
-            ref: ${{ matrix.redis-version[1] }}
-            path: redis
+          submodules: recursive
+          repository: redis/redis
+          ref: ${{ matrix.redis-version[1] }}
+          path: redis
 
       - name: Install redis
         run: |
-            export HOMEBREW_NO_AUTO_UPDATE=1
-            cd redis
-            make -j
-            ./src/redis-server --version
-            make install PREFIX=/usr/local
-            redis-server --version
+          export HOMEBREW_NO_AUTO_UPDATE=1
+          cd redis
+          make -j
+          ./src/redis-server --version
+          make install PREFIX=/usr/local
+          redis-server --version
 
       - name: Setup python
         uses: actions/setup-python@v5
         with:
-            python-version: '3.10'
+          python-version: "3.10"
 
       - name: Install Clang (for bindgen)
         run: |
@@ -78,20 +63,10 @@ jobs:
 
       - name: Install toolchain
         id: tc
-        uses: dtolnay/rust-toolchain@master
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: ${{ matrix.toolchain }}
           components: rustfmt, clippy
-
-      - name: Setup cache
-        if: runner.os != 'macOS'
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-test-${{ matrix.toolchain }}-${{ hashFiles('**/Cargo.toml') }}
 
       - name: Format
         run: cargo fmt --all -- --check
