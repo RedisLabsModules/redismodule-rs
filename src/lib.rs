@@ -20,6 +20,7 @@ mod macros;
 mod utils;
 
 pub use crate::context::blocked::BlockedClient;
+pub use crate::context::command_filter::{CommandFilter, CommandFilterContext};
 pub use crate::context::thread_safe::{
     ContextGuard, DetachedFromClient, RedisGILGuard, RedisLockIndicator, ThreadSafeContext,
 };
