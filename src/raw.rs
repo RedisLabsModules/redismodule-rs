@@ -141,6 +141,8 @@ bitflags! {
         const MODULE = REDISMODULE_NOTIFY_MODULE;
         const LOADED = REDISMODULE_NOTIFY_LOADED;
         const MISSED = REDISMODULE_NOTIFY_KEY_MISS;
+        const OVERWRITTEN = REDISMODULE_NOTIFY_OVERWRITTEN;
+        const TYPE_CHANGED = REDISMODULE_NOTIFY_TYPE_CHANGED;
         /// Does not include the [`Self::MISSED`] and [`Self::NEW`].
         ///
         /// Includes [`Self::GENERIC`], [`Self::STRING`], [`Self::LIST`],
