@@ -23,3 +23,6 @@ dump.rdb
 .gdb_history
 
 venv/
+
+# Git worktrees
+.worktrees/
