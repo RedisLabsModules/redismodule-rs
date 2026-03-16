@@ -61,11 +61,11 @@ pub(crate) fn get_feature_flags(
     (
         all_lower_versions
             .into_iter()
-            .map(|s| quote!(feature = #s).into())
+            .map(|s| quote!(feature = #s))
             .collect(),
         all_upper_versions
             .into_iter()
-            .map(|s| quote!(feature = #s).into())
+            .map(|s| quote!(feature = #s))
             .collect(),
     )
 }
