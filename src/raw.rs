@@ -206,12 +206,13 @@ extern "C" {
 
 ///////////////////////////////////////////////////////////////
 
-pub const FMT: *const c_char = b"v\0".as_ptr().cast::<c_char>();
+pub const FMT: *const c_char = c"v".as_ptr().cast::<c_char>();
 
 // REDISMODULE_HASH_DELETE is defined explicitly here because bindgen cannot
 // parse typecasts in C macro constants yet.
 // See https://github.com/rust-lang/rust-bindgen/issues/316
-pub const REDISMODULE_HASH_DELETE: *const RedisModuleString = 1 as *const RedisModuleString;
+pub const REDISMODULE_HASH_DELETE: *const RedisModuleString =
+    std::ptr::dangling::<RedisModuleString>();
 
 // Helper functions for the raw bindings.
 

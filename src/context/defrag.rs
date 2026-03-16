@@ -29,11 +29,14 @@ unsafe impl RedisLockIndicator for DefragContext {}
 
 impl DefragContext {
     /// Creates a new [`DefragContext`] from a poiter to [`raw::RedisModuleDefragCtx`].
-    /// The function is considered unsafe because the provided pointer
-    /// must be a valid pointer to [`raw::RedisModuleDefragCtx`], and the Redis GIL must be held.
     /// The function is exposed for users that wants to implement the defrag function
     /// on their module datatype, they can use this function to create [`DefragContext`]
     /// that can be used in a safely manner.
+    ///
+    /// # Safety
+    ///
+    /// The function is considered unsafe because the provided pointer
+    /// must be a valid pointer to [`raw::RedisModuleDefragCtx`], and the Redis GIL must be held.
     /// Notice that the returned [`DefragContext`] borrows the pointer to [`raw::RedisModuleDefragCtx`]
     /// so it can not outlive it (this means that it should not be used once the defrag callback ends).
     pub unsafe fn new(defrag_ctx: *mut raw::RedisModuleDefragCtx) -> DefragContext {
@@ -120,12 +123,14 @@ impl DefragContext {
     /// If defragmentation was not necessary, NULL is returned and the operation has
     /// no other effect.
     ///
-    /// If a non-NULL value is returned, the caller should use the new pointer instead
-    /// of the old one and update any reference to the old pointer, which must not
-    /// be used again.
+    /// # Safety
     ///
     /// The function is unsafe because it is assumed that the pointer is valid and previusly
     /// allocated. It is considered undefined if this is not the case.
+    ///
+    /// If a non-NULL value is returned, the caller should use the new pointer instead
+    /// of the old one and update any reference to the old pointer, which must not
+    /// be used again.
     pub unsafe fn defrag_realloc<T>(&self, mut ptr: *mut T) -> *mut T {
         let new_ptr: *mut T = RedisModule_DefragAlloc
             .expect("RedisModule_DefragAlloc should be available.")(
