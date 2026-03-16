@@ -71,7 +71,8 @@ pub fn api(item: TokenStream) -> TokenStream {
             .fold(*API_OLDEST_VERSION, |min_api_version, item| {
                 // if we do not have a version mapping, we assume the API exists and return the minimum version.
                 let api_version = API_VERSION_MAPPING
-                    .get(&item.to_string()).copied()
+                    .get(&item.to_string())
+                    .copied()
                     .unwrap_or(*API_OLDEST_VERSION);
                 api_version.max(min_api_version)
             });
