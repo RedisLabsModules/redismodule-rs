@@ -14,7 +14,7 @@ fn timer_create(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 
     let timer_id = ctx.create_timer(Duration::from_millis(duration as u64), callback, data);
 
-    return Ok(format!("{}", timer_id).into());
+    Ok(format!("{}", timer_id).into())
 }
 
 fn timer_info(ctx: &Context, args: Vec<RedisString>) -> RedisResult {

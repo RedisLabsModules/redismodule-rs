@@ -20,7 +20,7 @@ fn test_helper_command_name(ctx: &Context, _args: Vec<RedisString>) -> RedisResu
 }
 
 fn test_helper_err(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
-    if args.len() < 1 {
+    if args.is_empty() {
         return Err(RedisError::WrongArity);
     }
 

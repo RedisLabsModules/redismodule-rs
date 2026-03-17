@@ -3,7 +3,7 @@ use std::thread;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use crate::utils::{get_redis_connection, start_redis_server_with_module, TestConnection};
+use crate::utils::TestConnection;
 use anyhow::Context;
 use anyhow::Result;
 use redis::{RedisError, RedisResult, Value};
@@ -168,7 +168,7 @@ fn test_string() -> Result<()> {
 
     redis::cmd("string.set")
         .arg(&["key", "value"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run string.set")?;
 
     let res: String = redis::cmd("string.get").arg(&["key"]).query(&mut con)?;
@@ -184,12 +184,12 @@ fn test_scan() -> Result<()> {
 
     redis::cmd("set")
         .arg(&["x", "1"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run string.set")?;
 
     redis::cmd("set")
         .arg(&["y", "1"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run string.set")?;
 
     let mut res: Vec<String> = redis::cmd("scan_keys").query(&mut con)?;
@@ -380,7 +380,7 @@ fn test_key_space_notifications() -> Result<()> {
     let res: usize = redis::cmd("events.num_key_miss").query(&mut con)?;
     assert_eq!(res, 0);
 
-    redis::cmd("GET").arg(&["x"]).query(&mut con)?;
+    redis::cmd("GET").arg(&["x"]).query::<()>(&mut con)?;
 
     let res: usize = redis::cmd("events.num_key_miss").query(&mut con)?;
     assert_eq!(res, 1);
@@ -416,7 +416,7 @@ fn test_server_event() -> Result<()> {
     let mut con = TestConnection::new("server_events");
 
     redis::cmd("flushall")
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run flushall")?;
 
     let res: i64 = redis::cmd("num_flushed").query(&mut con)?;
@@ -424,7 +424,7 @@ fn test_server_event() -> Result<()> {
     assert_eq!(res, 1);
 
     redis::cmd("flushall")
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run string.set")?;
 
     let res: i64 = redis::cmd("num_flushed").query(&mut con)?;
@@ -433,7 +433,7 @@ fn test_server_event() -> Result<()> {
 
     redis::cmd("config")
         .arg(&["set", "maxmemory", "1"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run string.set")?;
 
     let res: i64 = redis::cmd("num_max_memory_changes").query(&mut con)?;
@@ -442,7 +442,7 @@ fn test_server_event() -> Result<()> {
 
     redis::cmd("config")
         .arg(&["set", "maxmemory", "0"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run string.set")?;
 
     let res: i64 = redis::cmd("num_max_memory_changes").query(&mut con)?;
@@ -533,7 +533,7 @@ fn test_response() -> Result<()> {
 
     redis::cmd("hset")
         .arg(&["k", "a", "b", "c", "d", "e", "b", "f", "g"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run string.set")?;
 
     let mut res: Vec<String> = redis::cmd("map.mget")
@@ -657,19 +657,19 @@ fn test_open_key_with_flags() -> Result<()> {
     // Avoid active expriation
     redis::cmd("DEBUG")
         .arg(&["SET-ACTIVE-EXPIRE", "0"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run DEBUG SET-ACTIVE-EXPIRE")?;
 
     for cmd in ["open_key_with_flags.write", "open_key_with_flags.read"].into_iter() {
         redis::cmd("set")
             .arg(&["x", "1"])
-            .query(&mut con)
+            .query::<()>(&mut con)
             .with_context(|| "failed to run string.set")?;
 
         // Set experition time to 1 second.
         redis::cmd("pexpire")
             .arg(&["x", "1"])
-            .query(&mut con)
+            .query::<()>(&mut con)
             .with_context(|| "failed to run expire")?;
 
         // Sleep for 2 seconds, ensure expiration time has passed.
@@ -695,8 +695,8 @@ fn test_open_key_with_flags() -> Result<()> {
         assert_eq!(expired_keys, 0);
 
         // Delete key and reset stats
-        redis::cmd("del").arg(&["x"]).query(&mut con)?;
-        redis::cmd("config").arg(&["RESETSTAT"]).query(&mut con)?;
+        redis::cmd("del").arg(&["x"]).query::<()>(&mut con)?;
+        redis::cmd("config").arg(&["RESETSTAT"]).query::<()>(&mut con)?;
     }
 
     Ok(())
@@ -709,7 +709,7 @@ fn test_expire() -> Result<()> {
     // Create a key without TTL
     redis::cmd("set")
         .arg(&["key", "value"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run set")?;
 
     let ttl: i64 = redis::cmd("ttl").arg(&["key"]).query(&mut con)?;
@@ -718,7 +718,7 @@ fn test_expire() -> Result<()> {
     // Set TTL on the key
     redis::cmd("expire.cmd")
         .arg(&["key", "100"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run expire.cmd")?;
 
     let ttl: i64 = redis::cmd("ttl").arg(&["key"]).query(&mut con)?;
@@ -727,7 +727,7 @@ fn test_expire() -> Result<()> {
     // Remove TTL on the key
     redis::cmd("expire.cmd")
         .arg(&["key", "-1"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run expire.cmd")?;
 
     let ttl: i64 = redis::cmd("ttl").arg(&["key"]).query(&mut con)?;
@@ -743,22 +743,22 @@ fn test_defrag() -> Result<()> {
     // Configure active defrag
     redis::cmd("config")
         .arg(&["set", "hz", "100"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run 'config set hz 100'")?;
 
     redis::cmd("config")
         .arg(&["set", "active-defrag-ignore-bytes", "1"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run 'config set active-defrag-ignore-bytes 1'")?;
 
     redis::cmd("config")
         .arg(&["set", "active-defrag-threshold-lower", "0"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run 'config set active-defrag-threshold-lower 0'")?;
 
     redis::cmd("config")
         .arg(&["set", "active-defrag-cycle-min", "99"])
-        .query(&mut con)
+        .query::<()>(&mut con)
         .with_context(|| "failed to run 'config set active-defrag-cycle-min 99'")?;
 
     // enable active defrag
