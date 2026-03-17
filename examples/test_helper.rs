@@ -1,5 +1,5 @@
+use redis_module::InfoContext;
 use redis_module::{redis_module, Context, RedisError, RedisResult, RedisString};
-use redis_module::{InfoContext, Status};
 
 fn test_helper_version(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
     let ver = ctx.get_redis_version()?;
@@ -20,7 +20,7 @@ fn test_helper_command_name(ctx: &Context, _args: Vec<RedisString>) -> RedisResu
 }
 
 fn test_helper_err(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
-    if args.len() < 1 {
+    if args.is_empty() {
         return Err(RedisError::WrongArity);
     }
 
@@ -31,8 +31,15 @@ fn test_helper_err(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
 }
 
 fn add_info(ctx: &InfoContext, _for_crash_report: bool) {
-    if ctx.add_info_section(Some("test_helper")) == Status::Ok {
-        ctx.add_info_field_str("field", "value");
+    if let Ok(section) = ctx
+        .builder()
+        .add_section("test_helper")
+        .field("field", "value")
+    {
+        let Ok(section) = section.build_section() else {
+            return;
+        };
+        let _ = section.build_info();
     }
 }
 

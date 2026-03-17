@@ -2,7 +2,7 @@ use redis_module::{redis_module, Context, RedisError, RedisResult, RedisString, 
 
 fn keys_pos(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     // Number of args (excluding command name) must be even
-    if (args.len() - 1) % 2 != 0 {
+    if !(args.len() - 1).is_multiple_of(2) {
         return Err(RedisError::WrongArity);
     }
 

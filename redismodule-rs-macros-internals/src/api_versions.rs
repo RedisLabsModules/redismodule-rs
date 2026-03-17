@@ -32,6 +32,7 @@ lazy_static::lazy_static! {
         (70000, "min-redis-compatibility-version-7-0".to_string()),
         (70200, "min-redis-compatibility-version-7-2".to_string()),
         (70400, "min-redis-compatibility-version-7-4".to_string()),
+        (80000, "min-redis-compatibility-version-8-0".to_string()),
     ];
 }
 

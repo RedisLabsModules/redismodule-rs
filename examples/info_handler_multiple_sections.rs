@@ -17,7 +17,7 @@ fn add_info(ctx: &InfoContext, _for_crash_report: bool) -> RedisResult<()> {
     let data = InfoSection1 {
         field_1: "value1".to_owned(),
     };
-    let _ = ctx.build_one_section(data)?;
+    ctx.build_one_section(data)?;
 
     let data = InfoSection2 {
         field_2: "value2".to_owned(),

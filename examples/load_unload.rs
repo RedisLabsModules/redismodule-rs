@@ -1,14 +1,14 @@
+use std::sync::Mutex;
+
 use redis_module::{logging::RedisLogLevel, redis_module, Context, RedisString, Status};
 
-static mut GLOBAL_STATE: Option<String> = None;
+static GLOBAL_STATE: Mutex<Option<String>> = Mutex::new(None);
 
 fn init(ctx: &Context, args: &[RedisString]) -> Status {
-    let (before, after) = unsafe {
-        let before = GLOBAL_STATE.clone();
-        GLOBAL_STATE.replace(format!("Args passed: {}", args.join(", ")));
-        let after = GLOBAL_STATE.clone();
-        (before, after)
-    };
+    let mut state = GLOBAL_STATE.lock().unwrap();
+    let before = state.clone();
+    *state = Some(format!("Args passed: {}", args.join(", ")));
+    let after = state.clone();
     ctx.log(
         RedisLogLevel::Warning,
         &format!("Update global state on LOAD. BEFORE: {before:?}, AFTER: {after:?}",),
@@ -18,11 +18,9 @@ fn init(ctx: &Context, args: &[RedisString]) -> Status {
 }
 
 fn deinit(ctx: &Context) -> Status {
-    let (before, after) = unsafe {
-        let before = GLOBAL_STATE.take();
-        let after = GLOBAL_STATE.clone();
-        (before, after)
-    };
+    let mut state = GLOBAL_STATE.lock().unwrap();
+    let before = state.take();
+    let after = state.clone();
     ctx.log(
         RedisLogLevel::Warning,
         &format!("Update global state on UNLOAD. BEFORE: {before:?}, AFTER: {after:?}"),

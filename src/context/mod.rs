@@ -56,6 +56,7 @@ pub struct CallOptions {
 
 #[derive(Clone)]
 #[cfg(any(
+    feature = "min-redis-compatibility-version-8-0",
     feature = "min-redis-compatibility-version-7-4",
     feature = "min-redis-compatibility-version-7-2"
 ))]
