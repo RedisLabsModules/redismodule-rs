@@ -72,7 +72,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: cargo clippy --all-targets --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }},bindgen-runtime
+        run: cargo clippy --workspace --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }},bindgen-runtime
 
       - name: Build debug
         run: cargo build --no-default-features --features min-redis-compatibility-version-${{ matrix.redis-version[0] }},bindgen-runtime
