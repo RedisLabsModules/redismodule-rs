@@ -696,7 +696,9 @@ fn test_open_key_with_flags() -> Result<()> {
 
         // Delete key and reset stats
         redis::cmd("del").arg(&["x"]).query::<()>(&mut con)?;
-        redis::cmd("config").arg(&["RESETSTAT"]).query::<()>(&mut con)?;
+        redis::cmd("config")
+            .arg(&["RESETSTAT"])
+            .query::<()>(&mut con)?;
     }
 
     Ok(())
