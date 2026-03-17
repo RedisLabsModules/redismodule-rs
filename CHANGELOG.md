@@ -1,0 +1,531 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [2.0.8](https://github.com/RedisLabsModules/redismodule-rs/compare/redis-module-v2.0.7...redis-module-v2.0.8) - 2026-03-17
+
+### Fixed
+
+- add `to_raw_parts` method.
+- fix edition
+- fix RED-144347, made needed change to properly run on Redis 6. ([#403](https://github.com/RedisLabsModules/redismodule-rs/pull/403))
+- fixed error in sed command
+- fixed PR comments
+- fix build of code comments ([#278](https://github.com/RedisLabsModules/redismodule-rs/pull/278))
+- fix #272 add log_io_error ([#273](https://github.com/RedisLabsModules/redismodule-rs/pull/273))
+- fix mac CI ([#257](https://github.com/RedisLabsModules/redismodule-rs/pull/257))
+- update readies dep commit ([#255](https://github.com/RedisLabsModules/redismodule-rs/pull/255))
+- fix #207 add support for RedisModule_GetCurrentCommandName ([#208](https://github.com/RedisLabsModules/redismodule-rs/pull/208))
+- fix formating and import
+- fix broken examples
+- fix build
+- fix build
+- fix example ([#52](https://github.com/RedisLabsModules/redismodule-rs/pull/52))
+- fix compile error
+- fix README link to .so
+
+### Other
+
+- Revamp the CI pipeline, including publishing ([#428](https://github.com/RedisLabsModules/redismodule-rs/pull/428))
+- Fix clippy lints ([#456](https://github.com/RedisLabsModules/redismodule-rs/pull/456))
+- Remove crate-owner-add workflow ([#455](https://github.com/RedisLabsModules/redismodule-rs/pull/455))
+- Fix crash on dump command ([#440](https://github.com/RedisLabsModules/redismodule-rs/pull/440))
+- Add BigRedis extension APIs
+- Add missing license for common
+- Merge pull request #449 from LukeMathWalker/rebuild
+- Avoid unnecessary rebuilds by telling cargo which files should trigger one
+- fmt
+- CR
+- CR
+- CR
+- cargo fmt
+- MOD-8720 command proc macro: add acl and command arguments parameters
+- Merge pull request #426 add ScanKeyCursor from RedisLabsModules/tj/wip/additions_for_rs_load_document
+- Fix cargo login ([#430](https://github.com/RedisLabsModules/redismodule-rs/pull/430))
+- Add crate owner ([#429](https://github.com/RedisLabsModules/redismodule-rs/pull/429))
+- don't use manual ports
+- decouple the integration tests
+- Upgrade GitHub Actions and add testing for cargo registry token ([#422](https://github.com/RedisLabsModules/redismodule-rs/pull/422))
+- use feature to select bindgen in CI ([#421](https://github.com/RedisLabsModules/redismodule-rs/pull/421))
+- Disable default features on nix crate ([#414](https://github.com/RedisLabsModules/redismodule-rs/pull/414))
+- Add feature flags allowing for statically linking to libclang ([#413](https://github.com/RedisLabsModules/redismodule-rs/pull/413))
+- MOD-10709 Pin nightly Rust toolchain and update CI ([#418](https://github.com/RedisLabsModules/redismodule-rs/pull/418))
+- Added RM_GetInternalSecret to redismodule.h ([#407](https://github.com/RedisLabsModules/redismodule-rs/pull/407))
+- Add missing new line
+- Remove commented out code
+- Update redismodule.h
+- Fix the name use within the macro
+- MOD-8036 fix logic error in command registration with optional ACL categories ([#396](https://github.com/RedisLabsModules/redismodule-rs/pull/396))
+- MOD-8036 Add tests for 393 and 394 ([#395](https://github.com/RedisLabsModules/redismodule-rs/pull/395))
+- Merge pull request #376 from RedisLabsModules/simplify-the-integration-test-code
+- MOD-8036 move `AddACLCategory` to `redismodule-rs` ([#394](https://github.com/RedisLabsModules/redismodule-rs/pull/394))
+- add `RM_AddACLCategory` ([#393](https://github.com/RedisLabsModules/redismodule-rs/pull/393))
+- fmt
+- whitespace
+- initial commit
+- Delete unused files and directories
+- Split cargo fmt and clippy
+- Delete the FREEBSD CI
+- Install redis ourselves
+- Guard the call module under 7-2 in the tests
+- Revert to using macos-latest in CI
+- Delete the .circleci subdirectory
+- Specify macos-14 instead of macos-latest
+- Always test with redis 7.2
+- Remove the unused matrix parameter
+- Pass redis version tags as strings instead
+- Specify the redis tags and the features differently
+- Remove the empty string
+- Git checkout with submodules
+- Specify the features for clippy
+- Address the formatting
+- Install python and redis, split the steps
+- Fix the features specification
+- Add a simple CI workflow
+- Update the resource class for the circleci macos runner.
+- Fix the warning about getting an address of a static.
+- Update the CircleCI macos runner.
+- Update the deny.toml file.
+- Added support for defrag API. ([#387](https://github.com/RedisLabsModules/redismodule-rs/pull/387))
+- Derive the Default and Debug for the allocator.
+- Add new API to remove expiration for RedisKeyWritable. ([#276](https://github.com/RedisLabsModules/redismodule-rs/pull/276))
+- Move is_empty() in key.rs to its rightful place with the documentation. ([#282](https://github.com/RedisLabsModules/redismodule-rs/pull/282))
+- Allow subscribing only with the supported flags.
+- Log the unsupported event notification flags when registering the module's subscribers
+- Don't check the bans for the internal macros crate
+- Address the review comments
+- Add NEW key space notification flag
+- Update readies
+- Install openssl via brew in CircleCI for macOS x86
+- Bump xcode version in CircleCI
+- Use --locked for installing cargo deny
+- Add cargo deny support.
+- Avoid passing NULL into from_raw_parts in case there are zero arguments on module load. ([#371](https://github.com/RedisLabsModules/redismodule-rs/pull/371))
+- add_module_option_handle_repl_async_load
+- Fix is_enterprise function ([#369](https://github.com/RedisLabsModules/redismodule-rs/pull/369))
+- Added support for _proxy-filtered flag. ([#366](https://github.com/RedisLabsModules/redismodule-rs/pull/366))
+- patch toml before restoring cache
+- print cargo.toml
+- print cargo.toml in ci
+- updated config.yml
+- Update Cargo.toml
+- update cargo.toml
+- avoid std in regex
+- xcode version
+- fmt
+- reverted integration
+- Apply suggestions from code review
+- test is now verifying from outside
+- new bitmap type in key module - KeyFlags
+- sleep for 2 milis
+- test pass
+- test
+- wip
+- Add "Debug" to the context.
+- Add "Debug" to stream-related structs.
+- Add a Debug trait implementation for AclPermissions.
+- Force post notification job callback to static lifetime ([#357](https://github.com/RedisLabsModules/redismodule-rs/pull/357))
+- Merge branch 'master' into improve-the-info-handler
+- Don't stop adding sections on the first error.
+- Add multiple sections test
+- Split the info examples into more.
+- Simplify the info handler example
+- Split the info example into two.
+- Refactor the supported maps list again
+- Revert the previous info argument of redis_module! macro.
+- Provide more information on the compatible structs for the InfoSection derive.
+- Refactor the supported maps list
+- Correct the documentation
+- Rename InfoContext::build_from to build_one_section.
+- Revert to the old style of RedisResult.
+- Improves the info handler API.
+- Fix lifetime warning in Rust 1.70 ([#352](https://github.com/RedisLabsModules/redismodule-rs/pull/352))
+- Remove module name from log info and warning log messages ([#353](https://github.com/RedisLabsModules/redismodule-rs/pull/353))
+- Allow lock Redis from global detached context. ([#350](https://github.com/RedisLabsModules/redismodule-rs/pull/350))
+- Added cron server event. ([#349](https://github.com/RedisLabsModules/redismodule-rs/pull/349))
+- Make BlockingCallOptions public ([#347](https://github.com/RedisLabsModules/redismodule-rs/pull/347))
+- Added trimmed key space notification ([#345](https://github.com/RedisLabsModules/redismodule-rs/pull/345))
+- Fix arm build ([#344](https://github.com/RedisLabsModules/redismodule-rs/pull/344))
+- Added config changes server event ([#343](https://github.com/RedisLabsModules/redismodule-rs/pull/343))
+- The PR add support for blocking `RM_Call`. ([#333](https://github.com/RedisLabsModules/redismodule-rs/pull/333))
+- update readies for rocky ([#342](https://github.com/RedisLabsModules/redismodule-rs/pull/342))
+- Revert the "LogLevel" type in the root.
+- Corrects the mapping of logging levels between Rust and Redis.
+- Extend `RedisValue` derive macro. ([#338](https://github.com/RedisLabsModules/redismodule-rs/pull/338))
+- Implement From<bool> for RedisValue. ([#337](https://github.com/RedisLabsModules/redismodule-rs/pull/337))
+- Implements `RedisValue` derive proc macro. ([#335](https://github.com/RedisLabsModules/redismodule-rs/pull/335))
+- Correctly fire AofStarted event. ([#334](https://github.com/RedisLabsModules/redismodule-rs/pull/334))
+- The PR introduce a new proc macro for command registrations. ([#326](https://github.com/RedisLabsModules/redismodule-rs/pull/326))
+- Changed post notification job to recieve FnOnce. ([#329](https://github.com/RedisLabsModules/redismodule-rs/pull/329))
+- Use `BTreeMap` and `BTreeSet` in addition to `HashMap` and `HashSet`. ([#327](https://github.com/RedisLabsModules/redismodule-rs/pull/327))
+- Use the module context for the standard logging.
+- Provide the standard logging facility implementation.
+- Fix publish CI. ([#324](https://github.com/RedisLabsModules/redismodule-rs/pull/324))
+- Fix publish CI ([#323](https://github.com/RedisLabsModules/redismodule-rs/pull/323))
+- Fix publish CI ([#322](https://github.com/RedisLabsModules/redismodule-rs/pull/322))
+- Fix the CircleCI clang issues on Jammy.
+- Update README.md ([#320](https://github.com/RedisLabsModules/redismodule-rs/pull/320))
+- Update README.md ([#319](https://github.com/RedisLabsModules/redismodule-rs/pull/319))
+- Merge branch 'master' into dependabot/cargo/bindgen-0.65
+- Direct link to the API ([#291](https://github.com/RedisLabsModules/redismodule-rs/pull/291))
+- Fix string verbatim reply to work correctly. ([#315](https://github.com/RedisLabsModules/redismodule-rs/pull/315))
+- Updated reades ([#317](https://github.com/RedisLabsModules/redismodule-rs/pull/317))
+- Update Redis version on CI to 7.2-rc1. ([#314](https://github.com/RedisLabsModules/redismodule-rs/pull/314))
+- Fix the redis_module macro code.
+- Post notification API and API versioning ([#304](https://github.com/RedisLabsModules/redismodule-rs/pull/304))
+- Bump redis to 0.23 back.
+- Merge branch 'master' into delete-all-features
+- Update redis requirement from 0.22.1 to 0.23.0
+- Merge branch 'master' into dependabot/cargo/bitflags-2.1
+- Merge branch 'master' into custom-allocator-for-dependent-crates
+- Revert the accidentally removed tests.
+- Address the clippy lints
+- Don't run the example code when running tests.
+- Let the redis module implementation register the allocator.
+- The PR introduce small API fixes/changes. ([#302](https://github.com/RedisLabsModules/redismodule-rs/pull/302))
+- add RESP3 new APIs ([#280](https://github.com/RedisLabsModules/redismodule-rs/pull/280))
+- Added configuration API. ([#297](https://github.com/RedisLabsModules/redismodule-rs/pull/297))
+- Dependencies update; Use Redis 7; Added macOS/M1 build ([#299](https://github.com/RedisLabsModules/redismodule-rs/pull/299))
+- Update README.md ([#293](https://github.com/RedisLabsModules/redismodule-rs/pull/293))
+- Added RM_Call options ([#290](https://github.com/RedisLabsModules/redismodule-rs/pull/290))
+- Added API to register to server events. ([#267](https://github.com/RedisLabsModules/redismodule-rs/pull/267))
+- Added context mutex struct that allows to save static data protected by Redis GIL ([#296](https://github.com/RedisLabsModules/redismodule-rs/pull/296))
+- Added keymiss event support ([#289](https://github.com/RedisLabsModules/redismodule-rs/pull/289))
+- Adde API for ACL validation ([#294](https://github.com/RedisLabsModules/redismodule-rs/pull/294))
+- Implement Deref for RedisString that return a &[u8]. ([#292](https://github.com/RedisLabsModules/redismodule-rs/pull/292))
+- Added API to get ctx flags. ([#270](https://github.com/RedisLabsModules/redismodule-rs/pull/270))
+- Fix memory leak in `RedisKey::hash_get_multi` ([#233](https://github.com/RedisLabsModules/redismodule-rs/pull/233))
+- Use Python 3.9 instead of 3.6 ([#281](https://github.com/RedisLabsModules/redismodule-rs/pull/281))
+- Update bindgen requirement from 0.63 to 0.64 ([#279](https://github.com/RedisLabsModules/redismodule-rs/pull/279))
+- revert get-value lifetime changes ([#277](https://github.com/RedisLabsModules/redismodule-rs/pull/277))
+- clean some code warnings ([#269](https://github.com/RedisLabsModules/redismodule-rs/pull/269))
+- Fix rust-analyzer lint on __info_func__cb ([#239](https://github.com/RedisLabsModules/redismodule-rs/pull/239))
+- Make call function generic. ([#264](https://github.com/RedisLabsModules/redismodule-rs/pull/264))
+- Updated readies (rust 1.66.1 on macOS/x64) ([#274](https://github.com/RedisLabsModules/redismodule-rs/pull/274))
+- Added API to read and trim a stream. ([#266](https://github.com/RedisLabsModules/redismodule-rs/pull/266))
+- Added keys scan API. ([#265](https://github.com/RedisLabsModules/redismodule-rs/pull/265))
+- Fixed rust installation ([#268](https://github.com/RedisLabsModules/redismodule-rs/pull/268))
+- cleaning clippy warnings ([#253](https://github.com/RedisLabsModules/redismodule-rs/pull/253))
+- Refactor string DMA ([#263](https://github.com/RedisLabsModules/redismodule-rs/pull/263))
+- Added build of ARM platforms ([#261](https://github.com/RedisLabsModules/redismodule-rs/pull/261))
+- add a comment regarding the allocation alignment ([#258](https://github.com/RedisLabsModules/redismodule-rs/pull/258))
+- Update redis requirement from 0.21.0 to 0.22.1 ([#244](https://github.com/RedisLabsModules/redismodule-rs/pull/244))
+- Fix FreeBSD CI - avoid coyback to hos ([#256](https://github.com/RedisLabsModules/redismodule-rs/pull/256))
+- Update bindgen requirement from 0.60 to 0.63 ([#250](https://github.com/RedisLabsModules/redismodule-rs/pull/250))
+- update cargo edition to 2021 ([#227](https://github.com/RedisLabsModules/redismodule-rs/pull/227))
+- Add support for unlink ([#241](https://github.com/RedisLabsModules/redismodule-rs/pull/241))
+- updating xcode version ([#238](https://github.com/RedisLabsModules/redismodule-rs/pull/238))
+- `impl {Eq, Ord, Hash} for RedisString` ([#199](https://github.com/RedisLabsModules/redismodule-rs/pull/199))
+- Update bindgen requirement from 0.59 to 0.60
+- Add module info to crash report ([#230](https://github.com/RedisLabsModules/redismodule-rs/pull/230))
+- Update freebsd.yml
+- Update strum_macros requirement from 0.23 to 0.24
+- more pedantic and nursery clippy ([#222](https://github.com/RedisLabsModules/redismodule-rs/pull/222))
+- cleanup all clippy warnings ([#215](https://github.com/RedisLabsModules/redismodule-rs/pull/215))
+- Add get_redis_version command ([#184](https://github.com/RedisLabsModules/redismodule-rs/pull/184))
+- ol8 due to centos8 upstream issues ([#220](https://github.com/RedisLabsModules/redismodule-rs/pull/220))
+- update readies ([#219](https://github.com/RedisLabsModules/redismodule-rs/pull/219))
+- avoid crash on null in err reply string ([#218](https://github.com/RedisLabsModules/redismodule-rs/pull/218))
+- pinning readies ([#217](https://github.com/RedisLabsModules/redismodule-rs/pull/217))
+- Remove misleading comments "assume NULL terminated" ([#216](https://github.com/RedisLabsModules/redismodule-rs/pull/216))
+- clean some clippy warnings ([#212](https://github.com/RedisLabsModules/redismodule-rs/pull/212))
+- Add optional info function to redis_module macro ([#211](https://github.com/RedisLabsModules/redismodule-rs/pull/211))
+- clean clippy warnings ([#209](https://github.com/RedisLabsModules/redismodule-rs/pull/209))
+- add as_slice ([#202](https://github.com/RedisLabsModules/redismodule-rs/pull/202))
+- Update freebsd.yml
+- moved from Buster to Bullseye ([#190](https://github.com/RedisLabsModules/redismodule-rs/pull/190))
+- Fix in Makefile ([#201](https://github.com/RedisLabsModules/redismodule-rs/pull/201))
+- Avoid replying with CR or LF in simple string or error ([#200](https://github.com/RedisLabsModules/redismodule-rs/pull/200))
+- Expose `RedisModule_GetServerInfo` as a rust API ([#195](https://github.com/RedisLabsModules/redismodule-rs/pull/195))
+- lint restored ([#198](https://github.com/RedisLabsModules/redismodule-rs/pull/198))
+- Create freebsd.yml ([#189](https://github.com/RedisLabsModules/redismodule-rs/pull/189))
+- reformat files with ([#196](https://github.com/RedisLabsModules/redismodule-rs/pull/196))
+- Update strum_macros requirement from 0.22 to 0.23
+- Added trace to module crash report ([#192](https://github.com/RedisLabsModules/redismodule-rs/pull/192))
+- Update strum_macros requirement from 0.21 to 0.22
+- CircleCI modifications ([#185](https://github.com/RedisLabsModules/redismodule-rs/pull/185))
+- Update README.md
+- Handle Short Reads ([#178](https://github.com/RedisLabsModules/redismodule-rs/pull/178))
+- replaced base image of platforms-build ([#187](https://github.com/RedisLabsModules/redismodule-rs/pull/187))
+- debian change due to their release ([#186](https://github.com/RedisLabsModules/redismodule-rs/pull/186))
+- Silence bindgen UB warnings
+- Update Cargo.toml
+- automate crate release on release drafter ([#182](https://github.com/RedisLabsModules/redismodule-rs/pull/182))
+- Update cratesio-publish.yml
+- Update cratesio-publish.yml
+- Update cratesio-publish.yml
+- Update cratesio-publish.yml
+- Update cratesio-publish.yml
+- Update cratesio-publish.yml
+- Update cratesio-publish.yml
+- automate crate release on release drafter ([#176](https://github.com/RedisLabsModules/redismodule-rs/pull/176))
+- use c_char instead of i8 ([#180](https://github.com/RedisLabsModules/redismodule-rs/pull/180))
+- avoid string copy when sending reply ([#179](https://github.com/RedisLabsModules/redismodule-rs/pull/179))
+- Fix #171: use platform independent c_char type
+- Update redis requirement from 0.20.0 to 0.21.0 ([#170](https://github.com/RedisLabsModules/redismodule-rs/pull/170))
+- Update bindgen requirement from 0.58 to 0.59
+- update version to 0.21
+- add StringBuffer(Vec<u8>) support for RedisValue ([#161](https://github.com/RedisLabsModules/redismodule-rs/pull/161))
+- set s as const ([#167](https://github.com/RedisLabsModules/redismodule-rs/pull/167))
+- Add next_str to NextArg ([#162](https://github.com/RedisLabsModules/redismodule-rs/pull/162))
+- Clippy pedantic ([#163](https://github.com/RedisLabsModules/redismodule-rs/pull/163))
+- all platforms, all the time ([#166](https://github.com/RedisLabsModules/redismodule-rs/pull/166))
+- returning redis ([#164](https://github.com/RedisLabsModules/redismodule-rs/pull/164))
+- update version to 0.20.0
+- update version to 0.19.0
+- Move args from Vec<String> to Vec<RedisString> to reduce allocations ([#157](https://github.com/RedisLabsModules/redismodule-rs/pull/157))
+- Adding redis to mac ([#160](https://github.com/RedisLabsModules/redismodule-rs/pull/160))
+- Update README.md
+- mac everywhere, gh bye ([#159](https://github.com/RedisLabsModules/redismodule-rs/pull/159))
+- removing docker curl and executing, relying on the contents of github… ([#158](https://github.com/RedisLabsModules/redismodule-rs/pull/158))
+- timer callback data is static
+- cleanup ([#152](https://github.com/RedisLabsModules/redismodule-rs/pull/152))
+- Add integration test infrastructure for example modules ([#137](https://github.com/RedisLabsModules/redismodule-rs/pull/137))
+- update version to 0.18.0
+- Add Stream to KeyType ([#156](https://github.com/RedisLabsModules/redismodule-rs/pull/156))
+- Add `REDISMODULE_NOTIFY_LOADED` to NotifyEvent flags
+- Update strum_macros requirement from 0.20 to 0.21
+- static internal ctx ([#151](https://github.com/RedisLabsModules/redismodule-rs/pull/151))
+- update version to 0.17.0
+- Expose fn verify_type as public (to be used by RedisJSON isJSON API) ([#149](https://github.com/RedisLabsModules/redismodule-rs/pull/149))
+- update version to 0.16.0
+- Mark export_shared_api with necessary experimental-api feature (fix #147)
+- Upgrade to GitHub-native Dependabot
+- Changes from feature-search-json branch ([#144](https://github.com/RedisLabsModules/redismodule-rs/pull/144))
+- Build system modifications ([#142](https://github.com/RedisLabsModules/redismodule-rs/pull/142))
+- update version to 0.15.0
+- update redismodule api to 6.2.2 ([#141](https://github.com/RedisLabsModules/redismodule-rs/pull/141))
+- update version to v0.14
+- clean warnings ([#140](https://github.com/RedisLabsModules/redismodule-rs/pull/140))
+- Implement list operations ([#132](https://github.com/RedisLabsModules/redismodule-rs/pull/132))
+- Update strum_macros requirement from 0.19 to 0.20 ([#114](https://github.com/RedisLabsModules/redismodule-rs/pull/114))
+- Update bindgen requirement from 0.57 to 0.58 ([#138](https://github.com/RedisLabsModules/redismodule-rs/pull/138))
+- bump version to 0.12.0
+- Create release-drafter.yml
+- Create release-drafter-config.yml
+- add support for notify_keyspace_event ([#133](https://github.com/RedisLabsModules/redismodule-rs/pull/133))
+- Add support to delete hash fields
+- Allow the use of NextArg on Iter<&str> as well as Iter<String>
+- Drop lock early
+- Fix #123: Rename macro-generated functions to avoid potential name clash
+- Expose RedisModule_OnLoad args (Fixes #91)
+- Make init/deinit callback use high-level API
+- bump version
+- Make RedisKey public to allow users to have a reference to RedisKey
+- Allow accessing low level raw Redis Context pointer
+- Fix too-short lifetime of value used as pointer
+- Update bindgen requirement from 0.54 to 0.57
+- Fix all loglevels mistakenly set to debug
+- Map bindings for `REDISMODULE_NOTIFY_*` to the correct type
+- rustfmt
+- Expose SubscribeToKeyspaceEvents ([#77](https://github.com/RedisLabsModules/redismodule-rs/pull/77))
+- Allow more flexibility for type of multi-get iterator values
+- Provide an IntoIterator for the multi-get results
+- Add user-facing hash_get_multi functionality to key objects ([#112](https://github.com/RedisLabsModules/redismodule-rs/pull/112))
+- Release 0.11.0
+- Fix `unused` compiler warning
+- Make `ThreadSafeContext` `Sync` ([#110](https://github.com/RedisLabsModules/redismodule-rs/pull/110))
+- Fix reference to Context in `redis_command` macro ([#109](https://github.com/RedisLabsModules/redismodule-rs/pull/109))
+- Publically export `BlockedClient` and `DetachedFromClient` ([#108](https://github.com/RedisLabsModules/redismodule-rs/pull/108))
+- Add API for context-less logging ([#106](https://github.com/RedisLabsModules/redismodule-rs/pull/106))
+- Add infrastructure for exposing hash-multi-get functionality ([#105](https://github.com/RedisLabsModules/redismodule-rs/pull/105))
+- Add support for running module unload code ([#107](https://github.com/RedisLabsModules/redismodule-rs/pull/107))
+- Make the conversion of Error to RedisError conform to RESP convention ([#103](https://github.com/RedisLabsModules/redismodule-rs/pull/103))
+- Implement a conversion to RedisError from any type implementing the Error trait ([#102](https://github.com/RedisLabsModules/redismodule-rs/pull/102))
+- Fix usage of RedisModule_HashGet in raw::hash_get and RedisModule_HashSet in raw::hash_set ([#99](https://github.com/RedisLabsModules/redismodule-rs/pull/99))
+- Add method for converting RedisString to &str ([#98](https://github.com/RedisLabsModules/redismodule-rs/pull/98))
+- Add missing "experimental-api" feature
+- Allow sending ThreadSafeContext between threads
+- Add example for blocking client
+- Add example for blocking client
+- Provide client blocking and unblocking for ThreadSafeContext
+- Allow Reply functionality without locking the ThreadSafeContext
+- Add example module that uses ThreadSafeContext
+- Add idiomatic Rust API for ThreadSafeContext, based on std::sync::Mutex
+- update version to 0.10.0 ([#90](https://github.com/RedisLabsModules/redismodule-rs/pull/90))
+- clippy code cleanup ([#81](https://github.com/RedisLabsModules/redismodule-rs/pull/81))
+- Add support for server events (redis 6) ([#87](https://github.com/RedisLabsModules/redismodule-rs/pull/87))
+- add key_type to RedisKey ([#86](https://github.com/RedisLabsModules/redismodule-rs/pull/86))
+- bump version to 0.9.2
+- replace i8 with c_char ([#84](https://github.com/RedisLabsModules/redismodule-rs/pull/84))
+- Update bindgen requirement from 0.53 to 0.54 ([#82](https://github.com/RedisLabsModules/redismodule-rs/pull/82))
+- bump version
+- add Aux events ([#80](https://github.com/RedisLabsModules/redismodule-rs/pull/80))
+- Update README.md
+- rename action to macos
+- update version to 0.9.0
+- Update README
+- Improve macro hygiene by avoiding global `use` ([#73](https://github.com/RedisLabsModules/redismodule-rs/pull/73))
+- save_string should take `&str` instead of `&String` ([#71](https://github.com/RedisLabsModules/redismodule-rs/pull/71))
+- Update to bindgen 0.53, and revert to old size_t==usize behavior
+- Release version 0.8.0
+- Fix badge links ([#70](https://github.com/RedisLabsModules/redismodule-rs/pull/70))
+- Add badge for GitHub Action
+- Create GitHub Action for build and test
+- Add support for RedisModule_CreateTimer ([#67](https://github.com/RedisLabsModules/redismodule-rs/pull/67))
+- Use `test` feature workaround to avoid Redis allocator in tests
+- Workaround to allow test-specific code in dependencies
+- Code cleanups
+- complete migration to better redis allocator
+- cleaner way to use redis allocator
+- Clean up tests following is_keys_position_request merge
+- cargo fmt
+- Remove deprecated Error::description
+- Show how to use is_keys_position_request
+- Add support for RedisModule_IsKeysPositionRequest
+- Use consistent "null" terminology for NULL replies
+- Fix command key arguments
+- Remove unnecessary variables
+- Cleanups
+- adding firstkey, lastkey, and keystep to redis_module & redis_command macros
+- bump version
+- allign the allocations to the given layout.align() ([#60](https://github.com/RedisLabsModules/redismodule-rs/pull/60))
+- bump version to 0.6.0
+- Add support for hash_get/hash_set and Sring operations ([#58](https://github.com/RedisLabsModules/redismodule-rs/pull/58))
+- Update bindgen requirement from 0.51 to 0.52 ([#57](https://github.com/RedisLabsModules/redismodule-rs/pull/57))
+- Update README.md
+- prepare for publish
+- Update Cargo.toml
+- fmt code
+- Rename crate name to redis-module ([#43](https://github.com/RedisLabsModules/redismodule-rs/pull/43))
+- Update config.yml
+- Update config.yml
+- add replicate command to raw API ([#49](https://github.com/RedisLabsModules/redismodule-rs/pull/49))
+- add missing ThreadSafeContext methods and extend RM_CALL ([#37](https://github.com/RedisLabsModules/redismodule-rs/pull/37))
+- Display error ([#53](https://github.com/RedisLabsModules/redismodule-rs/pull/53))
+- Delete Cargo.lock
+- Next u64 ([#47](https://github.com/RedisLabsModules/redismodule-rs/pull/47))
+- Bump cc from 1.0.45 to 1.0.46 ([#44](https://github.com/RedisLabsModules/redismodule-rs/pull/44))
+- Bump libc from 0.2.62 to 0.2.65 ([#45](https://github.com/RedisLabsModules/redismodule-rs/pull/45))
+- move to std::time::Duration ([#46](https://github.com/RedisLabsModules/redismodule-rs/pull/46))
+- Bump bitflags from 1.2.0 to 1.2.1 ([#41](https://github.com/RedisLabsModules/redismodule-rs/pull/41))
+- Bump bindgen from 0.51.0 to 0.51.1 ([#38](https://github.com/RedisLabsModules/redismodule-rs/pull/38))
+- Bump bitflags from 1.1.0 to 1.2.0 ([#39](https://github.com/RedisLabsModules/redismodule-rs/pull/39))
+- Clean up build script a bit
+- Introduce the `experimental-api` feature
+- Update example with new aux data functions
+- Remove 'extern' to make sure callback symbols exist
+- Update redismodule.h from RediSearch
+- Add the Redis Enterprise functions
+- Fix the data_type example
+- Use the latest redismodule.h header version
+- Allow command to be any expression, not just an identifier
+- Bump cc from 1.0.42 to 1.0.45 ([#36](https://github.com/RedisLabsModules/redismodule-rs/pull/36))
+- Bump cc from 1.0.41 to 1.0.42 ([#34](https://github.com/RedisLabsModules/redismodule-rs/pull/34))
+- Make the bindgen generator to produce bindings for experimental api
+- add redis buffer ([#29](https://github.com/RedisLabsModules/redismodule-rs/pull/29))
+- add missing rdb load_* methods ([#28](https://github.com/RedisLabsModules/redismodule-rs/pull/28))
+- Add correctly typed constant
+- Avoid std::io before switching to Redis allocator
+- Switch to Redis allocator as early as possible to avoid mixed allocations
+- Add some new Redis Module Enterprise Fork APIs
+- Bump cc from 1.0.40 to 1.0.41 ([#27](https://github.com/RedisLabsModules/redismodule-rs/pull/27))
+- Remove RediSearch support (moved to separate crate)
+- Add support for converting Utf8Error to RedisError
+- Use updated redismodule.h to match redisearch-api-rs
+- Add macOS-specific linker flags to allow linking a dylib against missing symbols
+- Run optional user-supplied module init functions
+- Refactor RedisValue From converters and use Bulk Strings instead of Simple Strings ([#26](https://github.com/RedisLabsModules/redismodule-rs/pull/26))
+- cargo fmt
+- udpate deps
+- add call ([#24](https://github.com/RedisLabsModules/redismodule-rs/pull/24))
+- don't panic on UTF8 error ([#15](https://github.com/RedisLabsModules/redismodule-rs/pull/15))
+- Merge branch 'master' into cryptorelay-picks
+- cargo fmt
+- update deps
+- add llvm
+- Bump num-traits from 0.1.43 to 0.2.6
+- Bump bitflags from 1.0.4 to 1.1.0
+- Bump bindgen from 0.47.3 to 0.51.0
+- Update Cargo.toml
+- Update README.md
+- add license
+- add two more From Option<String> to RedisValue
+- add From<Vec<&String>> for RedisValue
+- add ParseIntError to RedisError
+- clean warnings
+- add get value for read only keys)
+- add into() from parse error to error
+- Breaking into scope blocks to make sure all memory allocated before we
+- K
+- Initial RediSearch API support with a working example
+- Support non-C++ linkage
+- Import redisearch_api.h
+- Remove some leftover dead code
+- Fix unit tests
+- Use static lifetime for constant
+- Add convenient REDIS_OK constant for return values
+- Distinguish between bulk and simple Redis strings
+- str returned SimpleString
+- send string as a simpleString
+- Update config.yml
+- Update config.yml
+- add Cargo.lock
+- Add usize to RedisValue converter
+- Update README.md
+- add circleci
+- Delete .gitmodules
+- add .gitmodules
+- Format with cargo fmt
+- More cleanups
+- Completed multi-command redis_module macro
+- Refactor macros: works
+- Add redis_command macro
+- Refactor module macro step 1: Expand manually
+- Macro cleanups
+- More API improvements
+- macro games
+- More cleanups
+- Native type works again: Removed mistaken freeing of memory
+- Clean up native types; still crashes
+- WIP
+- Cleanups
+- Cleanups
+- Implement From for RedisValue
+- cleanups
+- Refactor and add unit tests
+- Get rid of extra Vec
+- Map values with an iter
+- More cleanups
+- More Command wrapper improvements
+- Refactor to use better Command wrapper
+- Refactor into modules
+- Reallocate when setting existing key
+- Use Redis allocator for native types
+- Store custom type in a key
+- Use derive(Primite) for Redis module enums
+- Creating a native type works; added better error handling
+- Custom data type
+- add instructions for running the example module
+- WIP
+- More API cleanups
+- Higher level API for registering commands
+- Add another command to the example
+- Refactor code to be more static
+- Cleanups
+- Update README with credits
+- Clean up warnings
+- Implement module using high-level API
+- Port remaining FFI bindings from redis-cell project
+- Clean up and refactor helloraw module
+- Use bindgen and build helloraw module upon it
+- Update redismodules.h to Redis 5 version
+- Rename redismod to redismodule
+- Improve raw modules API
+- Add example Redis module
+- Make redismod a standalone crate
+- .gitignore
+- Add comment about using bindgen
+- Move from deprecated gcc crate to cc
+- Import redis module code from redis-cell
+- Create README.md
+- Initial commit
+
+### Removed
+
+- removed print cargo.toml
