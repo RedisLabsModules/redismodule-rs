@@ -433,20 +433,20 @@ pub fn info_command_handler(_attr: TokenStream, item: TokenStream) -> TokenStrea
 /// # Notes
 ///
 /// 1. The name of the struct is taken "as is", so if it starts with
-/// a capital letter (written in the "Upper Camel Case"), like in this
-/// example - `Info`, then it will be compiled into a string prefixed
-/// with the module name, ending up being `"module_name_Info"`-named
-/// section. The fields of the struct are also prefixed with the module
-/// name, so the `field_1` will be prefixed with `module_name_` as well.
+///    a capital letter (written in the "Upper Camel Case"), like in this
+///    example - `Info`, then it will be compiled into a string prefixed
+///    with the module name, ending up being `"module_name_Info"`-named
+///    section. The fields of the struct are also prefixed with the module
+///    name, so the `field_1` will be prefixed with `module_name_` as well.
 /// 2. In dictionaries, the type of dictionaries supported varies,
-/// for now it is [`std::collections::BTreeMap`] and
-/// [`std::collections::HashMap`].
+///    for now it is [`std::collections::BTreeMap`] and
+///    [`std::collections::HashMap`].
 /// 3. In dictionaries, the value type can be anything that can be
-/// converted into an object of type
-/// [`redis_module::InfoContextBuilderFieldBottomLevelValue`], for
-/// example, a [`std::string::String`] or [`u64`]. Please, refer to
-/// [`redis_module::InfoContextBuilderFieldBottomLevelValue`] for more
-/// information.
+///    converted into an object of type
+///    [`redis_module::InfoContextBuilderFieldBottomLevelValue`], for
+///    example, a [`std::string::String`] or [`u64`]. Please, refer to
+///    [`redis_module::InfoContextBuilderFieldBottomLevelValue`] for more
+///    information.
 #[proc_macro_derive(InfoSection)]
 pub fn info_section(item: TokenStream) -> TokenStream {
     info_section::info_section(item)

@@ -203,11 +203,11 @@ pub struct FindKeysNum {
 /// After Redis finds the location from where it needs to start looking for keys,
 /// Redis will start finding keys base on the information in this enum.
 /// There are 2 possible options:
-/// 1. Range -   Required to specify additional 3 more values, `last_key`, `steps`, and `limit`.
-/// 2. Keynum -  Required to specify additional 3 more values, `keynumidx`, `firstkey`, and `keystep`.
-///              Redis will consider the argument at `keynumidx` as an indicator
-///              to the number of keys that will follow. Then it will start
-///              from `firstkey` and jump each `keystep` to find the keys.
+/// 1. Range - Required to specify additional 3 more values, `last_key`, `steps`, and `limit`.
+/// 2. Keynum - Required to specify additional 3 more values, `keynumidx`, `firstkey`, and `keystep`.
+///    Redis will consider the argument at `keynumidx` as an indicator
+///    to the number of keys that will follow. Then it will start
+///    from `firstkey` and jump each `keystep` to find the keys.
 pub enum FindKeys {
     Range(FindKeysRange),
     Keynum(FindKeysNum),
@@ -358,6 +358,7 @@ pub struct RedisModuleCommandArg {
 }
 
 impl RedisModuleCommandArg {
+    #[expect(clippy::too_many_arguments)]
     pub fn new(
         name: String,
         type_: u32,
@@ -402,6 +403,7 @@ pub struct CommandInfo {
 }
 
 impl CommandInfo {
+    #[expect(clippy::too_many_arguments)]
     pub fn new(
         name: String,
         flags: Option<String>,

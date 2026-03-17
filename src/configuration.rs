@@ -227,6 +227,7 @@ extern "C" fn i64_configuration_get<T: ConfigurationValue<i64> + 'static>(
     private_data.get_val()
 }
 
+#[expect(clippy::too_many_arguments)]
 pub fn register_i64_configuration<T: ConfigurationValue<i64>>(
     ctx: &Context,
     name: &str,
