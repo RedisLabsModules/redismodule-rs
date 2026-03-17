@@ -2,7 +2,7 @@
 members = [".", "redismodule-rs-macros", "redismodule-rs-macros-internals"]
 
 [workspace.package]
-version = "2.0.7"
+version = "2.0.8"
 license = "BSD-3-Clause"
 edition = "2021"
 
