@@ -274,6 +274,7 @@ fn test_stream_reader() -> Result<()> {
 
 #[test]
 #[cfg(any(
+    feature = "min-redis-compatibility-version-8-0",
     feature = "min-redis-compatibility-version-7-4",
     feature = "min-redis-compatibility-version-7-2"
 ))]
@@ -312,7 +313,10 @@ fn test_get_current_user() -> Result<()> {
 }
 
 #[test]
-#[cfg(feature = "min-redis-compatibility-version-7-4")]
+#[cfg(any(
+    feature = "min-redis-compatibility-version-8-0",
+    feature = "min-redis-compatibility-version-7-4"
+))]
 fn test_set_acl_categories() -> Result<()> {
     let mut con = TestConnection::new("acl");
 
@@ -612,6 +616,7 @@ fn test_redis_value_derive() -> Result<()> {
 
 #[test]
 #[cfg(any(
+    feature = "min-redis-compatibility-version-8-0",
     feature = "min-redis-compatibility-version-7-4",
     feature = "min-redis-compatibility-version-7-2"
 ))]
@@ -635,6 +640,7 @@ fn test_call_blocking() -> Result<()> {
 
 #[test]
 #[cfg(any(
+    feature = "min-redis-compatibility-version-8-0",
     feature = "min-redis-compatibility-version-7-4",
     feature = "min-redis-compatibility-version-7-2"
 ))]

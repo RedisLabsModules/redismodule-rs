@@ -113,7 +113,7 @@ fn call_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
     Ok("pass".into())
 }
 
-fn call_blocking_internal(ctx: &Context) -> PromiseCallReply {
+fn call_blocking_internal(ctx: &Context) -> PromiseCallReply<'_, '_> {
     let call_options = CallOptionsBuilder::new().build_blocking();
     ctx.call_blocking("blpop", &call_options, &["list", "1"])
 }

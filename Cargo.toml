@@ -159,6 +159,7 @@ cc = "1"
 default = ["min-redis-compatibility-version-6-0", "bindgen-runtime"]
 
 # xor having minimum compatibility version
+min-redis-compatibility-version-8-0 = ["redis-module/min-redis-compatibility-version-8-0"]
 min-redis-compatibility-version-7-4 = ["redis-module/min-redis-compatibility-version-7-4"]
 min-redis-compatibility-version-7-2 = ["redis-module/min-redis-compatibility-version-7-2"]
 min-redis-compatibility-version-7-0 = ["redis-module/min-redis-compatibility-version-7-0"]
