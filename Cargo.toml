@@ -142,7 +142,7 @@ nix = { version = "0.26", default-features = false }
 cfg-if = "1"
 redis-module-macros-internals = { path = "./redismodule-rs-macros-internals" }
 log = "0.4"
-common = { path = "./common" }
+common = { path = "./common", package = "redis-module-common" }
 
 [dev-dependencies]
 anyhow = "1"
