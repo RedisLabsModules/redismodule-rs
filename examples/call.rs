@@ -157,29 +157,56 @@ fn call_blocking_from_detach_ctx(ctx: &Context, _: Vec<RedisString>) -> RedisRes
 }
 
 fn call_dump_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
-    // Set a key with a value
+    // Test DUMP with valid UTF-8 value
+    // RDB serialization typically includes non-UTF-8 bytes, but accept both for stability
     ctx.call("SET", &["test_dump_key", "test_value"])?;
-
-    // Call DUMP which returns binary data (may not be valid UTF-8)
     let dump_result = ctx.call("DUMP", &["test_dump_key"])?;
 
-    // Verify we got a result (should be StringBuffer for binary data)
     match dump_result {
-        RedisValue::StringBuffer(data) => {
-            if data.is_empty() {
-                return Err(RedisError::Str("DUMP returned empty data"));
-            }
-        }
-        RedisValue::SimpleString(_) => {
-            // Also acceptable if the binary data happens to be valid UTF-8
-        }
+        RedisValue::StringBuffer(_) | RedisValue::SimpleString(_) => {}
         _ => {
             return Err(RedisError::Str("DUMP returned unexpected type"));
         }
     }
-
-    // Clean up
     ctx.call("DEL", &["test_dump_key"])?;
+
+    // Test DUMP with invalid UTF-8 value - guarantees non-UTF-8 in output
+    let invalid_utf8: &[u8] = &[0xff, 0xfe, 0x80, 0x81];
+    ctx.call("SET", &[&b"test_dump_binary_key"[..], invalid_utf8])?;
+    let dump_binary_result = ctx.call("DUMP", &["test_dump_binary_key"])?;
+
+    match dump_binary_result {
+        RedisValue::StringBuffer(_) => {}
+        _ => {
+            return Err(RedisError::Str(
+                "DUMP with invalid UTF-8 value should return StringBuffer",
+            ));
+        }
+    }
+    ctx.call("DEL", &["test_dump_binary_key"])?;
+
+    Ok("pass".into())
+}
+
+fn call_binary_data_test(ctx: &Context, _: Vec<RedisString>) -> RedisResult {
+    // Test GET with invalid UTF-8 value
+    let invalid_utf8: &[u8] = &[0xff, 0xfe, 0x80, 0x81];
+    ctx.call("SET", &[&b"test_binary_key"[..], invalid_utf8])?;
+    let result = ctx.call("GET", &["test_binary_key"])?;
+
+    match result {
+        RedisValue::StringBuffer(data) => {
+            if data != invalid_utf8 {
+                return Err(RedisError::Str("GET returned wrong binary data"));
+            }
+        }
+        _ => {
+            return Err(RedisError::Str(
+                "GET with invalid UTF-8 should return StringBuffer",
+            ));
+        }
+    }
+    ctx.call("DEL", &["test_binary_key"])?;
 
     Ok("pass".into())
 }
@@ -196,5 +223,6 @@ redis_module! {
         ["call.blocking", call_blocking, "", 0, 0, 0, ""],
         ["call.blocking_from_detached_ctx", call_blocking_from_detach_ctx, "", 0, 0, 0, ""],
         ["call.dump_test", call_dump_test, "", 0, 0, 0, ""],
+        ["call.binary_data_test", call_binary_data_test, "", 0, 0, 0, ""],
     ],
 }

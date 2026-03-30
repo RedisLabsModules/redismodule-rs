@@ -657,6 +657,23 @@ fn test_call_dump() -> Result<()> {
 }
 
 #[test]
+#[cfg(any(
+    feature = "min-redis-compatibility-version-7-4",
+    feature = "min-redis-compatibility-version-7-2"
+))]
+fn test_call_binary_data() -> Result<()> {
+    let mut con = TestConnection::new("call");
+
+    let res: String = redis::cmd("call.binary_data_test")
+        .query(&mut con)
+        .with_context(|| "failed to run call.binary_data_test")?;
+
+    assert_eq!(&res, "pass");
+
+    Ok(())
+}
+
+#[test]
 fn test_open_key_with_flags() -> Result<()> {
     let mut con = TestConnection::new("open_key_with_flags");
 
