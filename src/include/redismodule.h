@@ -1910,6 +1910,8 @@ static int RedisModule_InitAPI(RedisModuleCtx *ctx) {
     REDISMODULE_GET_API(BigRegisterDb);
     REDISMODULE_GET_API(BigRegisterDbAddCf);
     REDISMODULE_GET_API(BigUnregisterDb);
+
+    return 0;
 }
 static int RedisModule_Init(RedisModuleCtx *ctx, const char *name, int ver, int apiver) {
     RedisModule_InitAPI(ctx);
