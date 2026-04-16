@@ -6,6 +6,10 @@
 // Workaround for https://github.com/rust-lang/rust-bindgen/issues/1651#issuecomment-848479168
 #[allow(deref_nullptr)]
 pub mod bindings {
+    #![expect(
+        clippy::missing_safety_doc,
+        reason = "The `RedisModuleSlotRangeArray` has an array field. And bindgen will try to generate an unsafe `as_slice()` method for this array."
+    )]
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
