@@ -1,5 +1,5 @@
+use crate::error::Error;
 use crate::raw;
-use crate::rediserror::RedisError;
 use crate::RedisBuffer;
 
 /// Wrapper around RedisModuleIO for type-safe serialization/deserialization.
@@ -25,7 +25,7 @@ impl RedisModuleIO {
     ///
     /// # Errors
     /// Returns an error if the operation fails or if an IO error occurred.
-    pub fn read_string(&mut self) -> Result<String, RedisError> {
+    pub fn read_string(&mut self) -> Result<String, Error> {
         let string_ptr = raw::load_string(self.io)?;
         Ok(string_ptr.to_string_lossy())
     }
@@ -39,9 +39,8 @@ impl RedisModuleIO {
     ///
     /// # Errors
     /// Returns an error if the operation fails or if an IO error occurred.
-    pub fn read_unsigned(&mut self) -> Result<u64, RedisError> {
-        let val = raw::load_unsigned(self.io)?;
-        Ok(val)
+    pub fn read_unsigned(&mut self) -> Result<u64, Error> {
+        raw::load_unsigned(self.io)
     }
 
     /// Writes an unsigned integer to the IO stream.
@@ -53,9 +52,8 @@ impl RedisModuleIO {
     ///
     /// # Errors
     /// Returns an error if the operation fails or if an IO error occurred.
-    pub fn read_signed(&mut self) -> Result<i64, RedisError> {
-        let val = raw::load_signed(self.io)?;
-        Ok(val)
+    pub fn read_signed(&mut self) -> Result<i64, Error> {
+        raw::load_signed(self.io)
     }
 
     /// Writes a signed integer to the IO stream.
@@ -67,9 +65,8 @@ impl RedisModuleIO {
     ///
     /// # Errors
     /// Returns an error if the operation fails or if an IO error occurred.
-    pub fn read_double(&mut self) -> Result<f64, RedisError> {
-        let val = raw::load_double(self.io)?;
-        Ok(val)
+    pub fn read_double(&mut self) -> Result<f64, Error> {
+        raw::load_double(self.io)
     }
 
     /// Writes a double to the IO stream.
@@ -81,9 +78,8 @@ impl RedisModuleIO {
     ///
     /// # Errors
     /// Returns an error if the operation fails or if an IO error occurred.
-    pub fn read_float(&mut self) -> Result<f32, RedisError> {
-        let val = raw::load_float(self.io)?;
-        Ok(val)
+    pub fn read_float(&mut self) -> Result<f32, Error> {
+        raw::load_float(self.io)
     }
 
     /// Writes a float to the IO stream.
@@ -95,9 +91,8 @@ impl RedisModuleIO {
     ///
     /// # Errors
     /// Returns an error if the operation fails or if an IO error occurred.
-    pub fn read_string_buffer(&mut self) -> Result<RedisBuffer, RedisError> {
-        let buffer = raw::load_string_buffer(self.io)?;
-        Ok(buffer)
+    pub fn read_string_buffer(&mut self) -> Result<RedisBuffer, Error> {
+        raw::load_string_buffer(self.io)
     }
 
     /// Writes a slice to the IO stream.
