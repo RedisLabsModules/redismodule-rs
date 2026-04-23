@@ -49,6 +49,8 @@ bitflags! {
         const NOEFFECTS = REDISMODULE_OPEN_KEY_NOEFFECTS as c_int;
         /// Access lazy expire fields
         const ACCESS_EXPIRED = REDISMODULE_OPEN_KEY_ACCESS_EXPIRED as c_int;
+        /// From redismodule.h: "Allow access trimmed key that haven't deleted yet"
+        const ACCESS_TRIMMED = REDISMODULE_OPEN_KEY_ACCESS_TRIMMED as c_int;
     }
 }
 
