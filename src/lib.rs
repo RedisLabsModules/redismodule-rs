@@ -4,6 +4,7 @@ extern crate num_traits;
 pub mod alloc;
 pub mod apierror;
 pub mod error;
+pub mod io;
 pub mod native_types;
 pub mod raw;
 pub mod rediserror;
@@ -23,6 +24,7 @@ pub use crate::context::blocked::BlockedClient;
 pub use crate::context::thread_safe::{
     ContextGuard, DetachedFromClient, RedisGILGuard, RedisLockIndicator, ThreadSafeContext,
 };
+pub use crate::io::RedisModuleIO;
 pub use crate::raw::NotifyEvent;
 
 pub use crate::configuration::ConfigurationValue;
