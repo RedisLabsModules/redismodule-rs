@@ -3,9 +3,9 @@ name = "redis-module-macros"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 authors = ["Meir Shpilraien <meir@redis.com>"]
 description = "A macros crate for redismodule-rs"
-repository = "https://github.com/RedisLabsModules/redismodule-rs"
 keywords = ["redis", "plugin"]
 categories = ["database", "api-bindings"]
 

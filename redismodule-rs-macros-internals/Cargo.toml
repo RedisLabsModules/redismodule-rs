@@ -5,7 +5,7 @@ description = "A macros crate for redismodule-rs"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-repository = "https://github.com/RedisLabsModules/redismodule-rs"
+repository.workspace = true
 keywords = ["redis", "plugin"]
 categories = ["database", "api-bindings"]
 
