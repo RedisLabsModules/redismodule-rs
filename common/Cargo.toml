@@ -1,8 +1,11 @@
 [package]
 name = "redis-module-common"
 version = "0.1.1"
-edition = "2021"
-license = "BSD-3-Clause"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Internal utility library shared by the user-facing redis-module-* crates"
+keywords = ["redis", "plugin"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
