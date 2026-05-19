@@ -16,6 +16,7 @@ use crate::raw;
 use crate::redismodule::REDIS_OK;
 pub use crate::redisraw::bindings::*;
 use crate::stream::StreamIterator;
+use crate::Context;
 use crate::RedisError;
 use crate::RedisResult;
 use crate::RedisString;
@@ -113,6 +114,13 @@ impl RedisKey {
         let value = unsafe { &*value };
 
         Ok(Some(value))
+    }
+
+    pub fn name(&self) -> RedisString {
+        let str = unsafe { raw::RedisModule_GetKeyNameFromModuleKey.unwrap()(self.key_inner) };
+        let str = RedisString::from_redis_module_string(self.ctx, str.cast_mut());
+
+        str.safe_clone(&Context::new(self.ctx))
     }
 
     /// # Panics
