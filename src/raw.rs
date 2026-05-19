@@ -512,7 +512,8 @@ where
     let fields = fields
         .iter()
         .map(|e| CString::new(e.clone()))
-        .collect::<Result<Vec<CString>, _>>()?;
+        .collect::<Result<Vec<CString>, _>>()
+        .map_err(RedisError::InvalidHashFieldName)?;
 
     let mut fi = fields.iter();
     let mut vi = values.iter_mut();
