@@ -148,11 +148,11 @@ impl RedisKey {
         }
     }
 
-    pub fn hash_get(&self, field: &str) -> Result<Option<RedisString>, RedisError> {
+    pub fn hash_get(&self, field: impl AsRef<[u8]>) -> Result<Option<RedisString>, RedisError> {
         let val = if self.is_null() {
             None
         } else {
-            hash_mget_key(self.ctx, self.key_inner, &[field])?
+            hash_mget_key(self.ctx, self.key_inner, &[field.as_ref()])?
                 .pop()
                 .expect("hash_mget_key should return vector of same length as input")
         };
