@@ -30,6 +30,13 @@ fn test_helper_err(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     Ok(().into())
 }
 
+fn test_helper_random_key(ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+    match ctx.random_key() {
+        Some(key) => Ok(key.into()),
+        None => Ok(().into()),
+    }
+}
+
 fn add_info(ctx: &InfoContext, _for_crash_report: bool) {
     if let Ok(section) = ctx
         .builder()
@@ -56,5 +63,6 @@ redis_module! {
         ["test_helper._version_rm_call", test_helper_version_rm_call, "", 0, 0, 0, ""],
         ["test_helper.name", test_helper_command_name, "", 0, 0, 0, ""],
         ["test_helper.err", test_helper_err, "", 0, 0, 0, ""],
+        ["test_helper.random_key", test_helper_random_key, "", 0, 0, 0, ""],
     ],
 }
