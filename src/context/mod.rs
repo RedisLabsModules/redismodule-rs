@@ -29,6 +29,7 @@ mod timer;
 
 pub mod blocked;
 pub mod call_reply;
+pub mod command_filter;
 pub mod commands;
 pub mod defrag;
 pub mod info;
