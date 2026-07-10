@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Other
 
 - Skip versions 2.1.0 through 2.1.3. These exist as git tags on the `2.1` branch and were not published to crates.io. All changes from that branch are included in this release.
+- Add release-plz configuration: `redis-module` releases are tagged and named `v<version>`, matching the existing tag format, and marked as the latest GitHub release.
 
 ## [2.0.8](https://github.com/RedisLabsModules/redismodule-rs/compare/redis-module-v2.0.7...redis-module-v2.0.8) - 2026-05-04
 
