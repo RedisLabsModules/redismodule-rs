@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0](https://github.com/RedisLabsModules/redismodule-rs/compare/redis-module-macros-v2.0.8...redis-module-macros-v2.2.0) - 2026-07-09
+
+### Other
+
+- No functional changes. The version moves with the workspace from 2.0.8 to 2.2.0.
+
 ## [2.0.8](https://github.com/RedisLabsModules/redismodule-rs/compare/redis-module-macros-v2.0.7...redis-module-macros-v2.0.8) - 2026-05-04
 
 ### Fixed
