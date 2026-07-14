@@ -77,7 +77,7 @@ macro_rules! redis_command {
                         $ctx,
                         &format!(
                             "Warning: failed to set command `{}` ACL categories `{}`",
-                            $command_name, acl_categories.to_str().unwrap()
+                            $command_name, &acl_categories.to_string_lossy()
                         ),
                     );
                 }
@@ -129,7 +129,7 @@ macro_rules! redis_event_handler {
             $event_handler(
                 &context,
                 $crate::NotifyEvent::from_bits_truncate(event_type),
-                event_str.to_str().unwrap(),
+                &event_str.to_string_lossy(),
                 redis_key,
             );
 
