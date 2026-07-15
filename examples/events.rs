@@ -1,11 +1,15 @@
 use redis_module::{
-    redis_module, Context, NotifyEvent, RedisError, RedisResult, RedisString, RedisValue, Status,
+    raw, redis_module, Context, NotifyEvent, RedisError, RedisResult, RedisString, RedisValue,
+    Status,
 };
+use std::ffi::CString;
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::Mutex;
 
 static NUM_KEY_MISSES: AtomicI64 = AtomicI64::new(0);
 static NUM_KEYS: AtomicI64 = AtomicI64::new(0);
+static LAST_GENERIC_EVENT: Mutex<String> = Mutex::new(String::new());
 
 fn on_event(ctx: &Context, event_type: NotifyEvent, event: &str, key: &[u8]) {
     if key == b"num_sets" {
@@ -45,6 +49,39 @@ fn event_send(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     }
 }
 
+fn on_generic(_ctx: &Context, _event_type: NotifyEvent, event: &str, _key: &[u8]) {
+    *LAST_GENERIC_EVENT.lock().unwrap() = event.to_string();
+}
+
+fn event_send_invalid_utf8(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+    if args.len() > 1 {
+        return Err(RedisError::WrongArity);
+    }
+
+    let key_name = RedisString::create(NonNull::new(ctx.ctx), "mykey");
+    // Fire a keyspace event whose name is not valid UTF-8 (0xFF can never
+    // appear in a UTF-8 string), the way a C module could. This has to go
+    // through the raw API because the safe wrapper only accepts &str.
+    let event = CString::new(&b"ev\xFFnt"[..]).unwrap();
+    let status: Status = unsafe {
+        raw::RedisModule_NotifyKeyspaceEvent.unwrap()(
+            ctx.ctx,
+            NotifyEvent::GENERIC.bits(),
+            event.as_ptr(),
+            key_name.inner,
+        )
+    }
+    .into();
+    match status {
+        Status::Ok => Ok("Event sent".into()),
+        Status::Err => Err(RedisError::Str("Generic error")),
+    }
+}
+
+fn last_generic_event(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
+    Ok(LAST_GENERIC_EVENT.lock().unwrap().clone().into())
+}
+
 fn on_key_miss(_ctx: &Context, _event_type: NotifyEvent, _event: &str, _key: &[u8]) {
     NUM_KEY_MISSES.fetch_add(1, Ordering::SeqCst);
 }
@@ -69,11 +106,14 @@ redis_module! {
     data_types: [],
     commands: [
         ["events.send", event_send, "", 0, 0, 0, ""],
+        ["events.send_invalid_utf8", event_send_invalid_utf8, "", 0, 0, 0, ""],
+        ["events.last_generic_event", last_generic_event, "", 0, 0, 0, ""],
         ["events.num_key_miss", num_key_miss, "", 0, 0, 0, ""],
         ["events.num_keys", num_keys, "", 0, 0, 0, ""],
     ],
     event_handlers: [
         [@STRING: on_event],
+        [@GENERIC: on_generic],
         [@STREAM: on_stream],
         [@MISSED: on_key_miss],
         [@NEW: on_new_key],

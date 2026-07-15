@@ -398,6 +398,27 @@ fn test_key_space_notifications() -> Result<()> {
 }
 
 #[test]
+fn test_key_space_notification_with_invalid_utf8_event_name() -> Result<()> {
+    let mut con = TestConnection::new("events");
+
+    // Fires a keyspace event whose name contains the byte 0xFF, which is
+    // never valid UTF-8. The event handler must not panic on it.
+    let res: String = redis::cmd("events.send_invalid_utf8").query(&mut con)?;
+    assert_eq!(res, "Event sent");
+
+    // The handler received the event name with the invalid byte replaced
+    // by U+FFFD (lossy conversion).
+    let res: String = redis::cmd("events.last_generic_event").query(&mut con)?;
+    assert_eq!(res, "ev\u{FFFD}nt");
+
+    // The server survived.
+    let res: String = redis::cmd("PING").query(&mut con)?;
+    assert_eq!(res, "PONG");
+
+    Ok(())
+}
+
+#[test]
 fn test_context_mutex() -> Result<()> {
     let mut con = TestConnection::new("threads");
 
