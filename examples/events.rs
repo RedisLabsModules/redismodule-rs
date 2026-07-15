@@ -63,6 +63,12 @@ fn event_send_invalid_utf8(ctx: &Context, args: Vec<RedisString>) -> RedisResult
     // appear in a UTF-8 string), the way a C module could. This has to go
     // through the raw API because the safe wrapper only accepts &str.
     let event = CString::new(&b"ev\xFFnt"[..]).unwrap();
+    // SAFETY: `RedisModule_NotifyKeyspaceEvent` is set by Redis before any
+    // command handler runs, so the `unwrap` cannot fail. `ctx.ctx` is the
+    // valid context passed to this command invocation, `event` is a
+    // NUL-terminated C string that outlives the call, and `key_name.inner`
+    // is a valid `RedisModuleString` owned by `key_name` for the duration
+    // of the call.
     let status: Status = unsafe {
         raw::RedisModule_NotifyKeyspaceEvent.unwrap()(
             ctx.ctx,
