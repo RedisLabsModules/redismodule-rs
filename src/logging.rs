@@ -28,6 +28,18 @@ impl From<log::Level> for RedisLogLevel {
     }
 }
 
+/// Turn an arbitrary log message into a `CString` that can never fail to
+/// build. Redis keys are binary-safe and log messages routinely interpolate
+/// client-controlled bytes, so a message may contain an interior NUL, the one
+/// byte `CString::new` rejects. Escaping NUL to `\0` keeps the log line total
+/// and diagnostic instead of panicking across the FFI boundary and aborting the
+/// server. The `unwrap_or_else` fallback is unreachable (the input no longer
+/// contains NUL) but avoids a second `unwrap`.
+fn sanitize_message(message: &str) -> CString {
+    CString::new(message.replace('\0', "\\0"))
+        .unwrap_or_else(|_| CString::new("<unloggable message>").unwrap())
+}
+
 pub(crate) fn log_internal<L: Into<RedisLogLevel>>(
     ctx: *mut raw::RedisModuleCtx,
     level: L,
@@ -38,7 +50,7 @@ pub(crate) fn log_internal<L: Into<RedisLogLevel>>(
     }
 
     let level = CString::new(level.into().as_ref()).unwrap();
-    let fmt = CString::new(message).unwrap();
+    let fmt = sanitize_message(message);
     unsafe {
         raw::RedisModule_Log.expect(NOT_INITIALISED_MESSAGE)(ctx, level.as_ptr(), fmt.as_ptr())
     }
@@ -52,7 +64,7 @@ pub fn log_io_error(io: *mut raw::RedisModuleIO, level: RedisLogLevel, message: 
         return;
     }
     let level = CString::new(level.as_ref()).unwrap();
-    let fmt = CString::new(message).unwrap();
+    let fmt = sanitize_message(message);
     unsafe {
         raw::RedisModule_LogIOError.expect(NOT_INITIALISED_MESSAGE)(
             io,
@@ -194,3 +206,23 @@ pub mod standard_log_implementation {
     }
 }
 pub use standard_log_implementation::*;
+
+#[cfg(test)]
+mod tests {
+    use super::sanitize_message;
+
+    #[test]
+    fn sanitize_message_passes_through_clean_messages() {
+        assert_eq!(
+            sanitize_message("plain message").to_bytes(),
+            b"plain message"
+        );
+    }
+
+    #[test]
+    fn sanitize_message_escapes_interior_nul() {
+        // A NUL byte would make `CString::new` fail; it must be escaped, not
+        // rejected. This is the case that used to panic across the FFI boundary.
+        assert_eq!(sanitize_message("key=a\0b").to_bytes(), b"key=a\\0b");
+    }
+}
