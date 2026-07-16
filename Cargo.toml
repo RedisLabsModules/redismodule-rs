@@ -2,7 +2,7 @@
 members = [".", "redismodule-rs-macros", "redismodule-rs-macros-internals"]
 
 [workspace.package]
-version = "2.0.8"
+version = "2.2.0"
 license = "BSD-3-Clause"
 edition = "2021"
 repository = "https://github.com/RedisLabsModules/redismodule-rs"
@@ -141,7 +141,7 @@ linkme = "0.3"
 serde = { version = "1", features = ["derive"] }
 nix = { version = "0.26", default-features = false }
 cfg-if = "1"
-redis-module-macros-internals = { path = "./redismodule-rs-macros-internals", version = "2.0.8" }
+redis-module-macros-internals = { path = "./redismodule-rs-macros-internals", version = "2.2.0" }
 log = "0.4"
 common = { path = "./common", package = "redis-module-common", version = "0.1.1" }
 
