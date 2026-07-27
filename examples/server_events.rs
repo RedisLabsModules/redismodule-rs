@@ -10,7 +10,6 @@ use redis_module_macros::{
 static NUM_FLUSHES: AtomicI64 = AtomicI64::new(0);
 static NUM_CRONS: AtomicI64 = AtomicI64::new(0);
 static NUM_MAX_MEMORY_CONFIGURATION_CHANGES: AtomicI64 = AtomicI64::new(0);
-static NUM_SHUTDOWNS: AtomicI64 = AtomicI64::new(0);
 
 #[flush_event_handler]
 fn flushed_event_handler(_ctx: &Context, flush_event: FlushSubevent) {
@@ -33,8 +32,8 @@ fn cron_event_handler(_ctx: &Context, _hz: u64) {
 }
 
 #[shutdown_event_handler]
-fn shutdown_event_handler(_ctx: &Context) {
-    NUM_SHUTDOWNS.fetch_add(1, Ordering::SeqCst);
+fn shutdown_event_handler(ctx: &Context) {
+    ctx.log_notice("server_events: received shutdown event, goodbye!");
 }
 
 fn num_flushed(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
@@ -51,10 +50,6 @@ fn num_maxmemory_changes(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult
     ))
 }
 
-fn num_shutdowns(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {
-    Ok(RedisValue::Integer(NUM_SHUTDOWNS.load(Ordering::SeqCst)))
-}
-
 //////////////////////////////////////////////////////
 
 redis_module! {
@@ -66,6 +61,5 @@ redis_module! {
         ["num_flushed", num_flushed, "readonly", 0, 0, 0, ""],
         ["num_max_memory_changes", num_maxmemory_changes, "readonly", 0, 0, 0, ""],
         ["num_crons", num_crons, "readonly", 0, 0, 0, ""],
-        ["num_shutdowns", num_shutdowns, "readonly", 0, 0, 0, ""],
     ],
 }
