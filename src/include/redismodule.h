@@ -80,6 +80,11 @@ typedef long long ustime_t;
 #define REDISMODULE_LIST_HEAD 0
 #define REDISMODULE_LIST_TAIL 1
 
+/* Flags for RedisModule_SwapPrefetchKey */
+#define REDISMODULE_SWAP_PREFETCH_FLAG_NOONE 0
+#define REDISMODULE_SWAP_PREFETCH_FLAG_NO_TOUCH (1<<0)
+#define REDISMODULE_SWAP_PREFETCH_FLAG_NO_DUP (1<<1) /* skip if already scheduled. */
+
 /* Key types. */
 #define REDISMODULE_KEYTYPE_EMPTY 0
 #define REDISMODULE_KEYTYPE_STRING 1
@@ -1476,6 +1481,10 @@ REDISMODULE_API const char * (*RedisModule_GetInternalSecret)(RedisModuleCtx *ct
 
 /* bigredis extensions
  * -------------------*/
+typedef void (*RedisModuleSwapPrefetchCB)(RedisModuleCtx *ctx, RedisModuleString *key, void* user_data);
+
+REDISMODULE_API int (*RedisModule_SwapPrefetchKey)(RedisModuleCtx *ctx, RedisModuleString *keyname, RedisModuleSwapPrefetchCB fn, void *user_data, int flags) REDISMODULE_ATTR;
+REDISMODULE_API int (*RedisModule_IsKeyInRam)(RedisModuleCtx *ctx, RedisModuleString *key) REDISMODULE_ATTR;
 REDISMODULE_API int (*RedisModule_BigModuleRegister)(RedisModuleCtx *ctx, RedisModuleBigCallbacks *callbacks) REDISMODULE_ATTR;
 REDISMODULE_API ssize_t (*RedisModule_BigWriteBufferBudgetInit)(RedisModuleCtx *ctx, int percentage) REDISMODULE_ATTR;
 REDISMODULE_API void (*RedisModule_BigWriteBufferBudgetRelease)(RedisModuleCtx *ctx) REDISMODULE_ATTR;
@@ -1903,6 +1912,8 @@ static int RedisModule_InitAPI(RedisModuleCtx *ctx) {
     REDISMODULE_GET_API(GetKeyMeta);
 
     /* Bigredis Extensions */
+    REDISMODULE_GET_API(IsKeyInRam);
+    REDISMODULE_GET_API(SwapPrefetchKey);
     REDISMODULE_GET_API(BigModuleRegister);
     REDISMODULE_GET_API(BigWriteBufferBudgetInit);
     REDISMODULE_GET_API(BigWriteBufferBudgetRelease);
