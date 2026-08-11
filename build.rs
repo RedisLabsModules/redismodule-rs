@@ -25,7 +25,10 @@ impl ParseCallbacks for RedisModuleCallback {
                 name: "isize",
                 is_signed: true,
             })
-        } else if name.starts_with("REDISMODULE_NOTIFY_") {
+        } else if name.starts_with("REDISMODULE_NOTIFY_")
+            || name.starts_with("REDISMODULE_SWAP_PREFETCH_FLAG_")
+        {
+            // These are passed as `int` arguments to API functions.
             Some(IntKind::Int)
         } else {
             None
