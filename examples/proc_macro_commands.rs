@@ -26,6 +26,8 @@ struct RedisValueDerive {
 }
 
 #[derive(RedisValue)]
+// The size difference between the variants is irrelevant in an example.
+#[allow(clippy::large_enum_variant)]
 enum RedisValueEnum {
     Str(String),
     RedisValue(RedisValueDerive),
