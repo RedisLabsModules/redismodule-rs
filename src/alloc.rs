@@ -284,6 +284,58 @@ mod tests {
         unsafe { dealloc_aligned(ptr, layout, |ptr| zmalloc.free(ptr)) };
     }
 
+    thread_local! {
+        /// The [`Zmalloc`] the `RedisModule_*` doubles below hand out blocks
+        /// from. They are plain `extern "C"` function pointers, so they cannot
+        /// capture one the way the other tests capture a local.
+        static ZMALLOC: Zmalloc = Zmalloc::default();
+    }
+
+    unsafe extern "C" fn zmalloc(bytes: usize) -> *mut std::os::raw::c_void {
+        ZMALLOC.with(|zmalloc| zmalloc.alloc(bytes)).cast()
+    }
+
+    unsafe extern "C" fn zfree(ptr: *mut std::os::raw::c_void) {
+        ZMALLOC.with(|zmalloc| zmalloc.free(ptr.cast()));
+    }
+
+    /// Every other test here drives `alloc_aligned` directly, so none of them
+    /// executes the `GlobalAlloc` impl: the `RedisModule_Alloc` lookup, the
+    /// casts around it, and `dealloc` routing through `dealloc_aligned`.
+    /// Wiring either side to the wrong thing passes all of them.
+    ///
+    /// This is the only test that writes the `RedisModule_*` statics, and the
+    /// double behind them tracks one block at a time, so it has to stay that
+    /// way. Miri cannot access those externs at all, hence the `ignore`.
+    #[test]
+    #[cfg_attr(miri, ignore = "cannot access the RedisModule_* extern statics")]
+    fn the_global_allocator_serves_over_aligned_layouts() {
+        #[repr(align(64))]
+        struct OverAligned([u8; 256]);
+
+        unsafe {
+            raw::RedisModule_Alloc = Some(zmalloc);
+            raw::RedisModule_Free = Some(zfree);
+        }
+
+        let layout = Layout::new::<OverAligned>();
+        let ptr = unsafe { RedisAlloc.alloc(layout) }.cast::<OverAligned>();
+
+        assert!(!ptr.is_null());
+        assert_eq!(ptr.addr() % layout.align(), 0);
+
+        // A typed access, unlike the byte writes elsewhere in this module:
+        // `panic_misaligned_pointer_dereference` fires on a load or store whose
+        // type the address is under-aligned for, and never on a byte one, so
+        // this is what would have aborted before the fix.
+        unsafe { ptr.write(OverAligned([0xAB; 256])) };
+        assert_eq!(unsafe { &*ptr }.0, [0xAB; 256]);
+
+        // `Zmalloc::free` asserts it was handed its own pointer back, which
+        // covers the header round-trip through `dealloc`.
+        unsafe { RedisAlloc.dealloc(ptr.cast(), layout) };
+    }
+
     #[test]
     fn a_failed_allocation_propagates_null() {
         let layout = Layout::from_size_align(64, 64).unwrap();
