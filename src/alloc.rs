@@ -22,7 +22,7 @@ const REDIS_ALLOCATOR_NOT_AVAILABLE_MESSAGE: &str =
 /// Defines the Redis allocator. This allocator delegates the allocation
 /// and deallocation tasks to the Redis server when available, otherwise
 /// it panics.
-#[derive(Default, Debug, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RedisAlloc;
 
 unsafe impl GlobalAlloc for RedisAlloc {
