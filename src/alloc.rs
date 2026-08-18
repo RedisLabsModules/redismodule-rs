@@ -1,4 +1,5 @@
 use std::alloc::{GlobalAlloc, Layout};
+use std::ptr;
 
 use crate::raw;
 
@@ -18,6 +19,21 @@ fn allocation_free_panic(message: &'static str) -> ! {
 
 const REDIS_ALLOCATOR_NOT_AVAILABLE_MESSAGE: &str =
     "Critical error: the Redis Allocator isn't available.\n";
+
+/// The alignment `RedisModule_Alloc` provides on its own.
+///
+/// It is Redis' `zmalloc`, which forwards to an allocator handing out
+/// `max_align_t`-aligned addresses — jemalloc, tcmalloc or libc `malloc`
+/// depending on how the server was built.
+///
+/// Understating this costs an unnecessary fixup; overstating it hands out
+/// under-aligned memory, so it is the weakest guarantee those allocators share
+/// rather than the strongest any of them happens to provide.
+const MIN_ALIGN: usize = 2 * std::mem::size_of::<usize>();
+
+/// Size of the header kept directly below an over-aligned block, holding the
+/// pointer that has to be given back to `RedisModule_Free`.
+const HEADER: usize = std::mem::size_of::<*mut u8>();
 
 /// Defines the Redis allocator. This allocator delegates the allocation
 /// and deallocation tasks to the Redis server when available, otherwise
@@ -44,10 +60,15 @@ unsafe impl GlobalAlloc for RedisAlloc {
 }
 
 /// Allocate `layout` through `alloc`, which is expected to behave like
-/// `RedisModule_Alloc`: it takes a size, and returns a block aligned for any
-/// fundamental type and no more.
+/// `RedisModule_Alloc`: it takes a size, and returns a block aligned to at most
+/// [`MIN_ALIGN`].
 ///
-/// Returns a null pointer if `alloc` does.
+/// Layouts within [`MIN_ALIGN`] are served by `alloc` directly. A stricter one
+/// cannot be — the module API has no aligned-allocation primitive — so it is
+/// carved out of a larger block instead, with the underlying pointer stored in
+/// the [`HEADER`] word below the address returned to the caller.
+///
+/// Returns a null pointer if `alloc` does, or if the padded size overflows.
 ///
 /// Taking the allocator as a closure keeps this testable without a running
 /// Redis server behind `RedisModule_Alloc`.
@@ -56,20 +77,41 @@ unsafe impl GlobalAlloc for RedisAlloc {
 ///
 /// `alloc` must behave like [`GlobalAlloc::alloc`] for the size it is given.
 unsafe fn alloc_aligned(layout: Layout, alloc: impl FnOnce(usize) -> *mut u8) -> *mut u8 {
-    /*
-     * To make sure the memory allocation by Redis is aligned to the according to the layout,
-     * we need to align the size of the allocation to the layout.
-     *
-     * "Memory is conceptually broken into equal-sized chunks,
-     * where the chunk size is a power of two that is greater than the page size.
-     * Chunks are always aligned to multiples of the chunk size.
-     * This alignment makes it possible to find metadata for user objects very quickly."
-     *
-     * From: https://linux.die.net/man/3/jemalloc
-     */
-    let size = (layout.size() + layout.align() - 1) & (!(layout.align() - 1));
+    if layout.align() <= MIN_ALIGN {
+        /*
+         * To make sure the memory allocation by Redis is aligned to the according to the layout,
+         * we need to align the size of the allocation to the layout.
+         *
+         * "Memory is conceptually broken into equal-sized chunks,
+         * where the chunk size is a power of two that is greater than the page size.
+         * Chunks are always aligned to multiples of the chunk size.
+         * This alignment makes it possible to find metadata for user objects very quickly."
+         *
+         * From: https://linux.die.net/man/3/jemalloc
+         */
+        let size = (layout.size() + layout.align() - 1) & (!(layout.align() - 1));
 
-    alloc(size)
+        return alloc(size);
+    }
+
+    // Worst case the block starts one byte past an aligned address, so reaching
+    // the next one from just above the header costs `align - 1` further bytes.
+    let Some(size) = layout.size().checked_add(layout.align() + HEADER) else {
+        return ptr::null_mut();
+    };
+
+    let base = alloc(size);
+    if base.is_null() {
+        return base;
+    }
+
+    let offset = (base.addr() + HEADER).next_multiple_of(layout.align()) - base.addr();
+    let ptr = base.add(offset);
+    // Storing the pointer rather than the offset keeps the provenance Redis gave
+    // us, so `dealloc_aligned` hands back exactly what `alloc` returned.
+    ptr.cast::<*mut u8>().sub(1).write(base);
+
+    ptr
 }
 
 /// Free a pointer produced by [`alloc_aligned`] through the matching `free`.
@@ -78,7 +120,15 @@ unsafe fn alloc_aligned(layout: Layout, alloc: impl FnOnce(usize) -> *mut u8) ->
 ///
 /// `ptr` must have come from [`alloc_aligned`] with this same `layout`, and
 /// `free` must release blocks allocated by the closure that call was given.
-unsafe fn dealloc_aligned(ptr: *mut u8, _layout: Layout, free: impl FnOnce(*mut u8)) {
+unsafe fn dealloc_aligned(ptr: *mut u8, layout: Layout, free: impl FnOnce(*mut u8)) {
+    let ptr = if layout.align() <= MIN_ALIGN {
+        ptr
+    } else {
+        // `alloc_aligned` took the same branch for this layout, so the word below
+        // `ptr` is inside the allocation and holds the underlying pointer.
+        ptr.cast::<*mut u8>().sub(1).read()
+    };
+
     free(ptr);
 }
 
@@ -87,17 +137,6 @@ mod tests {
     use super::*;
     use std::alloc::System;
     use std::cell::Cell;
-    use std::ptr;
-
-    /// The alignment `RedisModule_Alloc` provides on its own, and so the most
-    /// [`Zmalloc`] may hand out.
-    ///
-    /// It is Redis' `zmalloc`, which forwards to an allocator handing out
-    /// `max_align_t`-aligned addresses — jemalloc, tcmalloc or libc `malloc`
-    /// depending on how the server was built. This is the weakest guarantee
-    /// those allocators share rather than the strongest any of them happens to
-    /// provide, since a caller may only rely on the former.
-    const MIN_ALIGN: usize = 2 * std::mem::size_of::<usize>();
 
     /// A block handed out by [`Zmalloc`], and what it takes to give it back.
     #[derive(Clone, Copy)]
