@@ -25,6 +25,22 @@ See the [examples](examples) directory for some sample modules.
 This crate tries to provide high-level wrappers around the standard Redis Modules API, while preserving the API's basic concepts.
 Therefore, following the [Redis Modules API](https://redis.io/topics/modules-intro) documentation will be mostly relevant here as well.
 
+# Versioning and releases
+
+All crates in this repository are released from `master` and published to
+[crates.io](https://crates.io/crates/redis-module) by
+[release-plz](https://release-plz.dev).
+
+The `v2.1.0` through `v2.1.3` git tags were cut from the `2.1` branch and were
+not published to crates.io. Published versions from 2.2.0 onward include all
+changes from that branch. Projects pinning those tags as git dependencies can
+use the published crate instead:
+
+```toml
+[dependencies]
+redis-module = "2.2"
+```
+
 # Redis Modules based on this crate
 
 The following are some modules that are built on this crate:
