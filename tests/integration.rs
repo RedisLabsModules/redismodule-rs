@@ -163,6 +163,41 @@ fn test_test_helper_err() -> Result<()> {
 }
 
 #[test]
+fn test_random_key() -> Result<()> {
+    let mut con = TestConnection::new("test_helper");
+
+    // First test: empty database should return nil
+    let res: Value = redis::cmd("test_helper.random_key")
+        .query(&mut con)
+        .with_context(|| "failed to run test_helper.random_key")?;
+    assert_eq!(res, Value::Nil);
+
+    // Set some keys
+    redis::cmd("SET")
+        .arg(&["key1", "value1"])
+        .query(&mut con)
+        .with_context(|| "failed to run SET")?;
+
+    redis::cmd("SET")
+        .arg(&["key2", "value2"])
+        .query(&mut con)
+        .with_context(|| "failed to run SET")?;
+
+    redis::cmd("SET")
+        .arg(&["key3", "value3"])
+        .query(&mut con)
+        .with_context(|| "failed to run SET")?;
+
+    // Now test: should return one of the keys
+    let res: String = redis::cmd("test_helper.random_key")
+        .query(&mut con)
+        .with_context(|| "failed to run test_helper.random_key with keys")?;
+    assert!(["key1", "key2", "key3"].contains(&res.as_str()));
+
+    Ok(())
+}
+
+#[test]
 fn test_string() -> Result<()> {
     let mut con = TestConnection::new("string");
 
