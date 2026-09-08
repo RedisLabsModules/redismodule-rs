@@ -1488,6 +1488,8 @@ REDISMODULE_API int (*RedisModule_IsKeyInRam)(RedisModuleCtx *ctx, RedisModuleSt
 REDISMODULE_API int (*RedisModule_BigModuleRegister)(RedisModuleCtx *ctx, RedisModuleBigCallbacks *callbacks) REDISMODULE_ATTR;
 REDISMODULE_API ssize_t (*RedisModule_BigWriteBufferBudgetInit)(RedisModuleCtx *ctx, int percentage) REDISMODULE_ATTR;
 REDISMODULE_API void (*RedisModule_BigWriteBufferBudgetRelease)(RedisModuleCtx *ctx) REDISMODULE_ATTR;
+REDISMODULE_API ssize_t (*RedisModule_AllocateWBMBudget)(RedisModuleCtx *ctx, size_t requested_bytes) REDISMODULE_ATTR;
+REDISMODULE_API int (*RedisModule_FreeWBMBudget)(RedisModuleCtx *ctx, size_t bytes) REDISMODULE_ATTR;
 REDISMODULE_API char* (*RedisModule_BigGetDbPath)(RedisModuleCtx *ctx, const char *index_name) REDISMODULE_ATTR;
 REDISMODULE_API int (*RedisModule_BigRegisterDb)(RedisModuleCtx *ctx, void *db_handle, void **cf_handles, size_t num_cf_handles) REDISMODULE_ATTR;
 REDISMODULE_API int (*RedisModule_BigRegisterDbAddCf)(RedisModuleCtx *ctx, void *db_handle, void *cf_handle) REDISMODULE_ATTR;
@@ -1917,6 +1919,8 @@ static int RedisModule_InitAPI(RedisModuleCtx *ctx) {
     REDISMODULE_GET_API(BigModuleRegister);
     REDISMODULE_GET_API(BigWriteBufferBudgetInit);
     REDISMODULE_GET_API(BigWriteBufferBudgetRelease);
+    REDISMODULE_GET_API(AllocateWBMBudget);
+    REDISMODULE_GET_API(FreeWBMBudget);
     REDISMODULE_GET_API(BigGetDbPath);
     REDISMODULE_GET_API(BigRegisterDb);
     REDISMODULE_GET_API(BigRegisterDbAddCf);
