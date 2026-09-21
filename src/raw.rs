@@ -586,6 +586,37 @@ where
     }
 }
 
+/// `HGET` with the field given as an existing `RedisModuleString`.
+///
+/// [`hash_get_multi`] passes fields as C strings (`REDISMODULE_HASH_CFIELDS`), which costs
+/// a `CString` here and a transient string object per field inside Redis. With a
+/// `RedisModuleString` Redis reads the field in place, so a caller that fetches the same
+/// field repeatedly can build the string once and reuse it.
+///
+/// Returns a null pointer when the hash has no such field. The returned value, when
+/// non-null, is a new string the caller must free.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[inline]
+pub fn hash_get_by_string(
+    key: *mut RedisModuleKey,
+    field: *mut RedisModuleString,
+) -> Result<*mut RedisModuleString, RedisError> {
+    let mut value: *mut RedisModuleString = ptr::null_mut();
+    let res = Status::from(unsafe {
+        RedisModule_HashGet.unwrap()(
+            key,
+            REDISMODULE_HASH_NONE as i32,
+            field,
+            &mut value,
+            ptr::null::<c_char>(),
+        )
+    });
+    match res {
+        Status::Ok => Ok(value),
+        Status::Err => Err(RedisError::Str("ERR key is not a hash value")),
+    }
+}
+
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn hash_set(key: *mut RedisModuleKey, field: &str, value: *mut RedisModuleString) -> Status {
