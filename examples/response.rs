@@ -77,6 +77,24 @@ fn map_hget(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
     })
 }
 
+/// `map.hget_writable key field`: the same lookup through a writable handle
+/// ([`RedisKeyWritable::hash_get_by_string`]).
+fn map_hget_writable(ctx: &Context, args: Vec<RedisString>) -> RedisResult {
+    if args.len() != 3 {
+        return Err(RedisError::WrongArity);
+    }
+
+    let mut args = args.into_iter().skip(1);
+    let key_name = args.next_arg()?;
+    let field = args.next_arg()?;
+
+    let key = ctx.open_key_writable(&key_name);
+    Ok(match key.hash_get_by_string(&field)? {
+        None => RedisValue::Null,
+        Some(value) => RedisValue::BulkRedisString(value),
+    })
+}
+
 //////////////////////////////////////////////////////
 
 redis_module! {
@@ -88,5 +106,6 @@ redis_module! {
         ["map.mget", map_mget, "readonly", 1, 1, 1, ""],
         ["map.unique", map_unique, "readonly", 1, 1, 1, ""],
         ["map.hget", map_hget, "readonly", 1, 1, 1, ""],
+        ["map.hget_writable", map_hget_writable, "write", 1, 1, 1, ""],
     ],
 }
