@@ -164,7 +164,10 @@ impl RedisKey {
     /// Avoids the per-call `CString` and the transient field object Redis creates for
     /// C-string fields; prefer it when the same field is fetched for many keys.
     /// `None` when the key does not exist or has no such field.
-    pub fn hash_get_by_string(&self, field: &RedisString) -> Result<Option<RedisString>, RedisError> {
+    pub fn hash_get_by_string(
+        &self,
+        field: &RedisString,
+    ) -> Result<Option<RedisString>, RedisError> {
         if self.is_null() {
             return Ok(None);
         }
@@ -295,7 +298,10 @@ impl RedisKeyWritable {
     /// Avoids the per-call `CString` and the transient field object Redis creates for
     /// C-string fields; prefer it when the same field is fetched for many keys.
     /// `None` when the hash has no such field.
-    pub fn hash_get_by_string(&self, field: &RedisString) -> Result<Option<RedisString>, RedisError> {
+    pub fn hash_get_by_string(
+        &self,
+        field: &RedisString,
+    ) -> Result<Option<RedisString>, RedisError> {
         let value = raw::hash_get_by_string(self.key_inner, field.inner)?;
         Ok((!value.is_null()).then(|| RedisString::from_redis_module_string(self.ctx, value)))
     }
