@@ -159,6 +159,22 @@ impl RedisKey {
         Ok(val)
     }
 
+    /// Like [`Self::hash_get`], with the field given as an existing [`RedisString`].
+    ///
+    /// Avoids the per-call `CString` and the transient field object Redis creates for
+    /// C-string fields; prefer it when the same field is fetched for many keys.
+    /// `None` when the key does not exist or has no such field.
+    pub fn hash_get_by_string(
+        &self,
+        field: &RedisString,
+    ) -> Result<Option<RedisString>, RedisError> {
+        if self.is_null() {
+            return Ok(None);
+        }
+        let value = raw::hash_get_by_string(self.key_inner, field.inner)?;
+        Ok((!value.is_null()).then(|| RedisString::from_redis_module_string(self.ctx, value)))
+    }
+
     /// Returns the values associated with the specified fields in the hash stored at this key.
     /// The result will be `None` if the key does not exist.
     pub fn hash_get_multi<'a, A, B>(
@@ -275,6 +291,19 @@ impl RedisKeyWritable {
         Ok(hash_mget_key(self.ctx, self.key_inner, &[field])?
             .pop()
             .expect("hash_mget_key should return vector of same length as input"))
+    }
+
+    /// Like [`Self::hash_get`], with the field given as an existing [`RedisString`].
+    ///
+    /// Avoids the per-call `CString` and the transient field object Redis creates for
+    /// C-string fields; prefer it when the same field is fetched for many keys.
+    /// `None` when the hash has no such field.
+    pub fn hash_get_by_string(
+        &self,
+        field: &RedisString,
+    ) -> Result<Option<RedisString>, RedisError> {
+        let value = raw::hash_get_by_string(self.key_inner, field.inner)?;
+        Ok((!value.is_null()).then(|| RedisString::from_redis_module_string(self.ctx, value)))
     }
 
     /// Returns the values associated with the specified fields in the hash stored at this key.

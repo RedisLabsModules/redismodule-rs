@@ -577,6 +577,54 @@ fn test_response() -> Result<()> {
     res.sort();
     assert_eq!(&res, &["b", "d"]);
 
+    // hash_get_by_string: present field, absent field, absent key.
+    let res: String = redis::cmd("map.hget")
+        .arg(&["k", "c"])
+        .query(&mut con)
+        .with_context(|| "failed to run map.hget")?;
+    assert_eq!(res, "d");
+
+    let res: Option<String> = redis::cmd("map.hget")
+        .arg(&["k", "nosuchfield"])
+        .query(&mut con)
+        .with_context(|| "failed to run map.hget")?;
+    assert_eq!(res, None);
+
+    let res: Option<String> = redis::cmd("map.hget")
+        .arg(&["nosuchkey", "c"])
+        .query(&mut con)
+        .with_context(|| "failed to run map.hget")?;
+    assert_eq!(res, None);
+
+    // A key of another type is an error, not a missing field.
+    redis::cmd("set")
+        .arg(&["s", "v"])
+        .query::<()>(&mut con)
+        .with_context(|| "failed to run set")?;
+    for cmd in ["map.hget", "map.hget_writable"] {
+        let err = redis::cmd(cmd)
+            .arg(&["s", "c"])
+            .query::<Option<String>>(&mut con)
+            .expect_err("hash lookup on a string key must fail");
+        assert!(
+            err.to_string().contains("not a hash"),
+            "{cmd}: unexpected error: {err}"
+        );
+    }
+
+    // The writable handle resolves the same way.
+    let res: String = redis::cmd("map.hget_writable")
+        .arg(&["k", "c"])
+        .query(&mut con)
+        .with_context(|| "failed to run map.hget_writable")?;
+    assert_eq!(res, "d");
+
+    let res: Option<String> = redis::cmd("map.hget_writable")
+        .arg(&["k", "nosuchfield"])
+        .query(&mut con)
+        .with_context(|| "failed to run map.hget_writable")?;
+    assert_eq!(res, None);
+
     Ok(())
 }
 
