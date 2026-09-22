@@ -577,6 +577,25 @@ fn test_response() -> Result<()> {
     res.sort();
     assert_eq!(&res, &["b", "d"]);
 
+    // hash_get_by_string: present field, absent field, absent key.
+    let res: String = redis::cmd("map.hget")
+        .arg(&["k", "c"])
+        .query(&mut con)
+        .with_context(|| "failed to run map.hget")?;
+    assert_eq!(res, "d");
+
+    let res: Option<String> = redis::cmd("map.hget")
+        .arg(&["k", "nosuchfield"])
+        .query(&mut con)
+        .with_context(|| "failed to run map.hget")?;
+    assert_eq!(res, None);
+
+    let res: Option<String> = redis::cmd("map.hget")
+        .arg(&["nosuchkey", "c"])
+        .query(&mut con)
+        .with_context(|| "failed to run map.hget")?;
+    assert_eq!(res, None);
+
     Ok(())
 }
 

@@ -593,8 +593,8 @@ where
 /// `RedisModuleString` Redis reads the field in place, so a caller that fetches the same
 /// field repeatedly can build the string once and reuse it.
 ///
-/// Returns a null pointer when the hash has no such field. The returned value, when
-/// non-null, is a new string the caller must free.
+/// Returns a null pointer when the hash has no such field. A non-null result is an owned
+/// string the caller must release with `RedisModule_FreeString`.
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[inline]
 pub fn hash_get_by_string(
