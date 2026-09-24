@@ -419,6 +419,24 @@ fn test_key_space_notification_with_invalid_utf8_event_name() -> Result<()> {
 }
 
 #[test]
+fn test_logging_message_with_interior_nul() -> Result<()> {
+    let mut con = TestConnection::new("log");
+
+    // Logs a message containing an interior NUL byte. Redis keys are
+    // binary-safe, so a module logging a key can hand the logging path a `\0`,
+    // which `CString::new` rejects. The logging call must sanitize it rather
+    // than panic across the FFI boundary.
+    let res: String = redis::cmd("log.with_nul").query(&mut con)?;
+    assert_eq!(res, "Logged");
+
+    // The server survived.
+    let res: String = redis::cmd("PING").query(&mut con)?;
+    assert_eq!(res, "PONG");
+
+    Ok(())
+}
+
+#[test]
 fn test_context_mutex() -> Result<()> {
     let mut con = TestConnection::new("threads");
 
