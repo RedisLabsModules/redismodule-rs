@@ -1,0 +1,32 @@
+name: Publish dry-run
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+
+jobs:
+  # Verify that all workspace crates are publishable, so that the actual
+  # release (triggered by merging the release PR) doesn't fail mid-way.
+  publish-dry-run:
+    name: Dry-run `cargo publish` for the workspace
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Install Clang (for bindgen)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libclang-dev
+
+      - name: Install toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Dry-run publish for all workspace crates
+        run: cargo publish --workspace --dry-run
