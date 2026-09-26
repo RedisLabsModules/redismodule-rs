@@ -400,6 +400,23 @@ impl Context {
         }
     }
 
+    /// Returns a name of a random key, or None if current db is empty.
+    ///
+    /// Available since Redis 6.0.0
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `RedisModule_RandomKey` is missing in redismodule.h
+    #[must_use]
+    pub fn random_key(&self) -> Option<RedisString> {
+        let ptr = unsafe { raw::RedisModule_RandomKey.unwrap()(self.ctx) };
+        if ptr.is_null() {
+            None
+        } else {
+            Some(RedisString::new(NonNull::new(self.ctx), ptr))
+        }
+    }
+
     fn call_internal<
         'ctx,
         'a,
