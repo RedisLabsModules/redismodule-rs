@@ -1,5 +1,5 @@
 use std::ffi::CString;
-use std::ptr::NonNull;
+use std::ptr;
 
 use crate::Context;
 use crate::{raw, RedisString};
@@ -16,18 +16,24 @@ impl Drop for ServerInfo {
 }
 
 impl ServerInfo {
+    /// Returns [`None`] if the field is missing or its name contains an embedded NUL byte.
     pub fn field(&self, field: &str) -> Option<RedisString> {
-        let field = CString::new(field).unwrap();
+        let field = CString::new(field).ok()?;
+        // Request an owned string outside auto-memory, regardless of the context's settings.
+        // SAFETY: self.inner is the live server-info handle and field is a valid C string.
         let value = unsafe {
-            raw::RedisModule_ServerInfoGetField.unwrap()(self.ctx, self.inner, field.as_ptr())
+            raw::RedisModule_ServerInfoGetField.unwrap()(
+                ptr::null_mut(),
+                self.inner,
+                field.as_ptr(),
+            )
         };
         if value.is_null() {
             None
-        } else if self.ctx.is_null() {
-            // Don't retain: with no context to detach from auto-memory, a retain leaks the last reference.
-            Some(RedisString::from_redis_module_string(self.ctx, value))
         } else {
-            Some(RedisString::new(NonNull::new(self.ctx), value))
+            // Wrap the returned string without incrementing its reference count.
+            // Keep the original context in the wrapper.
+            Some(RedisString::from_redis_module_string(self.ctx, value))
         }
     }
 }
