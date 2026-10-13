@@ -16,6 +16,15 @@ impl Drop for ServerInfo {
 }
 
 impl ServerInfo {
+    /// Returns the value of `field` from this server-info snapshot.
+    ///
+    /// `RedisModule_ServerInfoGetField` hands the caller an owned string
+    /// (refcount 1). With a real module context Redis tracks that string for
+    /// auto-memory, and [`RedisString::new`] detaches it from the queue so
+    /// Drop is the sole free. With a null context nothing tracks the string,
+    /// so adopting it through [`RedisString::new`] would retain once and Drop
+    /// would free once, leaving the last reference held forever. Adopt without
+    /// retaining when the context is null.
     pub fn field(&self, field: &str) -> Option<RedisString> {
         let field = CString::new(field).unwrap();
         let value = unsafe {
@@ -23,6 +32,8 @@ impl ServerInfo {
         };
         if value.is_null() {
             None
+        } else if self.ctx.is_null() {
+            Some(RedisString::from_redis_module_string(self.ctx, value))
         } else {
             Some(RedisString::new(NonNull::new(self.ctx), value))
         }
