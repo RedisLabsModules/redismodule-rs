@@ -7,14 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- `ServerInfo::field`: with a null module context, adopt the owned string from
-  `RedisModule_ServerInfoGetField` without an extra retain. The previous path
-  retained once and freed once, so the last reference was never released and
-  every call leaked one Redis string. Real command contexts were unaffected
-  because auto-memory detachment already left the refcount at one.
-
 ### Added
 
 - `RedisKey::hash_get_by_string` and `RedisKeyWritable::hash_get_by_string`: `HGET` with the field passed as an existing `RedisString`, avoiding the per-call `CString` and the transient field object Redis creates for C-string fields.
