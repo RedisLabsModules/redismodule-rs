@@ -19,7 +19,7 @@ impl ServerInfo {
     /// Returns [`None`] if the field is missing or its name contains an embedded NUL byte.
     pub fn field(&self, field: &str) -> Option<RedisString> {
         let field = CString::new(field).ok()?;
-        // Request an owned string outside auto-memory, regardless of the context's settings.
+        // Use null for allocation and cleanup so the string can outlive its command context.
         // SAFETY: self.inner is the live server-info handle and field is a valid C string.
         let value = unsafe {
             raw::RedisModule_ServerInfoGetField.unwrap()(
@@ -31,9 +31,10 @@ impl ServerInfo {
         if value.is_null() {
             None
         } else {
-            // Wrap the returned string without incrementing its reference count.
-            // Keep the original context in the wrapper.
-            Some(RedisString::from_redis_module_string(self.ctx, value))
+            Some(RedisString::from_redis_module_string(
+                ptr::null_mut(),
+                value,
+            ))
         }
     }
 }
