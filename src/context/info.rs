@@ -16,6 +16,9 @@ impl Drop for ServerInfo {
 }
 
 impl ServerInfo {
+    /// The returned string is independent of the command context; its debug output shows a null
+    /// context pointer.
+    ///
     /// Returns [`None`] if the field is missing or its name contains an embedded NUL byte.
     pub fn field(&self, field: &str) -> Option<RedisString> {
         let field = CString::new(field).ok()?;
