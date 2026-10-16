@@ -125,6 +125,14 @@ impl RedisString {
         inner
     }
 
+    /// Wraps an existing Redis string by calling RedisModule_RetainString.
+    ///
+    /// If the string is tracked by the supplied context's auto-memory queue, it is detached;
+    /// otherwise, its reference count is incremented. Use this to acquire a reference to a
+    /// borrowed string. For an owned reference outside auto-memory, use
+    /// [`Self::from_redis_module_string`] to avoid adding an unnecessary reference.
+    ///
+    /// A non-null context must remain valid until this wrapper is dropped.
     pub fn new(
         ctx: Option<NonNull<raw::RedisModuleCtx>>,
         inner: *mut raw::RedisModuleString,
@@ -188,6 +196,12 @@ impl RedisString {
         Self { ctx, inner }
     }
 
+    /// Takes ownership of an existing Redis string reference without retaining it.
+    ///
+    /// This does not detach the string from auto-memory. If the string is tracked, supply its
+    /// tracking context and drop the wrapper before automatic cleanup. A non-null context must
+    /// remain valid until the wrapper is dropped; use a null context for strings that may
+    /// outlive their context.
     pub const fn from_redis_module_string(
         ctx: *mut raw::RedisModuleCtx,
         inner: *mut raw::RedisModuleString,

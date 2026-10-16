@@ -1,5 +1,5 @@
 use std::ffi::CString;
-use std::ptr::NonNull;
+use std::ptr;
 
 use crate::Context;
 use crate::{raw, RedisString};
@@ -16,15 +16,28 @@ impl Drop for ServerInfo {
 }
 
 impl ServerInfo {
+    /// The returned string is independent of the command context; its debug output shows a null
+    /// context pointer.
+    ///
+    /// Returns [`None`] if the field is missing or its name contains an embedded NUL byte.
     pub fn field(&self, field: &str) -> Option<RedisString> {
-        let field = CString::new(field).unwrap();
+        let field = CString::new(field).ok()?;
+        // Use null for allocation and cleanup so the string can outlive its command context.
+        // SAFETY: self.inner is the live server-info handle and field is a valid C string.
         let value = unsafe {
-            raw::RedisModule_ServerInfoGetField.unwrap()(self.ctx, self.inner, field.as_ptr())
+            raw::RedisModule_ServerInfoGetField.unwrap()(
+                ptr::null_mut(),
+                self.inner,
+                field.as_ptr(),
+            )
         };
         if value.is_null() {
             None
         } else {
-            Some(RedisString::new(NonNull::new(self.ctx), value))
+            Some(RedisString::from_redis_module_string(
+                ptr::null_mut(),
+                value,
+            ))
         }
     }
 }
