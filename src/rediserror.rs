@@ -32,18 +32,18 @@ impl<'root> From<ErrorReply<'root>> for RedisError {
 impl RedisError {
     #[must_use]
     pub const fn nonexistent_key() -> Self {
-        Self::Str("ERR could not perform this operation on a key that doesn't exist")
+        Self::Str("could not perform this operation on a key that doesn't exist")
     }
 
     #[must_use]
     pub const fn short_read() -> Self {
-        Self::Str("ERR short read or OOM loading DB")
+        Self::Str("short read or OOM loading DB")
     }
 }
 
 impl<T: std::error::Error> From<T> for RedisError {
     fn from(e: T) -> Self {
-        Self::String(format!("ERR {e}"))
+        Self::String(e.to_string())
     }
 }
 
@@ -64,6 +64,6 @@ impl fmt::Display for RedisError {
             Self::String(s) => s.as_str(),
         };
 
-        write!(f, "{d}")
+        write!(f, "ERR {d}")
     }
 }
