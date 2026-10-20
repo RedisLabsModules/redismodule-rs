@@ -338,6 +338,10 @@ typedef uint64_t RedisModuleTimerID;
  * Use RedisModule_GetModuleOptionsAll instead. */
 #define _REDISMODULE_OPTIONS_FLAGS_NEXT (1<<4)
 
+/* Prevent direct-to-disk key writes during RDB loading and RESTORE in
+ * BigRedis mode. See RM_SetModuleOptions for details. */
+ #define REDISMODULE_OPTIONS_REQUIRE_LOADED_KEYS_IN_RAM    (1<<30)
+
 /* Definitions for RedisModule_SetCommandInfo. */
 
 typedef enum {
