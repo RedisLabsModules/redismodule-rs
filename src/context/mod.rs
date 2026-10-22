@@ -610,14 +610,7 @@ impl Context {
                     raw::RedisModule_WrongArity.unwrap()(self.ctx).into()
                 }
             },
-
-            Err(RedisError::WrongType) => {
-                self.reply_error_string(RedisError::WrongType.to_string().as_str())
-            }
-
-            Err(RedisError::String(s)) => self.reply_error_string(s.as_str()),
-
-            Err(RedisError::Str(s)) => self.reply_error_string(s),
+            Err(err) => self.reply_error_string(&err.to_str()),
         }
     }
 
