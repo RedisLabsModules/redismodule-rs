@@ -3,7 +3,9 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use redis_module::{
     redis_module, server_events::FlushSubevent, Context, RedisResult, RedisString, RedisValue,
 };
-use redis_module_macros::{config_changed_event_handler, cron_event_handler, flush_event_handler};
+use redis_module_macros::{
+    config_changed_event_handler, cron_event_handler, flush_event_handler, shutdown_event_handler,
+};
 
 static NUM_FLUSHES: AtomicI64 = AtomicI64::new(0);
 static NUM_CRONS: AtomicI64 = AtomicI64::new(0);
@@ -27,6 +29,11 @@ fn config_changed_event_handler(_ctx: &Context, changed_configs: &[&str]) {
 #[cron_event_handler]
 fn cron_event_handler(_ctx: &Context, _hz: u64) {
     NUM_CRONS.fetch_add(1, Ordering::SeqCst);
+}
+
+#[shutdown_event_handler]
+fn shutdown_event_handler(ctx: &Context) {
+    ctx.log_notice("server_events: received shutdown event, goodbye!");
 }
 
 fn num_flushed(_ctx: &Context, _args: Vec<RedisString>) -> RedisResult {

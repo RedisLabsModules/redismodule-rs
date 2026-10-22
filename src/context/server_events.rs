@@ -37,6 +37,7 @@ pub enum ServerEventHandler {
     Loading(fn(&Context, LoadingSubevent)),
     Flush(fn(&Context, FlushSubevent)),
     ModuleChange(fn(&Context, ModuleChangeSubevent)),
+    Shutdown(fn(&Context)),
 }
 
 #[distributed_slice()]
@@ -56,6 +57,9 @@ pub static CONFIG_CHANGED_SERVER_EVENTS_LIST: [fn(&Context, &[&str])] = [..];
 
 #[distributed_slice()]
 pub static CRON_SERVER_EVENTS_LIST: [fn(&Context, u64)] = [..];
+
+#[distributed_slice()]
+pub static SHUTDOWN_SERVER_EVENTS_LIST: [fn(&Context)] = [..];
 
 #[distributed_slice()]
 pub static INFO_COMMAND_HANDLER_LIST: [fn(&InfoContext, bool) -> RedisResult<()>] = [..];
@@ -144,6 +148,18 @@ extern "C" fn module_change_event_callback(
         .for_each(|callback| {
             callback(&ctx, module_changed_sub_event);
         });
+}
+
+extern "C" fn shutdown_event_callback(
+    ctx: *mut raw::RedisModuleCtx,
+    _eid: raw::RedisModuleEvent,
+    _subevent: u64,
+    _data: *mut ::std::os::raw::c_void,
+) {
+    let ctx = Context::new(ctx);
+    SHUTDOWN_SERVER_EVENTS_LIST.iter().for_each(|callback| {
+        callback(&ctx);
+    });
 }
 
 extern "C" fn config_change_event_callback(
@@ -237,5 +253,20 @@ pub fn register_server_events(ctx: &Context) -> Result<(), RedisError> {
         raw::REDISMODULE_EVENT_CRON_LOOP,
         Some(cron_callback),
     )?;
+    if !SHUTDOWN_SERVER_EVENTS_LIST.is_empty() {
+        let res = unsafe {
+            raw::RedisModule_SubscribeToServerEvent.unwrap()(
+                ctx.ctx,
+                raw::RedisModuleEvent {
+                    id: raw::REDISMODULE_EVENT_SHUTDOWN,
+                    dataver: 1,
+                },
+                Some(shutdown_event_callback),
+            )
+        };
+        if res != raw::REDISMODULE_OK as i32 {
+            return Err(RedisError::Str("Failed subscribing to server event"));
+        }
+    }
     Ok(())
 }
