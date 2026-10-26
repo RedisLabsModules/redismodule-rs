@@ -818,6 +818,22 @@ typedef struct RedisModuleFlushInfo {
     int32_t dbnum;          /* Flushed database number, -1 for ALL. */
 } RedisModuleFlushInfoV1;
 
+
+/* Flags of RedisModulePersistenceInfo. */
+#define REDISMODULE_PERSISTENCE_FLAG_SYNCER (1<<0) /* The save feeds a syncer replica, which converts the RDBE into one restore per key and cannot read a value that
+                                                      depends on the other values of the RDB. */
+
+#define REDISMODULE_PERSISTENCEINFO_VERSION 1
+typedef struct RedisModulePersistenceInfo {
+    uint64_t version;       /* Not used since this structure is never passed
+                               from the module to the core right now. Here
+                               for future compatibility. */
+    uint64_t flags;         /* REDISMODULE_PERSISTENCE_FLAG_*. */
+} RedisModulePersistenceInfoV1;
+
+#define RedisModulePersistenceInfo RedisModulePersistenceInfoV1
+
+
 #define RedisModuleFlushInfo RedisModuleFlushInfoV1
 
 #define REDISMODULE_MODULE_CHANGE_VERSION 1
