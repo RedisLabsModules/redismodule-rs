@@ -237,6 +237,99 @@ fn test_scan_key_for_each() -> Result<()> {
 }
 
 #[test]
+fn test_scan_keys_for_each() -> Result<()> {
+    let mut con = TestConnection::new("scan_keys");
+
+    redis::cmd("set")
+        .arg(&["x", "1"])
+        .query::<()>(&mut con)
+        .with_context(|| "failed to run set")?;
+
+    redis::cmd("set")
+        .arg(&["y", "1"])
+        .query::<()>(&mut con)
+        .with_context(|| "failed to run set")?;
+
+    let mut res: Vec<String> = redis::cmd("scan_keys_for_each")
+        .query(&mut con)
+        .with_context(|| "failed scan_keys_for_each")?;
+    res.sort();
+
+    assert_eq!(&res, &["x", "y"]);
+
+    Ok(())
+}
+
+#[test]
+fn test_scan_keys_limit() -> Result<()> {
+    let mut con = TestConnection::new("scan_keys");
+
+    for key in ["a", "b", "c", "d"] {
+        redis::cmd("set")
+            .arg(&[key, "1"])
+            .query::<()>(&mut con)
+            .with_context(|| "failed to run set")?;
+    }
+
+    // The keyspace is scanned in hash-table order, so we can only assert on how many keys the
+    // early stop let through, not on which ones.
+    let res: Vec<String> = redis::cmd("scan_keys_limit")
+        .arg(&[2])
+        .query(&mut con)
+        .with_context(|| "failed scan_keys_limit")?;
+    assert_eq!(res.len(), 2);
+
+    let res: Vec<String> = redis::cmd("scan_keys_limit")
+        .arg(&[10])
+        .query(&mut con)
+        .with_context(|| "failed scan_keys_limit")?;
+    assert_eq!(res.len(), 4);
+
+    // A limit of zero breaks on the very first callback, before anything is collected.
+    let res: Vec<String> = redis::cmd("scan_keys_limit")
+        .arg(&[0])
+        .query(&mut con)
+        .with_context(|| "failed scan_keys_limit")?;
+    assert!(res.is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn test_scan_key_limit() -> Result<()> {
+    let mut con = TestConnection::new("scan_keys");
+    redis::cmd("hset")
+        .arg(&[
+            "user:123", "name", "Alice", "age", "29", "location", "Austin",
+        ])
+        .query::<()>(&mut con)
+        .with_context(|| "failed to hset")?;
+
+    // A small hash is listpack encoded, which Redis walks in insertion order and in a single
+    // `RedisModule_ScanKey` call: breaking is the only way to stop before the end.
+    let res: Vec<String> = redis::cmd("scan_key_limit")
+        .arg(&["user:123", "2"])
+        .query(&mut con)
+        .with_context(|| "failed scan_key_limit")?;
+    assert_eq!(&res, &["name", "Alice", "age", "29"]);
+
+    let res: Vec<String> = redis::cmd("scan_key_limit")
+        .arg(&["user:123", "10"])
+        .query(&mut con)
+        .with_context(|| "failed scan_key_limit")?;
+    assert_eq!(&res, &["name", "Alice", "age", "29", "location", "Austin"]);
+
+    // A limit of zero breaks on the very first callback, before anything is collected.
+    let res: Vec<String> = redis::cmd("scan_key_limit")
+        .arg(&["user:123", "0"])
+        .query(&mut con)
+        .with_context(|| "failed scan_key_limit")?;
+    assert!(res.is_empty());
+
+    Ok(())
+}
+
+#[test]
 fn test_stream_reader() -> Result<()> {
     let mut con = TestConnection::new("stream");
 
