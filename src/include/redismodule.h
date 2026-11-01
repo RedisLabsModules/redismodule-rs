@@ -822,6 +822,9 @@ typedef struct RedisModuleFlushInfo {
 /* Flags of RedisModulePersistenceInfo. */
 #define REDISMODULE_PERSISTENCE_FLAG_SYNCER (1<<0) /* The save feeds a syncer replica, which converts the RDBE into one restore per key and cannot read a value that
                                                       depends on the other values of the RDB. */
+#define REDISMODULE_PERSISTENCE_FLAG_STDRDB (1<<1) /* The save is a standard RDB (REPLCONF REQ STDRDB), such
+                                                      as a backup or an export. Such an RDB is imported one
+                                                      key at a time, so the same applies. */
 
 #define REDISMODULE_PERSISTENCEINFO_VERSION 1
 typedef struct RedisModulePersistenceInfo {
