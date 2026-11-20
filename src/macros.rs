@@ -367,6 +367,13 @@ macro_rules! redis_module {
                         } else {
                             $i64_default
                         };
+                        if !($i64_min..=$i64_max).contains(&default) {
+                            context.log_warning(&format!(
+                                "Configuration '{}' value {} is outside the range {}..={}",
+                                $i64_configuration_name, default, $i64_min, $i64_max
+                            ));
+                            return raw::Status::Err as c_int;
+                        }
                         register_i64_configuration(&context, $i64_configuration_name, $i64_configuration_val, default, $i64_min, $i64_max, $i64_flags_options, $i64_on_changed);
                     )*
                 )?

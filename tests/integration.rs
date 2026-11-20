@@ -482,6 +482,71 @@ fn test_server_event() -> Result<()> {
 }
 
 #[test]
+fn test_configuration_numeric_module_args() -> Result<()> {
+    let extension = if cfg!(target_os = "macos") {
+        "dylib"
+    } else {
+        "so"
+    };
+    let profile = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    };
+    let module = std::env::current_dir()?.join(format!(
+        "target/{profile}/examples/libconfiguration.{extension}"
+    ));
+    for name in ["i64", "atomic_i64"] {
+        for value in [
+            None,
+            Some("0"),
+            Some("1000"),
+            Some("-1"),
+            Some("1001"),
+            Some("abc"),
+        ] {
+            // With no listeners Redis exits after module initialization. This tests
+            // actual startup arguments without opening ports or leaving a server running.
+            let mut command = std::process::Command::new("redis-server");
+            command.args([
+                "--port",
+                "0",
+                "--save",
+                "",
+                "--appendonly",
+                "no",
+                "--loadmodule",
+            ]);
+            command.arg(&module);
+            if let Some(value) = value {
+                command.args([name, value]);
+            }
+            let output = command.output()?;
+            let log = format!(
+                "{}{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            let valid = matches!(value, None | Some("0") | Some("1000"));
+            assert_eq!(
+                log.contains("Module 'configuration' loaded"),
+                valid,
+                "{name}={value:?}: {log}"
+            );
+            if valid {
+                assert!(log.contains("Configured to not listen anywhere"), "{log}");
+            } else {
+                assert!(log.contains("initialization failed"), "{log}");
+                if value != Some("abc") {
+                    assert!(log.contains("outside the range 0..=1000"), "{log}");
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn test_configuration() -> Result<()> {
     let mut con = TestConnection::new("configuration");
 
